@@ -74,7 +74,7 @@ canvas { display: none; }
 <body>
 <header>
   <h1>🍫 ยอดขายแต่ละวัน</h1>
-  <span>Sales Reporting Tool</span>
+  <span>Sales Reporting Tool · <b style="color:#fff">V1.0</b></span>
 </header>
 <main>
   <canvas id="canvas"></canvas>
@@ -185,6 +185,7 @@ let state = {
   step: localStorage.getItem("anthropic_key") ? "upload" : "apikey",
   apiKey: localStorage.getItem("anthropic_key") || "",
   date: "",
+  openCash: 10000,
   rows: {},
   finance: {},
   formUrl: "",
@@ -301,7 +302,12 @@ function renderConfirm() {
   });
 
   // finance
-  html += `<div class="sec-title">การเงิน</div><div class="fin-grid">`;
+  html += `<div class="sec-title">การเงิน</div>
+  <div class="fin-row" style="margin-bottom:6px;background:#f5f4f0;border-color:#e4e2dc">
+    <label style="font-weight:700">เงินทอนเปิดร้าน (กรอกเอง)</label>
+    <input type="number" value="${state.openCash}" oninput="state.openCash=Number(this.value)||0">
+  </div>
+  <div class="fin-grid">`;
   FINANCE_ITEMS.forEach(key => {
     const v = state.finance[key] || 0;
     html += `<div class="fin-row"><label>${key}</label>
