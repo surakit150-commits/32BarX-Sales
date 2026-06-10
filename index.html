@@ -38,7 +38,7 @@ canvas { display: none; }
 /* floating image viewer */
 .img-fab { position: fixed; right: 14px; bottom: 18px; z-index: 60; background: #1a1a1a; color: #fff; border: none; border-radius: 24px; padding: 12px 16px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.3); }
 .img-panel { position: fixed; left: 0; right: 0; bottom: 0; height: 50vh; background: #111; z-index: 50; border-top: 3px solid #1a1a1a; overflow: hidden; touch-action: none; }
-.img-panel img { width: 100%; height: auto; display: block; transform-origin: 0 0; will-change: transform; }
+.img-panel img { display: block; width: 100%; height: auto; transform-origin: 0 0; }
 body.panel-open main { padding-bottom: 52vh; }
 .api-key-row { display: flex; gap: 8px; margin-bottom: 16px; }
 .api-key-row input { flex: 1; border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; font-size: 14px; }
@@ -230,67 +230,94 @@ function render() {
   // floating image viewer (confirm step only)
   if (state.step === "confirm" && state.imgB64) {
     html += `<button class="img-fab" onclick="toggleImgPanel()">${state.imgPanel ? "✕ ปิดรูป" : "🖼️ ดูรูป"}</button>`;
-    if (state.imgPanel) html += `<div class="img-panel"><img src="data:${state.imgMime};base64,${state.imgB64}" alt="paper"></div>`;
+    if (state.imgPanel) html += `<div class="img-panel" id="imgPanel">
+      <img id="panelImg" src="data:${state.imgMime};base64,${state.imgB64}" alt="paper">
+    </div>`;
   }
   document.body.classList.toggle("panel-open", state.step === "confirm" && state.imgPanel);
   app.innerHTML = html;
-  bindImgZoom();
+  if (state.imgPanel) bindPinchZoom();
 }
 
-// ── pinch zoom + pan inside image panel only ──
-function bindImgZoom() {
-  const panel = document.querySelector(".img-panel");
-  if (!panel) return;
-  const img = panel.querySelector("img");
+// ── pinch zoom (pointer events, with clamping & smooth 2→1 finger handoff) ──
+function bindPinchZoom() {
+  const panel = document.getElementById("imgPanel");
+  const img = document.getElementById("panelImg");
+  if (!panel || !img) return;
+
   let scale = 1, tx = 0, ty = 0;
-  let startDist = 0, startScale = 1, startTx = 0, startTy = 0, startMidX = 0, startMidY = 0;
-  let panX = 0, panY = 0, panning = false;
+  const pointers = new Map();          // pointerId -> {x, y}
+  let gStartDist = 0, gStartScale = 1, gStartTx = 0, gStartTy = 0, gStartMid = null;
+  let pStart = null;                   // single-finger pan start {x, y, tx, ty}
 
-  const apply = () => {
-    // clamp pan so image can't fly away completely
+  function clampAndApply() {
+    const pw = panel.clientWidth, ph = panel.clientHeight;
+    const iw = pw * scale;                       // displayed image width
+    const ih = (img.naturalHeight / img.naturalWidth) * iw;
+    // keep image covering the panel: don't let edges drift inside
+    const minTx = Math.min(0, pw - iw), maxTx = 0;
+    const minTy = Math.min(0, ph - ih), maxTy = Math.max(0, ph - ih);
+    tx = Math.max(minTx, Math.min(maxTx, tx));
+    ty = Math.max(minTy, Math.min(ih <= ph ? maxTy : 0, ty));
     img.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
-  };
+  }
 
-  panel.addEventListener("touchstart", e => {
-    if (e.touches.length === 2) {
-      e.preventDefault();
-      const [a, b] = e.touches;
-      startDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-      startScale = scale; startTx = tx; startTy = ty;
-      startMidX = (a.clientX + b.clientX) / 2;
-      startMidY = (a.clientY + b.clientY) / 2;
-    } else if (e.touches.length === 1 && scale > 1) {
-      panning = true;
-      panX = e.touches[0].clientX - tx;
-      panY = e.touches[0].clientY - ty;
+  function mid(p1, p2) { return { x: (p1.x + p2.x)/2, y: (p1.y + p2.y)/2 }; }
+  function dist(p1, p2) { return Math.hypot(p1.x - p2.x, p1.y - p2.y); }
+  function rel(e) {
+    const r = panel.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  panel.addEventListener("pointerdown", e => {
+    panel.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, rel(e));
+    const pts = [...pointers.values()];
+    if (pts.length === 2) {
+      gStartDist = dist(pts[0], pts[1]);
+      gStartScale = scale; gStartTx = tx; gStartTy = ty;
+      gStartMid = mid(pts[0], pts[1]);
+      pStart = null;
+    } else if (pts.length === 1) {
+      pStart = { x: pts[0].x, y: pts[0].y, tx, ty };
     }
-  }, { passive: false });
-
-  panel.addEventListener("touchmove", e => {
-    if (e.touches.length === 2) {
-      e.preventDefault();
-      const [a, b] = e.touches;
-      const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-      const newScale = Math.min(6, Math.max(1, startScale * dist / startDist));
-      const rect = panel.getBoundingClientRect();
-      const mx = startMidX - rect.left, my = startMidY - rect.top;
-      // zoom around pinch midpoint
-      tx = mx - (mx - startTx) * (newScale / startScale);
-      ty = my - (my - startTy) * (newScale / startScale);
-      scale = newScale;
-      if (scale === 1) { tx = 0; ty = 0; }
-      apply();
-    } else if (e.touches.length === 1 && panning) {
-      e.preventDefault();
-      tx = e.touches[0].clientX - panX;
-      ty = e.touches[0].clientY - panY;
-      apply();
-    }
-  }, { passive: false });
-
-  panel.addEventListener("touchend", e => {
-    if (e.touches.length === 0) panning = false;
   });
+
+  panel.addEventListener("pointermove", e => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, rel(e));
+    const pts = [...pointers.values()];
+    if (pts.length === 2 && gStartDist > 0) {
+      const d = dist(pts[0], pts[1]);
+      const m = mid(pts[0], pts[1]);
+      const newScale = Math.min(8, Math.max(1, gStartScale * d / gStartDist));
+      const k = newScale / gStartScale;
+      // zoom anchored at gesture-start midpoint + follow midpoint movement
+      tx = m.x - (gStartMid.x - gStartTx) * k;
+      ty = m.y - (gStartMid.y - gStartTy) * k;
+      scale = newScale;
+      clampAndApply();
+    } else if (pts.length === 1 && pStart && scale > 1) {
+      tx = pStart.tx + (pts[0].x - pStart.x);
+      ty = pStart.ty + (pts[0].y - pStart.y);
+      clampAndApply();
+    }
+  });
+
+  function lift(e) {
+    pointers.delete(e.pointerId);
+    const pts = [...pointers.values()];
+    if (pts.length === 1) {
+      // 2→1 handoff: re-anchor pan to the remaining finger (prevents freeze/jump)
+      pStart = { x: pts[0].x, y: pts[0].y, tx, ty };
+      gStartDist = 0;
+    } else if (pts.length === 0) {
+      pStart = null; gStartDist = 0;
+      if (scale <= 1.02) { scale = 1; tx = 0; ty = 0; clampAndApply(); }
+    }
+  }
+  panel.addEventListener("pointerup", lift);
+  panel.addEventListener("pointercancel", lift);
 }
 
 function toggleImgPanel() {
