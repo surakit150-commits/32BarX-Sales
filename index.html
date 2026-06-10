@@ -79,7 +79,7 @@ body.panel-open main { padding-bottom: 52vh; }
 <body>
 <header>
   <h1>🍫 ยอดขายแต่ละวัน</h1>
-  <span>Sales Reporting Tool · <b style="color:#fff">V1.2.3.1</b></span>
+  <span>Sales Reporting Tool · <b style="color:#fff">V1.2.3.2</b></span>
 </header>
 <main>
   <canvas id="canvas"></canvas>
@@ -290,17 +290,6 @@ function bindImgZoom() {
 
   panel.addEventListener("touchend", e => {
     if (e.touches.length === 0) panning = false;
-    if (scale <= 1.02) { scale = 1; tx = 0; ty = 0; apply(); }
-  });
-
-  // double-tap to reset
-  let lastTap = 0;
-  panel.addEventListener("touchend", e => {
-    const now = Date.now();
-    if (now - lastTap < 300 && e.touches.length === 0) {
-      scale = 1; tx = 0; ty = 0; apply();
-    }
-    lastTap = now;
   });
 }
 
