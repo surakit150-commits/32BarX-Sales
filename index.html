@@ -35,6 +35,11 @@ main { max-width: 960px; margin: 0 auto; padding: 20px 12px; }
 .top-bar .back { background: none; border: 1px solid #ddd; border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 13px; color: #666; }
 .preview-img { width: 100%; border-radius: 8px; border: 1px solid #eee; margin-bottom: 12px; }
 canvas { display: none; }
+/* floating image viewer */
+.img-fab { position: fixed; right: 14px; bottom: 18px; z-index: 60; background: #1a1a1a; color: #fff; border: none; border-radius: 24px; padding: 12px 16px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.3); }
+.img-panel { position: fixed; left: 0; right: 0; bottom: 0; height: 50vh; background: #111; z-index: 50; border-top: 3px solid #1a1a1a; overflow: auto; -webkit-overflow-scrolling: touch; }
+.img-panel img { width: 100%; height: auto; display: block; }
+body.panel-open main { padding-bottom: 52vh; }
 .api-key-row { display: flex; gap: 8px; margin-bottom: 16px; }
 .api-key-row input { flex: 1; border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; font-size: 14px; }
 .api-key-row .save-btn { background: #1a1a1a; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
@@ -74,7 +79,7 @@ canvas { display: none; }
 <body>
 <header>
   <h1>🍫 ยอดขายแต่ละวัน</h1>
-  <span>Sales Reporting Tool · <b style="color:#fff">V1.2.2</b></span>
+  <span>Sales Reporting Tool · <b style="color:#fff">V1.2.3</b></span>
 </header>
 <main>
   <canvas id="canvas"></canvas>
@@ -189,6 +194,7 @@ let state = {
   imgB64: null,
   imgMime: "image/jpeg",
   enhanced: false,
+  imgPanel: false,
   rows: {},
   finance: {},
   formUrl: "",
@@ -220,7 +226,21 @@ function isMismatch(r) {
 function render() {
   const app = document.getElementById("app");
   const fns = { apikey: renderApiKey, upload: renderUpload, preview: renderPreview, loading: renderLoading, confirm: renderConfirm, done: renderDone };
-  app.innerHTML = (fns[state.step] || renderUpload)();
+  let html = (fns[state.step] || renderUpload)();
+  // floating image viewer (confirm step only)
+  if (state.step === "confirm" && state.imgB64) {
+    html += `<button class="img-fab" onclick="toggleImgPanel()">${state.imgPanel ? "✕ ปิดรูป" : "🖼️ ดูรูป"}</button>`;
+    if (state.imgPanel) html += `<div class="img-panel"><img src="data:${state.imgMime};base64,${state.imgB64}" alt="paper"></div>`;
+  }
+  document.body.classList.toggle("panel-open", state.step === "confirm" && state.imgPanel);
+  app.innerHTML = html;
+}
+
+function toggleImgPanel() {
+  state.imgPanel = !state.imgPanel;
+  const y = window.scrollY;
+  render();
+  window.scrollTo(0, y); // keep scroll position
 }
 
 function renderPreview() {
@@ -469,7 +489,8 @@ function stripPrompt(def) {
 1. อ่านทีละแถว: ดูชื่อรายการที่พิมพ์ในแถวนั้นก่อน แล้วอ่านตัวเลข 5 ช่องของแถวเดียวกันจากซ้ายไปขวา
 2. จับคู่ด้วยชื่อเท่านั้น ห้ามเดาจากลำดับ
 3. ถ้าแถวไหนถูกตัดขอบภาพจนอ่านชื่อไม่ได้ ให้ข้ามรายการนั้น (ไม่ต้องใส่ใน JSON)
-4. ปกติ เปิด+เติม−Test−ขาย=ปิด ใช้ช่วยทวนการอ่าน แต่รายงานตามที่เห็นจริง
+4. กฎเหล็ก: รายงานเฉพาะตัวเลขที่ "เขียนอยู่จริง" ในช่องเท่านั้น ช่องว่าง/ขีด/ไม่มีหมึก = 0 เสมอ
+5. ห้ามคำนวณ ห้ามอนุมาน ห้ามเติมเลขเพื่อให้ยอดสมเหตุสมผลโดยเด็ดขาด ถึงแม้ยอดจะดูไม่ลงตัวก็ให้รายงานตามที่เห็น
 
 โครงสร้าง:
 {
