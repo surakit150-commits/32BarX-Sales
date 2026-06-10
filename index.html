@@ -74,7 +74,7 @@ canvas { display: none; }
 <body>
 <header>
   <h1>🍫 ยอดขายแต่ละวัน</h1>
-  <span>Sales Reporting Tool · <b style="color:#fff">V1.1</b></span>
+  <span>Sales Reporting Tool · <b style="color:#fff">V1.2</b></span>
 </header>
 <main>
   <canvas id="canvas"></canvas>
@@ -186,6 +186,9 @@ let state = {
   apiKey: localStorage.getItem("anthropic_key") || "",
   date: "",
   openCash: 10000,
+  imgB64: null,
+  imgMime: "image/jpeg",
+  enhanced: false,
   rows: {},
   finance: {},
   formUrl: "",
@@ -216,8 +219,24 @@ function isMismatch(r) {
 // ============================================================
 function render() {
   const app = document.getElementById("app");
-  const fns = { apikey: renderApiKey, upload: renderUpload, loading: renderLoading, confirm: renderConfirm, done: renderDone };
+  const fns = { apikey: renderApiKey, upload: renderUpload, preview: renderPreview, loading: renderLoading, confirm: renderConfirm, done: renderDone };
   app.innerHTML = (fns[state.step] || renderUpload)();
+}
+
+function renderPreview() {
+  return `<div class="card">
+    ${stepDots("upload")}
+    <div class="top-bar">
+      <div><h2>${state.enhanced ? "ภาพหลังปรับแต่ง" : "ตรวจสอบภาพ"}</h2>
+      <p>${state.enhanced ? "ถ้าตัวเลขชัดดีแล้ว กดยืนยันเพื่อเริ่มอ่าน" : "ปรับแต่งภาพให้คมชัดขึ้นก่อนอ่าน หรืออ่านเลยก็ได้"}</p></div>
+      <button class="back" onclick="setState({step:'upload',enhanced:false,error:''})">← ใหม่</button>
+    </div>
+    <img class="preview-img" src="data:${state.imgMime};base64,${state.imgB64}" alt="paper">
+    ${state.enhanced
+      ? `<button class="btn btn-dark" onclick="startReading()">✅ ยืนยัน → เริ่มอ่านข้อมูล</button>`
+      : `<button class="btn btn-dark" style="margin-bottom:8px" onclick="enhanceImage()">🛠️ ปรับแต่งภาพอัตโนมัติ</button>
+         <button class="btn btn-outline" onclick="startReading()">อ่านข้อมูลเลย (ไม่ปรับภาพ)</button>`}
+  </div>`;
 }
 
 function stepDots(active) {
@@ -269,7 +288,10 @@ function renderConfirm() {
     ${stepDots("confirm")}
     <div class="top-bar">
       <div><h2>ตรวจสอบข้อมูล</h2><p>แก้ค่าที่อ่านผิด — ช่องสีแดง = เปิด+เติม−Test−ขาย ≠ ปิด</p></div>
-      <button class="back" onclick="setState({step:'upload',error:''})">← ใหม่</button>
+      <div style="display:flex;gap:6px">
+        <button class="back" onclick="rereadImage()">🔄 อ่านรูปใหม่</button>
+        <button class="back" onclick="setState({step:'upload',error:''})">← ใหม่</button>
+      </div>
     </div>
     <div class="date-row"><label>วันที่</label>
       <input type="text" id="dateInput" value="${state.date||''}" placeholder="10/6/69" oninput="state.date=this.value">
@@ -351,8 +373,64 @@ async function handleFile(e) {
   if (!file) return;
   const mime = file.type || "image/jpeg";
   const b64 = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.readAsDataURL(file); });
+  state.imgB64 = b64; state.imgMime = mime;
+  setState({ step: "preview", error: "" });
+}
+
+// ── Image enhancement: grayscale + contrast + sharpen (no resize) ──
+async function enhanceImage() {
+  const img = new Image();
+  img.src = "data:" + state.imgMime + ";base64," + state.imgB64;
+  await new Promise(res => img.onload = res);
+
+  const c = document.createElement("canvas");
+  c.width = img.width; c.height = img.height; // keep original size
+  const ctx = c.getContext("2d");
+  ctx.drawImage(img, 0, 0);
+
+  let d = ctx.getImageData(0, 0, c.width, c.height);
+  const px = d.data, w = c.width, h = c.height;
+
+  // 1) grayscale + contrast
+  const contrast = 1.35, mid = 128;
+  for (let i = 0; i < px.length; i += 4) {
+    let g = 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2];
+    g = (g - mid) * contrast + mid;
+    g = g < 0 ? 0 : g > 255 ? 255 : g;
+    px[i] = px[i+1] = px[i+2] = g;
+  }
+
+  // 2) sharpen (3x3 kernel) on grayscale channel
+  const src = new Uint8ClampedArray(px);
+  const k = [0,-1,0,-1,5,-1,0,-1,0];
+  for (let y = 1; y < h-1; y++) {
+    for (let x = 1; x < w-1; x++) {
+      let sum = 0, ki = 0;
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++)
+          sum += src[((y+dy)*w + (x+dx))*4] * k[ki++];
+      const i = (y*w + x)*4;
+      const v = sum < 0 ? 0 : sum > 255 ? 255 : sum;
+      px[i] = px[i+1] = px[i+2] = v;
+    }
+  }
+  ctx.putImageData(d, 0, 0);
+
+  const dataUrl = c.toDataURL("image/jpeg", 0.92);
+  state.imgB64 = dataUrl.split(",")[1];
+  state.imgMime = "image/jpeg";
+  setState({ enhanced: true });
+}
+
+function startReading() {
   setState({ step: "loading", error: "" });
-  await parseImage(b64, mime);
+  parseImage(state.imgB64, state.imgMime);
+}
+
+async function rereadImage() {
+  if (!state.imgB64) { setState({ step: "upload", error: "ไม่มีรูปค้างอยู่ กรุณาอัปโหลดใหม่" }); return; }
+  setState({ step: "loading", error: "" });
+  await parseImage(state.imgB64, state.imgMime);
 }
 
 async function parseImage(b64, mime) {
@@ -421,7 +499,7 @@ function handleConfirm() {
 }
 
 function resetApp() {
-  setState({ step: "upload", date:"", rows:{}, finance:{}, formUrl:"", jpegUrl:"", error:"" });
+  setState({ step: "upload", date:"", rows:{}, finance:{}, formUrl:"", jpegUrl:"", error:"", enhanced:false, imgB64:null });
 }
 
 // ============================================================
