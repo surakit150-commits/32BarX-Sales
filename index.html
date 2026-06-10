@@ -74,7 +74,7 @@ canvas { display: none; }
 <body>
 <header>
   <h1>🍫 ยอดขายแต่ละวัน</h1>
-  <span>Sales Reporting Tool · <b style="color:#fff">V1.2.1</b></span>
+  <span>Sales Reporting Tool · <b style="color:#fff">V1.2.2</b></span>
 </header>
 <main>
   <canvas id="canvas"></canvas>
@@ -278,7 +278,7 @@ function renderUpload() {
 function renderLoading() {
   return `<div class="card"><div class="loading">
     <span class="spinner">⏳</span>
-    <div style="font-weight:600;margin-bottom:6px">AI กำลังอ่านข้อมูล (Opus)...</div>
+    <div style="font-weight:600;margin-bottom:6px">AI กำลังอ่านข้อมูล แบ่งอ่าน 3 ส่วนพร้อมกัน (Opus)...</div>
     <div style="font-size:13px;color:#999">อ่านครบทั้ง 5 ค่า อาจใช้เวลาสักครู่</div>
   </div></div>`;
 }
@@ -433,43 +433,101 @@ async function rereadImage() {
   await parseImage(state.imgB64, state.imgMime);
 }
 
+// ── Crop helper: cut vertical strip (x0..x1 fraction) at original resolution ──
+async function cropStrip(b64, mime, x0, x1) {
+  const img = new Image();
+  img.src = "data:" + mime + ";base64," + b64;
+  await new Promise(res => img.onload = res);
+  const sx = Math.floor(img.width * x0), sw = Math.floor(img.width * (x1 - x0));
+  const c = document.createElement("canvas");
+  c.width = sw; c.height = img.height;
+  c.getContext("2d").drawImage(img, sx, 0, sw, img.height, 0, 0, sw, img.height);
+  return c.toDataURL("image/jpeg", 0.92).split(",")[1];
+}
+
+const STRIP_DEFS = [
+  { x0: 0.0, x1: 0.45, // left: date+finance box, กลุ่ม1, กลุ่ม4
+    sections: `กลุ่ม1: 1. HB, 2. PHATTA, 3. LP, 4. PK, 5. SURAT, 6. PD, 7. CR90%, 8. DC, 9. MILK, 10. Surat 100, 11. Tak, 12. Rayong, 13. Mango Sticky, 14. Straw Yogurt, 15. Caramel White Choc, 16. บานอฟฟี่, 17. Craft Cola
+กลุ่ม4: Ice ball (ถุง), ถ้วย (แถว) C|H, นม (Gallon), นม Oat (กล่อง), นม Almond (กล่อง)`,
+    finance: true, date: true },
+  { x0: 0.38, x1: 0.74, // middle: 30-32, BonBon, Almond
+    sections: `กล่อง: 30. กล่องช้าง Set B, 31. Set 6 Tin, 32. Set D กล่องใหญ่
+BonBon (ลำดับบนกระดาษ บนลงล่าง): Bon Bon ดาว, Bon Bon เมี่ยงคำ, Bon Bon Passion Fruit, Bon Bon หมูแดง, Bon Bon Strawberry Almond, Bon Bon Strawberry Rose, Bon Bon Dark Almonds Crush, Bon Bon ไข่เค็มลาวา, Bon Bon อัญชันมะนาว, Bon Bon แกงเขียวหวาน, Bon Bon เหนียวม่วง, Bon Bon มัสมั่น, Bon Bon ต้มข่า, Bon Bon Milk Caramel, Bon Bon Lychee Rose
+Almond เคลือบช็อก: Dark 60g, Dark 100g, Dark 250g, Caramel 60g, Caramel 100g, Caramel 250g`,
+    finance: false, date: false },
+  { x0: 0.68, x1: 1.0, // right: 33, อื่นๆ2
+    sections: `อื่นๆ: 33. Set 4444, 40. Cookies HB, Cookies HB Set 4, Cookies Jumbo, Cookies Jumbo Set 3, Cookies วานิช, 41. Banana Choc, 42. ส้มเคลือบ, 43. NAMA, 44. Brownie, 45. Snackbars, 50. หัวใจ, 51. Barks, 60. Veluto 32, 61. Cocoa Powder, 62. Cacao Nibs, 66. Craft Soda, 67. โก เล้ง เต้, 70. ไอติม PROUD, 71. ไอติม Nibs, 75. Key Chain, 76. Postcard, 90. Guide Book`,
+    finance: false, date: false },
+];
+
+function stripPrompt(def) {
+  return `อ่านภาพตารางบันทึกยอดขาย (เป็นบางส่วนของกระดาษ) ส่งกลับเป็น JSON เท่านั้น
+
+แต่ละแถวมี 5 ค่า: เปิด(open), เติม(refill), Test(test), ขาย(sale), ปิด(close) — ช่องว่างหรือขีดให้ใส่ 0
+
+วิธีอ่าน (สำคัญมาก):
+1. อ่านทีละแถว: ดูชื่อรายการที่พิมพ์ในแถวนั้นก่อน แล้วอ่านตัวเลข 5 ช่องของแถวเดียวกันจากซ้ายไปขวา
+2. จับคู่ด้วยชื่อเท่านั้น ห้ามเดาจากลำดับ
+3. ถ้าแถวไหนถูกตัดขอบภาพจนอ่านชื่อไม่ได้ ให้ข้ามรายการนั้น (ไม่ต้องใส่ใน JSON)
+4. ปกติ เปิด+เติม−Test−ขาย=ปิด ใช้ช่วยทวนการอ่าน แต่รายงานตามที่เห็นจริง
+
+โครงสร้าง:
+{
+  ${def.date ? '"date": "เช่น 10/6/69",' : ''}
+  "items": { "ชื่อรายการ": {"open":0,"refill":0,"test":0,"sale":0,"close":0} }${def.finance ? ',\n  "finance": { "ซื้อน้ำแข็ง":0, "ซื้อนม":0, "เงินโอน":0, "Credit card":0, "Wallet Alipay":0, "ปิดรอบเงินสด":0 }' : ''}
+}
+${def.finance ? '\nสำคัญ: ช่อง "เงินทอน/เปิดร้าน" (มัก 10,000) ห้ามอ่าน ห้ามใส่ช่องใดๆ ข้ามไปเลย\n' : ''}
+รายการในภาพส่วนนี้ (ใช้ชื่อตรงๆ):
+${def.sections}`;
+}
+
+async function callApi(b64, prompt) {
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-api-key": state.apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+    body: JSON.stringify({
+      model: "claude-opus-4-5",
+      max_tokens: 6000,
+      messages: [{ role: "user", content: [
+        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
+        { type: "text", text: prompt }
+      ]}]
+    })
+  });
+  const json = await resp.json();
+  if (json.error) throw new Error(json.error.message);
+  const text = json.content?.find(c => c.type === "text")?.text || "";
+  return JSON.parse(text.replace(/```json|```/g, "").trim());
+}
+
 async function parseImage(b64, mime) {
   try {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": state.apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-      body: JSON.stringify({
-        model: "claude-opus-4-5",
-        max_tokens: 8000,
-        messages: [{
-          role: "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: mime, data: b64 } },
-            { type: "text", text: PROMPT }
-          ]
-        }]
-      })
-    });
-    const json = await resp.json();
-    if (json.error) throw new Error(json.error.message);
-    const text = json.content?.find(c => c.type === "text")?.text || "";
-    const clean = text.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean);
+    // crop 3 strips at full resolution, read in parallel
+    const strips = await Promise.all(STRIP_DEFS.map(d => cropStrip(b64, mime, d.x0, d.x1)));
+    const results = await Promise.all(strips.map((s, i) => callApi(s, stripPrompt(STRIP_DEFS[i]))));
 
-    // build rows
     const rows = {};
     Object.keys(ENTRY_MAP).forEach(k => {
       if (k === "วันที่" || FINANCE_ITEMS.includes(k)) return;
-      const src = (parsed.items && parsed.items[k]) || {};
-      rows[k] = {
-        open: Number(src.open)||0, refill: Number(src.refill)||0,
-        test: Number(src.test)||0, sale: Number(src.sale)||0, close: Number(src.close)||0
-      };
+      rows[k] = { open:0, refill:0, test:0, sale:0, close:0 };
     });
-    const finance = {};
-    FINANCE_ITEMS.forEach(k => finance[k] = Number((parsed.finance && parsed.finance[k]))||0);
+    let date = "", finance = {};
+    FINANCE_ITEMS.forEach(k => finance[k] = 0);
 
-    setState({ date: parsed.date || "", rows, finance, step: "confirm" });
+    results.forEach(parsed => {
+      if (parsed.date) date = parsed.date;
+      if (parsed.items) Object.entries(parsed.items).forEach(([k, v]) => {
+        if (rows[k]) rows[k] = {
+          open: Number(v.open)||0, refill: Number(v.refill)||0,
+          test: Number(v.test)||0, sale: Number(v.sale)||0, close: Number(v.close)||0
+        };
+      });
+      if (parsed.finance) Object.entries(parsed.finance).forEach(([k, v]) => {
+        if (FINANCE_ITEMS.includes(k)) finance[k] = Number(v)||0;
+      });
+    });
+
+    setState({ date, rows, finance, step: "confirm" });
   } catch (err) {
     setState({ step: "upload", error: "อ่านรูปไม่สำเร็จ: " + err.message });
   }
@@ -568,43 +626,6 @@ function drawJpeg() {
   });
   return canvas.toDataURL("image/jpeg",0.94);
 }
-
-// ============================================================
-// PROMPT
-// ============================================================
-const PROMPT = `อ่านกระดาษบันทึกยอดขายนี้ ส่งกลับเป็น JSON เท่านั้น ไม่มีคำอธิบาย
-
-กระดาษมีคอลัมน์ 5 ค่าต่อรายการ: เปิด(open), เติม(refill), Test(test), ขาย(sale), ปิด(close)
-อ่านให้ครบทั้ง 5 ค่า ถ้าช่องว่าง/ขีด ให้ใส่ 0
-
-โครงสร้าง:
-{
-  "date": "วันที่ เช่น 10/6/69",
-  "items": {
-    "ชื่อรายการ": {"open":0,"refill":0,"test":0,"sale":0,"close":0}
-  },
-  "finance": { "ซื้อน้ำแข็ง":0, "ซื้อนม":0, "เงินโอน":0, "Credit card":0, "Wallet Alipay":0, "ปิดรอบเงินสด":0 }
-}
-
-สำคัญ: ช่องบนสุดของตารางการเงินด้านซ้ายคือ "เงินทอน/เปิดร้าน" (มักเป็น 10,000) ห้ามอ่าน ห้ามนำไปใส่ช่องใดๆ ทั้งสิ้น ให้ข้ามไปเลย แล้วเริ่มอ่านจาก "ซื้อน้ำแข็ง" เป็นต้นไป
-
-วิธีอ่านที่ถูกต้อง (สำคัญมาก):
-1. อ่านทีละแถว: ดู "ชื่อรายการที่พิมพ์ไว้" ในคอลัมน์ซ้ายของแถวนั้นก่อน แล้วจึงอ่านตัวเลข 5 ค่าในแถวเดียวกัน
-2. จับคู่ค่ากับรายการด้วย "ชื่อ" เท่านั้น ห้ามจับคู่ด้วยลำดับ/ตำแหน่ง
-3. ก่อนตอบ ตรวจทานหมวด Bon Bon อีกรอบว่าชื่อกับตัวเลขอยู่แถวเดียวกันจริง
-
-ลำดับ Bon Bon บนกระดาษ (บนลงล่าง) เพื่อช่วยตรวจทาน:
-ดาว → เมี่ยงคำ → Passion Fruit → หมูแดง → Strawberry ALMOND → Strawberry ROSE → Dark Almonds Crush → ไข่เค็มลาวา → อัญชันมะนาว → แกงเขียวหวาน → เหนียวม่วง → มัสมั่น → ต้มข่า → Milk Caramel → Lychee Rose
-
-ใช้ชื่อรายการเหล่านี้ตรงๆ:
-กลุ่ม1: 1. HB, 2. PHATTA, 3. LP, 4. PK, 5. SURAT, 6. PD, 7. CR90%, 8. DC, 9. MILK, 10. Surat 100, 11. Tak, 12. Rayong, 13. Mango Sticky, 14. Straw Yogurt, 15. Caramel White Choc, 16. บานอฟฟี่, 17. Craft Cola
-กล่อง: 30. กล่องช้าง Set B, 31. Set 6 Tin, 32. Set D กล่องใหญ่, 33. Set 4444
-BonBon: Bon Bon ดาว, Bon Bon เมี่ยงคำ, Bon Bon Passion Fruit, Bon Bon หมูแดง, Bon Bon Strawberry Almond, Bon Bon Strawberry Rose, Bon Bon Dark Almonds Crush, Bon Bon ไข่เค็มลาวา, Bon Bon อัญชันมะนาว, Bon Bon แกงเขียวหวาน, Bon Bon เหนียวม่วง, Bon Bon มัสมั่น, Bon Bon ต้มข่า, Bon Bon Milk Caramel, Bon Bon Lychee Rose
-Almond: Dark 60g, Dark 100g, Dark 250g, Caramel 60g, Caramel 100g, Caramel 250g
-อื่นๆ2: 40. Cookies HB, Cookies HB Set 4, Cookies Jumbo, Cookies Jumbo Set 3, Cookies วานิช, 41. Banana Choc, 42. ส้มเคลือบ, 43. NAMA, 44. Brownie, 45. Snackbars, 50. หัวใจ, 51. Barks, 60. Veluto 32, 61. Cocoa Powder, 62. Cacao Nibs, 66. Craft Soda, 67. โก เล้ง เต้, 70. ไอติม PROUD, 71. ไอติม Nibs, 75. Key Chain, 76. Postcard, 90. Guide Book
-กลุ่ม4: Ice ball (ถุง), ถ้วย (แถว) C|H, นม (Gallon), นม Oat (กล่อง), นม Almond (กล่อง)
-
-หมายเหตุ: โดยปกติ เปิด + เติม − Test − ขาย = ปิด ใช้ช่วยตรวจสอบการอ่านให้แม่นยำ แต่ให้รายงานค่าตามที่เห็นจริงบนกระดาษ`;
 
 render();
 </script>
