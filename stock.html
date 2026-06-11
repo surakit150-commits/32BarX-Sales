@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>จัดการสต๊อค 🍫</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #f5f4f0; min-height: 100vh; }
+header { background: #1a1a1a; color: #fff; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+header h1 { font-size: 20px; font-weight: 800; }
+header span { margin-left: auto; font-size: 13px; color: #888; }
+main { max-width: 640px; margin: 0 auto; padding: 14px 12px 60px; }
+.card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 16px; }
+.card h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.card p.desc { color: #666; font-size: 13.5px; margin-bottom: 14px; }
+.sec-title { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin: 18px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #eee; }
+.sec-title:first-of-type { margin-top: 0; }
+
+/* Tabs ใหญ่ */
+.tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.tab-btn { flex: 1; padding: 11px 4px; border: 1.5px solid #ddd; border-radius: 10px; background: #fff; font-size: 13.5px; font-weight: 800; color: #666; cursor: pointer; }
+.tab-btn.on { background: #1a1a1a; border-color: #1a1a1a; color: #fff; }
+
+/* ผู้ทำรายการ */
+.mgr-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.mgr-btn { flex: 1; min-width: 70px; padding: 10px 6px; border: 1.5px solid #ddd; border-radius: 10px; background: #fff; font-size: 14.5px; font-weight: 700; color: #555; cursor: pointer; }
+.mgr-btn.on { border-color: #1a1a1a; background: #1a1a1a; color: #fff; }
+
+/* ประเภทรายการ */
+.act-row { display: flex; gap: 8px; }
+.act-btn { flex: 1; padding: 12px 6px; border: 1.5px solid #ddd; border-radius: 10px; background: #fff; cursor: pointer; text-align: center; }
+.act-btn .ic { font-size: 22px; display: block; margin-bottom: 4px; }
+.act-btn .nm { font-size: 13.5px; font-weight: 800; display: block; }
+.act-btn .sb { font-size: 10.5px; color: #999; display: block; margin-top: 2px; line-height: 1.3; }
+.act-btn.on { color: #fff; }
+.act-btn.on .sb { color: rgba(255,255,255,0.75); }
+.act-btn.on.c-restock  { background: #1e7e34; border-color: #1e7e34; }
+.act-btn.on.c-withdraw { background: #c2700a; border-color: #c2700a; }
+.act-btn.on.c-adjust   { background: #1d4ed8; border-color: #1d4ed8; }
+
+/* แถบบอกโหมด */
+.mode-bar { border-radius: 8px; padding: 9px 14px; font-size: 13.5px; font-weight: 700; color: #fff; margin: 14px 0 10px; }
+.mode-bar.c-restock  { background: #1e7e34; }
+.mode-bar.c-withdraw { background: #c2700a; }
+.mode-bar.c-adjust   { background: #1d4ed8; }
+.mode-bar small { display: block; font-weight: 400; font-size: 11.5px; color: rgba(255,255,255,0.85); margin-top: 1px; }
+
+/* ตารางสินค้า — พื้นหลังโทนเดียวกับ header (ดำ) แบบอ่อน */
+.item-wrap { background: #e9e8e5; border-radius: 10px; padding: 8px 12px; column-count: 2; column-gap: 18px; }
+/* พื้นหลังรายการเปลี่ยนโทนตามโหมด ให้เข้าชุดกับแถบ header ของโหมดนั้น */
+.f-restock  .item-wrap { background: #e6f4e9; }
+.f-restock  .item-row  { border-color: #cfe6d6; }
+.f-withdraw .item-wrap { background: #f9efdc; }
+.f-withdraw .item-row  { border-color: #eddcba; }
+.f-adjust   .item-wrap { background: #e8eefb; }
+.f-adjust   .item-row  { border-color: #d2dcf3; }
+.item-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid #dcdbd7; break-inside: avoid; }
+.item-row label { flex: 1; font-size: 12.5px; color: #3a3a3a; line-height: 1.25; }
+.item-row .unit { font-size: 11px; color: #888; min-width: 20px; }
+.item-row input { width: 62px; border: 1px solid #cfcec9; border-radius: 7px; padding: 7px 4px; font-size: 14px; font-weight: 700; text-align: center; background: #fff; -moz-appearance: textfield; }
+.item-row input::-webkit-outer-spin-button, .item-row input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.item-row input:not(:placeholder-shown) { border-width: 1.5px; }
+.f-restock  .item-row input:not(:placeholder-shown) { border-color: #1e7e34; background: #f2fbf4; }
+.f-withdraw .item-row input:not(:placeholder-shown) { border-color: #c2700a; background: #fdf6ec; }
+.f-adjust   .item-row input:not(:placeholder-shown) { border-color: #1d4ed8; background: #f0f5ff; }
+.item-row.filled label { font-weight: 700; color: #111; }
+
+/* note */
+.note-box { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 56px; }
+
+.btn { display: block; width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; margin-top: 14px; }
+.btn-dark { background: #1a1a1a; color: #fff; }
+.btn-outline { background: #fff; border: 1px solid #ddd; color: #333; }
+.btn.c-restock  { background: #1e7e34; color: #fff; }
+.btn.c-withdraw { background: #c2700a; color: #fff; }
+.btn.c-adjust   { background: #1d4ed8; color: #fff; }
+.btn:hover { opacity: 0.9; }
+
+/* สรุปก่อนส่ง + ผลลัพธ์ */
+.sum-tbl { width: 100%; border-collapse: collapse; margin: 8px 0; }
+.sum-tbl td, .sum-tbl th { padding: 7px 8px; font-size: 14px; border-bottom: 1px solid #f0efeb; text-align: left; }
+.sum-tbl th { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.05em; }
+.sum-tbl td.q { text-align: right; font-weight: 800; white-space: nowrap; }
+.meta-line { font-size: 14px; color: #444; margin-bottom: 6px; }
+.meta-line b { color: #1a1a1a; }
+
+/* Tab สรุปยอด */
+.stat-tbl { width: 100%; border-collapse: collapse; }
+.stat-tbl th { font-size: 10.5px; color: #999; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 5px 4px; text-align: right; border-bottom: 2px solid #eee; }
+.stat-tbl th.l { text-align: left; }
+.stat-tbl td { padding: 7px 4px; font-size: 13px; border-bottom: 1px solid #f3f2ee; text-align: right; white-space: nowrap; }
+.stat-tbl td.l { text-align: left; white-space: normal; color: #444; }
+.stat-tbl td.cur { font-weight: 800; font-size: 14px; }
+.stat-tbl tr.low td { background: #fff2f0; }
+.stat-tbl tr.warn td { background: #fdf8ec; }
+.neg { color: #c00; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+.dot.r { background: #d33; } .dot.y { background: #d99c1c; } .dot.g { background: #2da44e; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11.5px; color: #777; margin: 10px 0 2px; }
+.upd { font-size: 12px; color: #999; margin-top: 10px; }
+
+.loading { text-align: center; padding: 32px; color: #666; }
+.loading .spinner { font-size: 28px; display: block; margin-bottom: 10px; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error { padding: 12px 16px; background: #fff0f0; border-radius: 8px; color: #c00; font-size: 14px; margin-top: 12px; }
+.ok-banner { padding: 12px 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; color: #166534; font-size: 14.5px; font-weight: 700; margin-bottom: 14px; }
+.arrow { color: #999; padding: 0 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🍫 จัดการสต๊อค 32BarX</h1>
+  <span>Stock Tool · <b style="color:#fff">V1.0</b></span>
+</header>
+<main id="app"></main>
+
+<script>
+// ═══════════ CONFIG ═══════════
+const STOCK_WEBHOOK = "https://script.google.com/macros/s/AKfycbwtja_WR7NWJ5pfcoezvYtdbhGEKnxQb3hgmi5_6_62dqxkDo4X2sKGpQQUsB157vCdqg/exec";
+
+const MANAGERS = ["Bell", "Kit", "Pae", "Gift"]; // Bell = default
+
+const ITEMS_BAR = [
+  "1. HB", "2. PHATTA", "3. LP", "4. PK", "5. SURAT", "6. PD",
+  "7. CR90%", "8. DC", "9. MILK", "10. Surat 100", "11. Tak", "12. Rayong",
+  "13. Mango Sticky", "14. Straw Yogurt", "15. Caramel White Choc",
+  "16. บานอฟฟี่", "17. Craft Cola"
+];
+
+const ITEMS_MASS = [
+  "1. HB ปรุงแล้ว", "1. HB ยังไม่ได้ปรุง",
+  "2. PHATTA", "3. LP", "4. PK", "5. SURAT", "6. PD",
+  "7. CR90%", "8. DC", "9. MILK", "10. Surat 100", "11. Tak", "12. Rayong",
+  "13. Mango Sticky", "14. Straw Yogurt", "15. Caramel White Choc",
+  "16. บานอฟฟี่", "17. Craft Cola"
+];
+
+const TABS = { summary: "📊 สรุปยอด", bar: "🍫 Chocolate Bar", mass: "🫕 Mass" };
+
+const ACTIONS = {
+  restock:  { ic: "📦", nm: "เติมสต๊อค",  sb: "ผลิตเสร็จ เข้าคลัง",   verb: "เติม",   hint: "ใส่จำนวนที่ผลิตได้ เฉพาะรายการที่เติม" },
+  withdraw: { ic: "📤", nm: "เบิกออก",    sb: "เอาไปใช้งานอื่น",      verb: "เบิก",   hint: "ใส่จำนวนที่เบิกออก เฉพาะรายการที่เบิก" },
+  adjust:   { ic: "🔢", nm: "นับจริง",    sb: "ปรับยอดตามที่นับได้",   verb: "นับได้", hint: "ใส่เลขที่นับได้จริง เฉพาะรายการที่นับ (ใส่ 0 ได้) — ช่องว่างไม่ถูกแก้ในชีต" }
+};
+
+// ═══════════ STATE ═══════════
+let state = {
+  tab: "summary",            // summary | mass | bar
+  screen: "main",            // main | confirm | sending | done | error
+  manager: "Bell",
+  action: "restock",
+  qty: { bar: {}, mass: {} },
+  note: "",
+  lastPayload: null,
+  result: null,
+  errorMsg: "",
+  summary: null,             // ข้อมูลจาก webhook
+  summaryLoading: false,
+  summaryError: ""
+};
+
+const $app = document.getElementById("app");
+
+// ═══════════ RENDER ═══════════
+function render() {
+  if (state.screen === "confirm") return renderConfirm();
+  if (state.screen === "sending") return renderSending();
+  if (state.screen === "done")    return renderDone();
+  if (state.screen === "error")   return renderError();
+
+  // main: tabs + เนื้อหาตาม tab
+  let inner;
+  if (state.tab === "summary")   inner = summaryHtml();
+  else                           inner = formHtml(state.tab);
+
+  $app.innerHTML = `
+    <div class="tabs">
+      ${Object.keys(TABS).map(t =>
+        `<button class="tab-btn ${state.tab===t?'on':''}" data-tab="${t}">${TABS[t]}</button>`).join("")}
+    </div>
+    ${inner}`;
+
+  $app.querySelectorAll(".tab-btn").forEach(b =>
+    b.onclick = () => {
+      state.tab = b.dataset.tab;
+      render();
+      if (state.tab === "summary" && !state.summary && !state.summaryLoading) loadSummary();
+    });
+
+  if (state.tab === "summary") bindSummary();
+  else bindForm(state.tab);
+}
+
+// ─────────── ฟอร์ม เติม/เบิก/นับจริง (ใช้ร่วม bar / mass) ───────────
+function itemsOf(cat) { return cat === "mass" ? ITEMS_MASS : ITEMS_BAR; }
+function unitOf(cat)  { return cat === "mass" ? "กก." : ""; }
+
+function formHtml(cat) {
+  const a = ACTIONS[state.action];
+  const unit = unitOf(cat);
+  return `
+  <div class="card f-${state.action}">
+    <div class="sec-title">ผู้ทำรายการ</div>
+    <div class="mgr-row">
+      ${MANAGERS.map(m => `<button class="mgr-btn ${state.manager===m?'on':''}" data-mgr="${m}">${m}</button>`).join("")}
+    </div>
+
+    <div class="sec-title">ประเภทรายการ</div>
+    <div class="act-row">
+      ${Object.keys(ACTIONS).map(k => `
+        <button class="act-btn c-${k} ${state.action===k?'on':''}" data-act="${k}">
+          <span class="ic">${ACTIONS[k].ic}</span>
+          <span class="nm">${ACTIONS[k].nm}</span>
+          <span class="sb">${ACTIONS[k].sb}</span>
+        </button>`).join("")}
+    </div>
+
+    <div class="mode-bar c-${state.action}">
+      ${a.ic} ${TABS[cat]} · โหมด: ${a.nm} ${cat==="mass" ? "(หน่วย กก.)" : ""}
+      <small>${a.hint} — ช่องที่เว้นว่าง = ไม่ขยับ</small>
+    </div>
+
+    <div class="item-wrap" id="itemList">
+      ${itemsOf(cat).map(it => {
+        const v = state.qty[cat][it] ?? "";
+        return `
+        <div class="item-row ${v!=="" ? "filled" : ""}">
+          <label for="q-${escId(it)}">${it}</label>
+          <input id="q-${escId(it)}" type="number" inputmode="decimal"
+                 min="0" step="${cat==="mass" ? "0.1" : "1"}" placeholder="—" value="${v}" data-item="${it}">
+          ${unit ? `<span class="unit">${unit}</span>` : ""}
+        </div>`;
+      }).join("")}
+    </div>
+
+    <div class="sec-title">หมายเหตุ (ไม่บังคับ)</div>
+    <textarea class="note-box" id="noteBox" placeholder="เช่น เบิกไปงาน event / ผลิตรอบเช้า">${escHtml(state.note)}</textarea>
+
+    <button class="btn c-${state.action}" id="goConfirm">ตรวจสอบรายการ →</button>
+  </div>`;
+}
+
+function bindForm(cat) {
+  $app.querySelectorAll(".mgr-btn").forEach(b =>
+    b.onclick = () => { state.manager = b.dataset.mgr; render(); });
+
+  $app.querySelectorAll(".act-btn").forEach(b =>
+    b.onclick = () => { state.action = b.dataset.act; render(); });
+
+  $app.querySelectorAll("#itemList input").forEach(inp => {
+    inp.oninput = () => {
+      state.qty[cat][inp.dataset.item] = inp.value;
+      inp.closest(".item-row").classList.toggle("filled", inp.value !== "");
+    };
+  });
+
+  $app.querySelector("#noteBox").oninput = e => state.note = e.target.value;
+  $app.querySelector("#goConfirm").onclick = () => goConfirm(cat);
+}
+
+function collectEntries(cat) {
+  // "0" เป็นค่าที่ใช้ได้ในโหมดนับจริง / ช่องว่างเท่านั้นที่ข้าม → ชีตไม่ถูกแตะ
+  return itemsOf(cat)
+    .filter(it => (state.qty[cat][it] ?? "").trim() !== "")
+    .map(it => [it, Number(state.qty[cat][it])]);
+}
+
+function goConfirm(cat) {
+  const entries = collectEntries(cat);
+  if (entries.length === 0) { alert("ยังไม่ได้ใส่จำนวนรายการไหนเลยครับ"); return; }
+  for (const [it, n] of entries) {
+    if (Number.isNaN(n)) { alert(`จำนวนของ ${it} ไม่ใช่ตัวเลข`); return; }
+    if (cat === "bar" && n % 1 !== 0) { alert(`จำนวนของ ${it} ต้องเป็นจำนวนเต็ม`); return; }
+    if (state.action === "adjust") {
+      if (n < 0) { alert(`เลขนับจริงของ ${it} ติดลบไม่ได้`); return; }
+    } else if (n <= 0) {
+      alert(`จำนวนของ ${it} ต้องมากกว่า 0`); return;
+    }
+  }
+  state.screen = "confirm";
+  render();
+}
+
+function renderConfirm() {
+  const cat = state.tab;
+  const a = ACTIONS[state.action];
+  const unit = unitOf(cat);
+  const entries = collectEntries(cat);
+  $app.innerHTML = `
+  <div class="card">
+    <h2>ตรวจสอบก่อนส่ง</h2>
+    <div class="mode-bar c-${state.action}">${a.ic} ${TABS[cat]} · ${a.nm} · โดย ${state.manager}</div>
+    <table class="sum-tbl">
+      <tr><th>สินค้า</th><th style="text-align:right">${a.verb}${unit ? " ("+unit+")" : ""}</th></tr>
+      ${entries.map(([it, n]) => `<tr><td>${it}</td><td class="q">${n}</td></tr>`).join("")}
+    </table>
+    ${state.note.trim() ? `<div class="meta-line">📝 หมายเหตุ: <b>${escHtml(state.note.trim())}</b></div>` : ""}
+    <div class="meta-line" style="color:#888;font-size:12.5px">
+      ${state.action === "adjust"
+        ? "ระบบจะปรับ stock ให้เท่ากับเลขที่นับได้ และบันทึกลง log (เฉพาะรายการที่ใส่ค่า)"
+        : "ระบบจะ" + a.verb + "เข้า/ออกจากคลังทันที และบันทึกลง log"}
+    </div>
+    <button class="btn c-${state.action}" id="sendBtn">✅ ยืนยัน — ${a.nm} ${entries.length} รายการ</button>
+    <button class="btn btn-outline" id="backBtn">← กลับไปแก้</button>
+  </div>`;
+
+  $app.querySelector("#backBtn").onclick = () => { state.screen = "main"; render(); };
+  $app.querySelector("#sendBtn").onclick = send;
+}
+
+function send() {
+  const cat = state.tab;
+  const items = {};
+  collectEntries(cat).forEach(([it, n]) => items[it] = n);
+  state.lastPayload = {
+    action: state.action,
+    category: cat,
+    manager: state.manager,
+    note: state.note.trim(),
+    items: items
+  };
+  state.screen = "sending";
+  render();
+  doSend();
+}
+
+async function doSend() {
+  try {
+    // ไม่ตั้ง Content-Type เพื่อเลี่ยง CORS preflight (เหมือนฝั่งขาย V1.3)
+    const res = await fetch(STOCK_WEBHOOK, {
+      method: "POST",
+      body: JSON.stringify(state.lastPayload)
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "ไม่ทราบสาเหตุ");
+    state.result = data;
+    state.screen = "done";
+    state.summary = null; // ข้อมูลสรุปเก่าหมดอายุแล้ว ให้โหลดใหม่ครั้งหน้า
+  } catch (err) {
+    state.errorMsg = String(err);
+    state.screen = "error";
+  }
+  render();
+}
+
+function renderSending() {
+  $app.innerHTML = `
+  <div class="card"><div class="loading">
+    <span class="spinner">⏳</span>กำลังบันทึกเข้าคลัง...
+  </div></div>`;
+}
+
+function renderDone() {
+  const a = ACTIONS[state.lastPayload.action];
+  const unit = unitOf(state.lastPayload.category);
+  const rs = state.result.results || [];
+  $app.innerHTML = `
+  <div class="card">
+    <div class="ok-banner">✅ บันทึกสำเร็จ — ${a.nm} ${rs.length} รายการ โดย ${state.result.manager}</div>
+    <table class="sum-tbl">
+      <tr><th>สินค้า</th><th style="text-align:right">Stock ก่อน → หลัง${unit ? " ("+unit+")" : ""}</th></tr>
+      ${rs.map(r => `<tr><td>${r.item}</td>
+        <td class="q">${r.before}<span class="arrow">→</span><b>${r.after}</b></td></tr>`).join("")}
+    </table>
+    <div class="meta-line" style="color:#888;font-size:12.5px">บันทึกลง tab "Stock Log" เรียบร้อยแล้ว</div>
+    <button class="btn btn-dark" id="againBtn">ทำรายการต่อ</button>
+  </div>`;
+  $app.querySelector("#againBtn").onclick = resetApp;
+}
+
+function renderError() {
+  $app.innerHTML = `
+  <div class="card">
+    <h2>ส่งไม่สำเร็จ ❌</h2>
+    <div class="error">${escHtml(state.errorMsg)}</div>
+    <p class="desc" style="margin-top:10px">ข้อมูลยังไม่ถูกบันทึก ลองส่งอีกครั้ง หรือกลับไปแก้รายการได้ครับ</p>
+    <button class="btn btn-dark" id="retryBtn">🔄 ลองส่งอีกครั้ง</button>
+    <button class="btn btn-outline" id="editBtn">← กลับไปแก้รายการ</button>
+  </div>`;
+  $app.querySelector("#retryBtn").onclick = () => { state.screen = "sending"; render(); doSend(); };
+  $app.querySelector("#editBtn").onclick = () => { state.screen = "main"; render(); };
+}
+
+function resetApp() {
+  const cat = state.lastPayload ? state.lastPayload.category : "bar";
+  state.qty[cat] = {};
+  state.note = "";
+  state.lastPayload = null;
+  state.result = null;
+  state.errorMsg = "";
+  state.screen = "main";
+  state.tab = cat; // กลับไป tab เดิม คงชื่อคน+โหมดไว้ เผื่อทำรายการต่อ
+  render();
+}
+
+// ─────────── Tab สรุปยอด ───────────
+function summaryHtml() {
+  if (state.summaryLoading) {
+    return `<div class="card"><div class="loading"><span class="spinner">⏳</span>กำลังโหลดข้อมูลจากชีต...</div></div>`;
+  }
+  if (state.summaryError) {
+    return `<div class="card"><h2>โหลดข้อมูลไม่สำเร็จ ❌</h2>
+      <div class="error">${escHtml(state.summaryError)}</div>
+      <button class="btn btn-dark" id="reloadBtn">🔄 โหลดใหม่</button></div>`;
+  }
+  if (!state.summary) {
+    return `<div class="card"><div class="loading">⏳ กำลังเริ่มโหลด...</div></div>`;
+  }
+
+  const s = state.summary;
+  const rows = s.bars.map(b => {
+    const days = b.avg > 0 ? b.current / b.avg : null;
+    const need7  = Math.max(0, Math.ceil(b.avg * 7  - b.current));
+    const need14 = Math.max(0, Math.ceil(b.avg * 14 - b.current));
+    const cls = days !== null && days < 7 ? "low" : (days !== null && days < 14 ? "warn" : "");
+    const dot = days === null ? "" :
+      `<span class="dot ${days < 7 ? "r" : days < 14 ? "y" : "g"}"></span>`;
+    return `<tr class="${cls}">
+      <td class="l">${dot}${b.label}</td>
+      <td class="cur ${b.current < 0 ? "neg" : ""}">${b.current}</td>
+      <td>${b.avg}</td>
+      <td>${days === null ? "—" : days < 0 ? "0" : Math.floor(days)} วัน</td>
+      <td>${need7 > 0 ? "+" + need7 : "✓"}</td>
+      <td>${need14 > 0 ? "+" + need14 : "✓"}</td>
+    </tr>`;
+  }).join("");
+
+  const massRows = s.mass.map(m =>
+    `<tr><td class="l">${m.label}</td><td class="cur ${m.kg < 0 ? "neg" : ""}">${m.kg} กก.</td></tr>`).join("");
+
+  return `
+  <div class="card">
+    <h2>🍫 Chocolate Bar คงเหลือ</h2>
+    <p class="desc">เฉลี่ยการใช้จากยอดขาย ${s.daysUsed} วันล่าสุด · "ทำเพิ่ม" = ต้องผลิตเพิ่มเพื่อให้พอ 1/2 สัปดาห์</p>
+    <table class="stat-tbl">
+      <tr><th class="l">สินค้า</th><th>เหลือ</th><th>ใช้/วัน</th><th>พอใช้</th><th>ทำเพิ่ม 1wk</th><th>2wk</th></tr>
+      ${rows}
+    </table>
+    <div class="legend">
+      <span><span class="dot r"></span>เหลือไม่ถึง 7 วัน</span>
+      <span><span class="dot y"></span>ไม่ถึง 14 วัน</span>
+      <span><span class="dot g"></span>เพียงพอ</span>
+    </div>
+  </div>
+  <div class="card">
+    <h2>🫕 Chocolate Mass คงเหลือ</h2>
+    <table class="stat-tbl">${massRows}</table>
+    <div class="upd">อัปเดตล่าสุด: ${s.updatedAt}</div>
+    <button class="btn btn-outline" id="reloadBtn">🔄 โหลดข้อมูลใหม่</button>
+  </div>`;
+}
+
+function bindSummary() {
+  const btn = $app.querySelector("#reloadBtn");
+  if (btn) btn.onclick = loadSummary;
+}
+
+function loadSummary() {
+  state.summaryLoading = true;
+  state.summaryError = "";
+  render();
+
+  // ใช้ JSONP (โหลดเป็น <script>) แทน fetch — Apps Script ตอบกลับแบบนี้ไม่ติด CORS แน่นอน
+  const cbName = "__sumCb" + Date.now();
+  let finished = false;
+  const tag = document.createElement("script");
+
+  function finish(err, data) {
+    if (finished) return;
+    finished = true;
+    delete window[cbName];
+    tag.remove();
+    if (err) { state.summaryError = err; state.summary = null; }
+    else if (!data.ok) { state.summaryError = data.error || "ไม่ทราบสาเหตุ"; state.summary = null; }
+    else { state.summary = data; }
+    state.summaryLoading = false;
+    render();
+  }
+
+  window[cbName] = data => finish(null, data);
+  tag.onerror = () => finish("โหลดข้อมูลไม่สำเร็จ — เช็คอินเทอร์เน็ต และเช็คว่า Webhook deploy เวอร์ชันใหม่แล้ว");
+  setTimeout(() => finish("หมดเวลารอข้อมูล (20 วิ) — ลองกดโหลดใหม่อีกครั้ง"), 20000);
+
+  tag.src = STOCK_WEBHOOK + "?mode=summary&callback=" + cbName;
+  document.body.appendChild(tag);
+}
+
+// ═══════════ HELPERS ═══════════
+function escId(s)   { return s.replace(/[^a-zA-Z0-9ก-๙]/g, "_"); }
+function escHtml(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+render();
+loadSummary(); // เปิดมาที่ tab สรุปยอด โหลดข้อมูลเลย
+</script>
+</body>
+</html>
