@@ -79,7 +79,7 @@ body.panel-open main { padding-bottom: 52vh; }
 <body>
 <header>
   <h1>🍫 ยอดขายแต่ละวัน</h1>
-  <span>Sales Reporting Tool · <b style="color:#fff">V1.2.3.2</b></span>
+  <span>Sales Reporting Tool · <b style="color:#fff">V1.3</b></span>
 </header>
 <main>
   <canvas id="canvas"></canvas>
@@ -91,6 +91,9 @@ body.panel-open main { padding-bottom: 52vh; }
 // CONFIG
 // ============================================================
 const FORM_BASE = "https://docs.google.com/forms/d/e/1FAIpQLSd5Sd9TLLzKagt4O2KWQyULEKwHRUZ58lAi6tRq9Db_i7sj4g/viewform?usp=pp_url";
+
+// Apps Script Web App — ส่งข้อมูลเข้า tab "Stock Dairy" โดยตรง (ตัด stock ทันที)
+const STOCK_WEBHOOK = "https://script.google.com/macros/s/AKfycbwtja_WR7NWJ5pfcoezvYtdbhGEKnxQb3hgmi5_6_62dqxkDo4X2sKGpQQUsB157vCdqg/exec";
 
 const ENTRY_MAP = {
   "วันที่": "entry.37045481",
@@ -200,6 +203,8 @@ let state = {
   formUrl: "",
   jpegUrl: "",
   error: "",
+  stockStatus: "",   // "", "sending", "ok", "fail"
+  stockMsg: "",
 };
 
 function setState(patch) { Object.assign(state, patch); render(); }
@@ -447,7 +452,25 @@ function renderConfirm() {
 }
 
 function renderDone() {
+  let stockCard;
+  if (state.stockStatus === "sending") {
+    stockCard = `<div class="card" style="background:#fffbeb;border:1px solid #fde68a">
+      <div style="font-weight:700;font-size:15px">⏳ กำลังส่งข้อมูลเข้า Stock Dairy...</div>
+    </div>`;
+  } else if (state.stockStatus === "ok") {
+    stockCard = `<div class="card" style="background:#f0fdf4;border:1px solid #bbf7d0">
+      <div style="font-weight:700;font-size:15px;color:#166534">✅ ตัด Stock สำเร็จ</div>
+      <div style="font-size:13px;color:#166534;margin-top:4px">${state.stockMsg}</div>
+    </div>`;
+  } else {
+    stockCard = `<div class="card" style="background:#fff0f0;border:1px solid #f0a0a0">
+      <div style="font-weight:700;font-size:15px;color:#c00">❌ ส่งเข้า Stock ไม่สำเร็จ</div>
+      <div style="font-size:13px;color:#c00;margin:4px 0 10px">${state.stockMsg}</div>
+      <button class="btn btn-dark" onclick="retryStock()">🔄 ลองส่งอีกครั้ง</button>
+    </div>`;
+  }
   return `<div>
+    ${stockCard}
     <div class="card">
       ${stepDots("done")}
       <div style="font-weight:700;font-size:16px;margin-bottom:12px">🖼️ JPEG Summary <span class="summary-badge">รวม Test+ขาย</span></div>
@@ -455,7 +478,7 @@ function renderDone() {
       <a class="btn btn-dark" href="${state.jpegUrl}" download="sales_${(state.date||'today').replace(/\//g,'-')}.jpg">⬇️ ดาวน์โหลด JPEG</a>
     </div>
     <div class="card">
-      <div style="font-weight:700;font-size:16px;margin-bottom:12px">📋 Google Form</div>
+      <div style="font-weight:700;font-size:16px;margin-bottom:12px">📋 Google Form <span style="font-size:12px;color:#888;font-weight:400">(ช่องทางสำรอง — กด Submit เหมือนเดิม)</span></div>
       <a class="btn btn-green" href="${state.formUrl}" target="_blank" rel="noreferrer">🔗 เปิด Form (กรอกครบแล้ว) →</a>
     </div>
     <button class="btn btn-outline" onclick="resetApp()">+ อัปโหลดวันถัดไป</button>
@@ -658,11 +681,45 @@ function handleConfirm() {
   if (dateEl) state.date = dateEl.value;
   const url = buildFormUrl();
   const jpeg = drawJpeg();
-  setState({ formUrl: url, jpegUrl: jpeg, step: "done" });
+  setState({ formUrl: url, jpegUrl: jpeg, step: "done", stockStatus: "sending", stockMsg: "" });
+  sendToStock();
 }
 
 function resetApp() {
-  setState({ step: "upload", date:"", rows:{}, finance:{}, formUrl:"", jpegUrl:"", error:"", enhanced:false, imgB64:null });
+  setState({ step: "upload", date:"", rows:{}, finance:{}, formUrl:"", jpegUrl:"", error:"", enhanced:false, imgB64:null, stockStatus:"", stockMsg:"" });
+}
+
+// ============================================================
+// STOCK WEBHOOK  (ส่ง Test+ขาย รวม + การเงิน เข้า tab Stock Dairy)
+// ============================================================
+function buildStockPayload() {
+  const values = {};
+  Object.entries(ENTRY_MAP).forEach(([label]) => {
+    if (label === "วันที่") return;
+    if (FINANCE_ITEMS.includes(label)) values[label] = state.finance[label] || 0;
+    else values[label] = rowTotal(state.rows[label]);
+  });
+  return { date: state.date || "", values };
+}
+
+async function sendToStock() {
+  try {
+    // ส่งเป็น text/plain เพื่อเลี่ยง CORS preflight (Apps Script รองรับแบบนี้)
+    const resp = await fetch(STOCK_WEBHOOK, {
+      method: "POST",
+      body: JSON.stringify(buildStockPayload())
+    });
+    const json = await resp.json();
+    if (json.ok) setState({ stockStatus: "ok", stockMsg: "ลงแถวที่ " + json.row + " ใน Stock Dairy แล้ว" });
+    else setState({ stockStatus: "fail", stockMsg: json.error || "ไม่ทราบสาเหตุ" });
+  } catch (err) {
+    setState({ stockStatus: "fail", stockMsg: err.message });
+  }
+}
+
+function retryStock() {
+  setState({ stockStatus: "sending", stockMsg: "" });
+  sendToStock();
 }
 
 // ============================================================
