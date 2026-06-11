@@ -121,6 +121,8 @@ const STOCK_WEBHOOK = "https://script.google.com/macros/s/AKfycbwtja_WR7NWJ5pfco
 
 const MANAGERS = ["Bell", "Kit", "Pae", "Gift"]; // Bell = default
 
+const BARS_PER_KG = 28; // Chocolate Mass 1 กก. ผลิตได้ 28 บาร์ — ใช้แปลงเรทขายบาร์เป็น กก./วัน
+
 const ITEMS_BAR = [
   "1. HB", "2. PHATTA", "3. LP", "4. PK", "5. SURAT", "6. PD",
   "7. CR90%", "8. DC", "9. MILK", "10. Surat 100", "11. Tak", "12. Rayong",
@@ -426,8 +428,39 @@ function summaryHtml() {
     </tr>`;
   }).join("");
 
-  const massRows = s.mass.map(m =>
-    `<tr><td class="l">${m.label}</td><td class="cur ${m.kg < 0 ? "neg" : ""}">${m.kg} กก.</td></tr>`).join("");
+  // Mass: แปลงเรทการใช้ของบาร์ → กก./วัน (1 กก. = BARS_PER_KG บาร์)
+  const barAvgMap = {};
+  s.bars.forEach(b => barAvgMap[b.label] = b.avg);
+
+  const massRows = s.mass.map(m => {
+    // หาเรทบาร์ของรสนั้น: "1. HB ปรุงแล้ว" → ใช้เรทของ "1. HB" / "ยังไม่ได้ปรุง" ไม่คิดเรท
+    let avgKg = null;
+    if (m.label === "1. HB ปรุงแล้ว") avgKg = (barAvgMap["1. HB"] || 0) / BARS_PER_KG;
+    else if (m.label !== "1. HB ยังไม่ได้ปรุง" && barAvgMap[m.label] !== undefined)
+      avgKg = barAvgMap[m.label] / BARS_PER_KG;
+
+    if (avgKg === null) {
+      return `<tr><td class="l">${m.label}</td>
+        <td class="cur ${m.kg < 0 ? "neg" : ""}">${m.kg}</td>
+        <td>—</td><td>—</td><td>—</td><td>—</td></tr>`;
+    }
+
+    const avgR = Math.round(avgKg * 100) / 100;
+    const days = avgKg > 0 ? m.kg / avgKg : null;
+    const need7  = Math.max(0, Math.ceil((avgKg * 7  - m.kg) * 10) / 10);
+    const need14 = Math.max(0, Math.ceil((avgKg * 14 - m.kg) * 10) / 10);
+    const cls = days !== null && days < 7 ? "low" : (days !== null && days < 14 ? "warn" : "");
+    const dot = days === null ? "" :
+      `<span class="dot ${days < 7 ? "r" : days < 14 ? "y" : "g"}"></span>`;
+    return `<tr class="${cls}">
+      <td class="l">${dot}${m.label}</td>
+      <td class="cur ${m.kg < 0 ? "neg" : ""}">${m.kg}</td>
+      <td>${avgR}</td>
+      <td>${days === null ? "—" : days < 0 ? "0" : Math.floor(days)} วัน</td>
+      <td>${need7 > 0 ? "+" + need7 : "✓"}</td>
+      <td>${need14 > 0 ? "+" + need14 : "✓"}</td>
+    </tr>`;
+  }).join("");
 
   return `
   <div class="card">
@@ -445,7 +478,11 @@ function summaryHtml() {
   </div>
   <div class="card">
     <h2>🫕 Chocolate Mass คงเหลือ</h2>
-    <table class="stat-tbl">${massRows}</table>
+    <p class="desc">หน่วยทั้งหมดเป็น กก. · คิดจากเรทขายบาร์ (1 กก. = ${BARS_PER_KG} บาร์) · HB ยังไม่ได้ปรุงแสดงเฉพาะคงเหลือ</p>
+    <table class="stat-tbl">
+      <tr><th class="l">สินค้า</th><th>เหลือ</th><th>ใช้/วัน</th><th>พอใช้</th><th>ทำเพิ่ม 1wk</th><th>2wk</th></tr>
+      ${massRows}
+    </table>
     <div class="upd">อัปเดตล่าสุด: ${s.updatedAt}</div>
     <button class="btn btn-outline" id="reloadBtn">🔄 โหลดข้อมูลใหม่</button>
   </div>`;
