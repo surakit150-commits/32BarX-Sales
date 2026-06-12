@@ -440,7 +440,18 @@ function resetApp() {
 
 // ─────────── Tab สรุปยอด ───────────
 function summaryHtml() {
-  const items = filteredItems();
+  let items = filteredItems();
+  const isAll = state.catFilter === "ทั้งหมด";
+  let hiddenCount = 0;
+
+  // tab "ทั้งหมด" = โชว์เฉพาะของขาด/เร่งด่วน (หมดสต๊อค หรือเหลือไม่ถึง 7 วัน)
+  // กันหน้ายาวเกินเมื่อวัตถุดิบเยอะขึ้น — ดูรายการเต็มได้จาก tab หมวด
+  if (isAll) {
+    const urgent = items.filter(it =>
+      it.current <= 0 || (it.daily > 0 && it.current / it.daily < 7));
+    hiddenCount = items.length - urgent.length;
+    items = urgent;
+  }
   let lastCat = null;
   const rows = items.map(it => {
     const days = it.daily > 0 ? it.current / it.daily : null;
@@ -469,12 +480,16 @@ function summaryHtml() {
 
   return `
   <div class="card">
-    <h2>🧂 วัตถุดิบคงเหลือ${state.catFilter !== "ทั้งหมด" ? " · " + escHtml(state.catFilter) : ""}</h2>
-    <p class="desc">หน่วย ${UNIT} · อัตราใช้/วันจากแถว Daily ในชีต · "ทำเพิ่ม" = ต้องซื้อ/ผลิตเพิ่มเพื่อให้พอ 1/2 สัปดาห์</p>
+    <h2>${isAll ? "⚠️ ต้องเติมเร่งด่วน" : "🧂 วัตถุดิบคงเหลือ · " + escHtml(state.catFilter)}</h2>
+    <p class="desc">${isAll
+      ? "แสดงเฉพาะของที่หมดหรือเหลือไม่ถึง 7 วัน — ดูรายการเต็มได้จากปุ่มหมวดด้านบน"
+      : "หน่วย " + UNIT + " · อัตราใช้/วันจากแถว Daily ในชีต · \"ทำเพิ่ม\" = ต้องซื้อ/ผลิตเพิ่มเพื่อให้พอ 1/2 สัปดาห์"}</p>
     <table class="stat-tbl">
       <tr><th class="l">วัตถุดิบ</th><th>เหลือ</th><th>ใช้/วัน</th><th>พอใช้</th><th>ทำเพิ่ม 1wk</th><th>2wk</th></tr>
-      ${rows || `<tr><td colspan="6" class="l" style="color:#999;padding:14px">ไม่มีวัตถุดิบในหมวดนี้</td></tr>`}
+      ${rows || `<tr><td colspan="6" class="l" style="color:#2da44e;padding:14px;font-weight:700">${
+        isAll ? "🎉 ไม่มีของขาด — ทุกรายการพอใช้เกิน 7 วัน" : "ไม่มีวัตถุดิบในหมวดนี้"}</td></tr>`}
     </table>
+    ${isAll && hiddenCount > 0 ? `<div class="upd">ซ่อนรายการที่ยังพอใช้อีก ${hiddenCount} รายการ (ดูได้ในแต่ละหมวด)</div>` : ""}
     <div class="legend">
       <span><span class="dot r"></span>เหลือไม่ถึง 7 วัน</span>
       <span><span class="dot y"></span>ไม่ถึง 14 วัน</span>
