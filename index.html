@@ -79,7 +79,7 @@ body.panel-open main { padding-bottom: 52vh; }
 <body>
 <header>
   <h1>🍫 ยอดขายแต่ละวัน</h1>
-  <span>Sales Reporting Tool · <b style="color:#fff">V1.3.5</b></span>
+  <span>Sales Reporting Tool · <b style="color:#fff">V1.3.6</b></span>
 </header>
 <main>
   <canvas id="canvas"></canvas>
@@ -740,9 +740,33 @@ async function callApi(b64, prompt, maxTokens) {
     })
   });
   const json = await resp.json();
-  if (json.error) throw new Error(json.error.message);
+  if (json.error) throw new Error("API: " + (json.error.message || JSON.stringify(json.error)));
   const text = json.content?.find(c => c.type === "text")?.text || "";
-  return JSON.parse(text.replace(/```json|```/g, "").trim());
+  const clean = text.replace(/```json|```/g, "").trim();
+  try {
+    return JSON.parse(clean);
+  } catch (e) {
+    throw new Error("ผลไม่ใช่ JSON: " + clean.slice(0, 150));
+  }
+}
+
+// ── ย่อ + แปลงเป็น JPEG มาตรฐานก่อนส่ง API ──
+// กันปัญหา: (1) ภาพใหญ่เกินลิมิต API (2) media_type ไม่ตรง (เช่นไฟล์ PNG แต่ส่งบอกว่า jpeg)
+async function normalizeImage(b64, mime) {
+  const img = new Image();
+  img.src = "data:" + mime + ";base64," + b64;
+  await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error("โหลดรูปไม่ได้")); });
+  const maxSide = 1568;
+  let w = img.width, h = img.height;
+  const scale = Math.min(1, maxSide / Math.max(w, h));
+  w = Math.max(1, Math.round(w * scale));
+  h = Math.max(1, Math.round(h * scale));
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, w, h);
+  return c.toDataURL("image/jpeg", 0.92).split(",")[1];
 }
 
 // ── Prompt สำหรับอ่านภาพเต็มทั้งใบครั้งเดียว (เห็นบริบทครบเหมือนเปิดในแชต) ──
@@ -775,9 +799,10 @@ ${PRODUCT_SECTIONS.map(s => s.label + ": " + s.items.join(", ")).join("\n")}
 
 async function parseImage(b64, mime) {
   try {
-    // อ่านภาพเต็มทั้งใบครั้งเดียว — ให้โมเดลเห็นบริบทครบ (หัวคอลัมน์ + ทั้งตาราง)
-    // วิธีนี้พิสูจน์แล้วว่าแม่นกว่าการหั่นภาพเป็นชิ้น เพราะไม่เสียบริบทคอลัมน์
-    const parsed = await callApi(b64, fullPrompt(), 8000);
+    // ย่อ+แปลงเป็น JPEG มาตรฐานก่อน (กันภาพใหญ่เกิน/ฟอร์แมตผิด)
+    const norm = await normalizeImage(b64, mime);
+    // อ่านภาพเต็มทั้งใบครั้งเดียว — ให้โมเดลเห็นบริบทครบ
+    const parsed = await callApi(norm, fullPrompt(), 8000);
 
     const rows = {};
     Object.keys(ENTRY_MAP).forEach(k => {
@@ -787,6 +812,7 @@ async function parseImage(b64, mime) {
     let date = "", finance = {};
     FINANCE_ITEMS.forEach(k => finance[k] = 0);
 
+    let matched = 0;
     if (parsed.date) date = parsed.date;
     if (parsed.items) Object.entries(parsed.items).forEach(([k, v]) => {
       if (!rows[k]) return;
@@ -794,10 +820,16 @@ async function parseImage(b64, mime) {
         open: Number(v.open)||0, refill: Number(v.refill)||0,
         test: Number(v.test)||0, sale: Number(v.sale)||0, close: Number(v.close)||0
       };
+      matched++;
     });
     if (parsed.finance) Object.entries(parsed.finance).forEach(([k, v]) => {
       if (FINANCE_ITEMS.includes(k)) finance[k] = Number(v)||0;
     });
+
+    // ถ้าไม่ match รายการเลย = อ่านไม่ออก/ผลผิดปกติ → แจ้ง ไม่ใช่โชว์ 0 เงียบๆ
+    if (matched === 0) {
+      throw new Error("อ่านได้ 0 รายการ — โมเดลคืน: " + JSON.stringify(parsed).slice(0, 200));
+    }
 
     setState({ date, rows, finance, cropMode: "ภาพเต็ม (อ่านครั้งเดียว)", step: "confirm" });
   } catch (err) {
