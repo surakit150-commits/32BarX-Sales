@@ -79,7 +79,7 @@ body.panel-open main { padding-bottom: 52vh; }
 <body>
 <header>
   <h1>🍫 ยอดขายแต่ละวัน</h1>
-  <span>Sales Reporting Tool · <b style="color:#fff">V1.3</b></span>
+  <span>Sales Reporting Tool · <b style="color:#fff">V1.3.1</b></span>
 </header>
 <main>
   <canvas id="canvas"></canvas>
@@ -387,7 +387,7 @@ function renderUpload() {
 function renderLoading() {
   return `<div class="card"><div class="loading">
     <span class="spinner">⏳</span>
-    <div style="font-weight:600;margin-bottom:6px">AI กำลังอ่านข้อมูล แบ่งอ่าน 3 ส่วนพร้อมกัน (Opus)...</div>
+    <div style="font-weight:600;margin-bottom:6px">AI กำลังอ่านข้อมูล แบ่งอ่าน 5 ส่วนพร้อมกัน (Opus)...</div>
     <div style="font-size:13px;color:#999">อ่านครบทั้ง 5 ค่า อาจใช้เวลาสักครู่</div>
   </div></div>`;
 }
@@ -560,44 +560,69 @@ async function rereadImage() {
   await parseImage(state.imgB64, state.imgMime);
 }
 
-// ── Crop helper: cut vertical strip (x0..x1 fraction) at original resolution ──
-async function cropStrip(b64, mime, x0, x1) {
+// ── Crop helper: ตัดเป็นกรอบสี่เหลี่ยม (x0..x1, y0..y1 เป็นสัดส่วน) ที่ความละเอียดเต็ม ──
+async function cropStrip(b64, mime, x0, x1, y0, y1) {
   const img = new Image();
   img.src = "data:" + mime + ";base64," + b64;
   await new Promise(res => img.onload = res);
-  const sx = Math.floor(img.width * x0), sw = Math.floor(img.width * (x1 - x0));
+  if (y0 == null) y0 = 0;
+  if (y1 == null) y1 = 1;
+  const sx = Math.floor(img.width  * x0), sw = Math.floor(img.width  * (x1 - x0));
+  const sy = Math.floor(img.height * y0), sh = Math.floor(img.height * (y1 - y0));
   const c = document.createElement("canvas");
-  c.width = sw; c.height = img.height;
-  c.getContext("2d").drawImage(img, sx, 0, sw, img.height, 0, 0, sw, img.height);
-  return c.toDataURL("image/jpeg", 0.92).split(",")[1];
+  c.width = sw; c.height = sh;
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+  return c.toDataURL("image/jpeg", 0.95).split(",")[1];
 }
 
+// 5 โซน: ตัดให้แต่ละ call เห็นแถวน้อยลง = ตัวเลขแต่ละช่องใหญ่ขึ้นหลัง API ย่อ → แม่นขึ้น
+// โซนที่แถวเยอะ (Bon Bon, อื่นๆ2) แยกบน/ล่าง + overlap แนวตั้งกันแถวตกขอบ
+// x เผื่อกว้างให้ครอบครบทุกคอลัมน์ (ชื่อ + เปิด/เติม/Test/ขาย/ปิด) ไม่ตัดขาย/ปิดหาย
 const STRIP_DEFS = [
-  { x0: 0.0, x1: 0.45, // left: date+finance box, กลุ่ม1, กลุ่ม4
+  // 1) ซ้าย เต็มสูง: date + การเงิน + กลุ่ม1 + กลุ่ม4 (อ่านแม่นดีอยู่แล้ว ไม่ต้องแบ่ง)
+  { x0: 0.0, x1: 0.46, y0: 0.0, y1: 1.0,
     sections: `กลุ่ม1: 1. HB, 2. PHATTA, 3. LP, 4. PK, 5. SURAT, 6. PD, 7. CR90%, 8. DC, 9. MILK, 10. Surat 100, 11. Tak, 12. Rayong, 13. Mango Sticky, 14. Straw Yogurt, 15. Caramel White Choc, 16. บานอฟฟี่, 17. Craft Cola
 กลุ่ม4: Ice ball (ถุง), ถ้วย (แถว) C|H, นม (Gallon), นม Oat (กล่อง), นม Almond (กล่อง)`,
     finance: true, date: true },
-  { x0: 0.38, x1: 0.74, // middle: 30-32, BonBon, Almond
+
+  // 2) กลาง-บน: 30-32 + Bon Bon ครึ่งบน
+  { x0: 0.34, x1: 0.75, y0: 0.0, y1: 0.62,
     sections: `กล่อง: 30. กล่องช้าง Set B, 31. Set 6 Tin, 32. Set D กล่องใหญ่
-BonBon (ลำดับบนกระดาษ บนลงล่าง): Bon Bon ดาว, Bon Bon เมี่ยงคำ, Bon Bon Passion Fruit, Bon Bon หมูแดง, Bon Bon Strawberry Almond, Bon Bon Strawberry Rose, Bon Bon Dark Almonds Crush, Bon Bon ไข่เค็มลาวา, Bon Bon อัญชันมะนาว, Bon Bon แกงเขียวหวาน, Bon Bon เหนียวม่วง, Bon Bon มัสมั่น, Bon Bon ต้มข่า, Bon Bon Milk Caramel, Bon Bon Lychee Rose
+BonBon (บนลงล่าง): Bon Bon ดาว, Bon Bon เมี่ยงคำ, Bon Bon Passion Fruit, Bon Bon หมูแดง, Bon Bon Strawberry Almond, Bon Bon Strawberry Rose, Bon Bon Dark Almonds Crush, Bon Bon ไข่เค็มลาวา, Bon Bon อัญชันมะนาว`,
+    finance: false, date: false },
+
+  // 3) กลาง-ล่าง: Bon Bon ครึ่งล่าง + Almond เคลือบ (overlap กับโซน 2)
+  { x0: 0.34, x1: 0.75, y0: 0.46, y1: 1.0,
+    sections: `BonBon (บนลงล่าง): Bon Bon Dark Almonds Crush, Bon Bon ไข่เค็มลาวา, Bon Bon อัญชันมะนาว, Bon Bon แกงเขียวหวาน, Bon Bon เหนียวม่วง, Bon Bon มัสมั่น, Bon Bon ต้มข่า, Bon Bon Milk Caramel, Bon Bon Lychee Rose
 Almond เคลือบช็อก: Dark 60g, Dark 100g, Dark 250g, Caramel 60g, Caramel 100g, Caramel 250g`,
     finance: false, date: false },
-  { x0: 0.68, x1: 1.0, // right: 33, อื่นๆ2
-    sections: `อื่นๆ: 33. Set 4444, 40. Cookies HB, Cookies HB Set 4, Cookies Jumbo, Cookies Jumbo Set 3, Cookies วานิช, 41. Banana Choc, 42. ส้มเคลือบ, 43. NAMA, 44. Brownie, 45. Snackbars, 50. หัวใจ, 51. Barks, 60. Veluto 32, 61. Cocoa Powder, 62. Cacao Nibs, 66. Craft Soda, 67. โก เล้ง เต้, 70. ไอติม PROUD, 71. ไอติม Nibs, 75. Key Chain, 76. Postcard, 90. Guide Book`,
+
+  // 4) ขวา-บน: อื่นๆ2 ครึ่งบน
+  { x0: 0.65, x1: 1.0, y0: 0.0, y1: 0.62,
+    sections: `อื่นๆ: 33. Set 4444, 40. Cookies HB, Cookies HB Set 4, Cookies Jumbo, Cookies Jumbo Set 3, Cookies วานิช, 41. Banana Choc, 42. ส้มเคลือบ, 43. NAMA, 44. Brownie, 45. Snackbars, 50. หัวใจ`,
+    finance: false, date: false },
+
+  // 5) ขวา-ล่าง: อื่นๆ2 ครึ่งล่าง (overlap กับโซน 4)
+  { x0: 0.65, x1: 1.0, y0: 0.46, y1: 1.0,
+    sections: `อื่นๆ: 44. Brownie, 45. Snackbars, 50. หัวใจ, 51. Barks, 60. Veluto 32, 61. Cocoa Powder, 62. Cacao Nibs, 66. Craft Soda, 67. โก เล้ง เต้, 70. ไอติม PROUD, 71. ไอติม Nibs, 75. Key Chain, 76. Postcard, 90. Guide Book`,
     finance: false, date: false },
 ];
 
 function stripPrompt(def) {
-  return `อ่านภาพตารางบันทึกยอดขาย (เป็นบางส่วนของกระดาษ) ส่งกลับเป็น JSON เท่านั้น
+  return `อ่านภาพตารางบันทึกยอดขาย (เป็นบางส่วนของกระดาษ ตัดมาเฉพาะโซน) ส่งกลับเป็น JSON เท่านั้น
 
-แต่ละแถวมี 5 ค่า: เปิด(open), เติม(refill), Test(test), ขาย(sale), ปิด(close) — ช่องว่างหรือขีดให้ใส่ 0
+คอลัมน์เรียงซ้าย→ขวาเสมอ: [ชื่อรายการ] [เปิด open] [เติม refill] [Test] [ขาย sale] [ปิด close]
+ภาพส่วนนี้อาจไม่เห็นแถวหัวตาราง ให้ยึดลำดับ 5 คอลัมน์นี้ทุกแถว — ช่องว่างหรือขีดให้ใส่ 0
 
 วิธีอ่าน (สำคัญมาก):
 1. อ่านทีละแถว: ดูชื่อรายการที่พิมพ์ในแถวนั้นก่อน แล้วอ่านตัวเลข 5 ช่องของแถวเดียวกันจากซ้ายไปขวา
 2. จับคู่ด้วยชื่อเท่านั้น ห้ามเดาจากลำดับ
-3. ถ้าแถวไหนถูกตัดขอบภาพจนอ่านชื่อไม่ได้ ให้ข้ามรายการนั้น (ไม่ต้องใส่ใน JSON)
-4. กฎเหล็ก: รายงานเฉพาะตัวเลขที่ "เขียนอยู่จริง" ในช่องเท่านั้น ช่องว่าง/ขีด/ไม่มีหมึก = 0 เสมอ
-5. ห้ามคำนวณ ห้ามอนุมาน ห้ามเติมเลขเพื่อให้ยอดสมเหตุสมผลโดยเด็ดขาด ถึงแม้ยอดจะดูไม่ลงตัวก็ให้รายงานตามที่เห็น
+3. ในภาพอาจมีรายการอื่นที่ไม่อยู่ในลิสต์ด้านล่างปนมาจากการตัดขอบ ให้อ่านเฉพาะรายการที่ชื่อตรงกับลิสต์ ส่วนที่เหลือข้ามไป
+4. ถ้าแถวไหนถูกตัดขอบภาพจนอ่านชื่อหรือตัวเลขไม่ครบ ให้ข้ามรายการนั้น (ไม่ต้องใส่ใน JSON)
+5. กฎเหล็ก: รายงานเฉพาะตัวเลขที่ "เขียนอยู่จริง" ในช่องเท่านั้น ช่องว่าง/ขีด/ไม่มีหมึก = 0 เสมอ
+6. ห้ามคำนวณ ห้ามอนุมาน ห้ามเติมเลขเพื่อให้ยอดสมเหตุสมผลโดยเด็ดขาด ถึงแม้ยอดจะดูไม่ลงตัวก็ให้รายงานตามที่เห็น
 
 โครงสร้าง:
 {
@@ -630,8 +655,8 @@ async function callApi(b64, prompt) {
 
 async function parseImage(b64, mime) {
   try {
-    // crop 3 strips at full resolution, read in parallel
-    const strips = await Promise.all(STRIP_DEFS.map(d => cropStrip(b64, mime, d.x0, d.x1)));
+    // ตัด 5 โซนที่ความละเอียดเต็ม อ่านขนานกัน
+    const strips = await Promise.all(STRIP_DEFS.map(d => cropStrip(b64, mime, d.x0, d.x1, d.y0, d.y1)));
     const results = await Promise.all(strips.map((s, i) => callApi(s, stripPrompt(STRIP_DEFS[i]))));
 
     const rows = {};
@@ -639,16 +664,23 @@ async function parseImage(b64, mime) {
       if (k === "วันที่" || FINANCE_ITEMS.includes(k)) return;
       rows[k] = { open:0, refill:0, test:0, sale:0, close:0 };
     });
+    const seen = {}; // รายการที่ถูกอ่านแล้ว (กันโซน overlap เขียนทับด้วย 0)
     let date = "", finance = {};
     FINANCE_ITEMS.forEach(k => finance[k] = 0);
 
     results.forEach(parsed => {
       if (parsed.date) date = parsed.date;
       if (parsed.items) Object.entries(parsed.items).forEach(([k, v]) => {
-        if (rows[k]) rows[k] = {
+        if (!rows[k]) return;
+        const cand = {
           open: Number(v.open)||0, refill: Number(v.refill)||0,
           test: Number(v.test)||0, sale: Number(v.sale)||0, close: Number(v.close)||0
         };
+        const candSum = cand.open + cand.refill + cand.test + cand.sale + cand.close;
+        // โซน overlap: ถ้าเคยอ่านรายการนี้แล้วได้ค่ามีเลข แต่รอบนี้ได้ 0 หมด → คงค่าเดิมไว้
+        if (seen[k] && candSum === 0) return;
+        rows[k] = cand;
+        if (candSum > 0) seen[k] = true;
       });
       if (parsed.finance) Object.entries(parsed.finance).forEach(([k, v]) => {
         if (FINANCE_ITEMS.includes(k)) finance[k] = Number(v)||0;
