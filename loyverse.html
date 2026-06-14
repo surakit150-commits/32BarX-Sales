@@ -37,7 +37,7 @@
 </head>
 <body>
 
-<h1>🍫 32BarX — สรุปยอดขายจาก Loyverse</h1>
+<h1>🍫 32BarX — สรุปยอดขายจาก Loyverse <span style="font-size:12px;background:#16a34a;color:#fff;padding:2px 8px;border-radius:6px;vertical-align:middle">V1.0</span></h1>
 <div class="sub">ดึงยอดขาย+Test รายวัน → ตาราง JPEG สำหรับเติมสต๊อก</div>
 
 <div class="bar">
@@ -58,6 +58,9 @@
 <div id="msg" class="msg"></div>
 <div id="result"></div>
 <canvas id="cv" width="1080" height="1920"></canvas>
+<img id="imgOut" style="display:none;width:100%;border-radius:10px;margin-top:12px;border:1px solid #ddd">
+<button class="jpg" id="btnSave" style="display:none;width:100%;margin-top:8px" onclick="saveImg()">📲 บันทึกลงรูปภาพ</button>
+<div class="sub" id="saveHint" style="display:none;text-align:center;margin-top:6px">หรือกดค้างที่รูปเพื่อบันทึกลงอัลบั้ม</div>
 
 <script>
 // ============================================================
@@ -146,12 +149,6 @@ const CATALOG = [
   { col:"R", group:"อื่นๆ 2", form:"76. Postcard",     item:"76.Post Card" },
   { col:"R", group:"อื่นๆ 2", form:"90. Guide Book",   item:"99. Guide book หนังสือเที่ยว" },
 
-  // ---------- กลุ่มที่ 4 (note operation — ไม่มี Loyverse, กรอกมือ) ----------
-  { col:"R", group:"กลุ่มที่ 4 (กรอกมือ)", form:"Ice ball (ถุง)", item:"__manual_iceball__", manual:true },
-  { col:"R", group:"กลุ่มที่ 4 (กรอกมือ)", form:"ถ้วย (แถว) C|H", item:"__manual_cup__", manual:true },
-  { col:"R", group:"กลุ่มที่ 4 (กรอกมือ)", form:"นม (Gallon)", item:"__manual_milk__", manual:true },
-  { col:"R", group:"กลุ่มที่ 4 (กรอกมือ)", form:"นม Oat", item:"__manual_oat__", manual:true },
-  { col:"R", group:"กลุ่มที่ 4 (กรอกมือ)", form:"นม Almond", item:"__manual_almondmilk__", manual:true },
 ];
 
 // ---------- utils ----------
@@ -311,11 +308,34 @@ function makeJpg(){
     });
   });
 
-  // export
-  const dataUrl = cv.toDataURL("image/jpeg", 0.92);
-  const a = document.createElement("a");
-  a.href = dataUrl; a.download = "32barx-สรุปยอดขาย-"+DATA.date+".jpg"; a.click();
-  msg("สร้าง JPEG แล้ว ✓ (ดาวน์โหลดอัตโนมัติ)", "ok");
+  // export -> แสดงรูป + เตรียม share (save ลง camera roll ได้)
+  cv.toBlob((blob) => {
+    window._lvBlob = blob;
+    const url = URL.createObjectURL(blob);
+    const img = $("imgOut");
+    img.src = url; img.style.display = "block";
+    $("btnSave").style.display = "block";
+    $("saveHint").style.display = "block";
+    msg("สร้างรูปแล้ว ✓ กด 'บันทึกลงรูปภาพ' (หรือกดค้างที่รูป)", "ok");
+    img.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, "image/jpeg", 0.92);
+}
+
+// บันทึกลงรูปภาพ — เปิด share sheet (iOS: เลือก Save Image -> camera roll)
+async function saveImg(){
+  const blob = window._lvBlob;
+  if(!blob){ return; }
+  const file = new File([blob], "32barx-"+DATA.date+".jpg", { type:"image/jpeg" });
+  if(navigator.canShare && navigator.canShare({ files:[file] })){
+    try{ await navigator.share({ files:[file], title:"สรุปยอดขาย 32BarX" }); }
+    catch(e){ /* ผู้ใช้ยกเลิก share — ไม่ต้องทำอะไร */ }
+  } else {
+    // fallback (เดสก์ท็อป/เบราว์เซอร์ที่ไม่รองรับ share ไฟล์)
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "32barx-"+DATA.date+".jpg"; a.click();
+    msg("ดาวน์โหลดรูปแล้ว", "ok");
+  }
 }
 
 // init
