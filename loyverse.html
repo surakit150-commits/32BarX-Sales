@@ -37,7 +37,7 @@
 </head>
 <body>
 
-<h1>🍫 32BarX — สรุปยอดขายจาก Loyverse <span style="font-size:12px;background:#16a34a;color:#fff;padding:2px 8px;border-radius:6px;vertical-align:middle">V1.0</span></h1>
+<h1>🍫 32BarX — สรุปยอดขายจาก Loyverse <span style="font-size:12px;background:#16a34a;color:#fff;padding:2px 8px;border-radius:6px;vertical-align:middle">V1.1</span></h1>
 <div class="sub">ดึงยอดขาย+Test รายวัน → ตาราง JPEG สำหรับเติมสต๊อก</div>
 
 <div class="bar">
@@ -295,12 +295,15 @@ function makeJpg(){
         x.fillStyle="#777"; x.font="600 "+Math.min(16,rowH*0.42)+"px Sarabun, sans-serif";
         x.fillText(it.text.toUpperCase(), colX[c]+6, y);
       } else {
-        x.fillStyle="#222"; x.font=Math.min(26,rowH*0.6)+"px Sarabun, sans-serif";
-        let nm = it.name; while(x.measureText(nm).width > colW-70 && nm.length>4){ nm=nm.slice(0,-2); }
-        x.fillText(nm, colX[c], y);
+        // ชื่อ — ย่อฟอนต์ให้พอดีคอลัมน์ ไม่ตัดตัวอักษร (ชื่อครบเสมอ)
+        const maxNameW = colW - 46;
+        let nmSize = Math.min(21, rowH*0.52);
+        x.font = nmSize+"px Sarabun, sans-serif";
+        while(x.measureText(it.name).width > maxNameW && nmSize > 10){ nmSize--; x.font = nmSize+"px Sarabun, sans-serif"; }
+        x.fillStyle="#222"; x.fillText(it.name, colX[c], y);
         x.textAlign="right";
-        if(it.val>0){ x.fillStyle="#111"; x.font="700 "+Math.min(34,rowH*0.78)+"px Sarabun, sans-serif"; x.fillText(it.val, colX[c]+colW, y); }
-        else { x.fillStyle="#ccc"; x.font="24px Sarabun, sans-serif"; x.fillText("−", colX[c]+colW, y); }
+        if(it.val>0){ x.fillStyle="#111"; x.font="700 "+Math.min(28,rowH*0.66)+"px Sarabun, sans-serif"; x.fillText(it.val, colX[c]+colW, y); }
+        else { x.fillStyle="#ccc"; x.font="20px Sarabun, sans-serif"; x.fillText("−", colX[c]+colW, y); }
         x.textAlign="left";
         x.strokeStyle="#f0f0f0"; x.beginPath(); x.moveTo(colX[c],y+6); x.lineTo(colX[c]+colW,y+6); x.stroke();
       }
