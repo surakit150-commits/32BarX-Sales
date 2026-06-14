@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>32BarX — สรุปยอดขาย Loyverse</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Sarabun", system-ui, -apple-system, sans-serif; background: #f3f3f1; color: #1a1a1a; padding: 14px; max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 19px; margin-bottom: 2px; }
+  .sub { font-size: 12px; color: #888; margin-bottom: 14px; }
+  .bar { background: #1a1a1a; color: #fff; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+  .bar b { font-size: 13px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  input[type=date], input[type=text] { padding: 9px 11px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; font-family: inherit; }
+  input.cfg { flex: 1; min-width: 160px; background: #2a2a2a; color: #fff; border-color: #444; }
+  button { background: #fff; color: #1a1a1a; border: none; border-radius: 8px; padding: 10px 16px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  button.go { background: #16a34a; color: #fff; }
+  button.jpg { background: #2563eb; color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  .msg { font-size: 13px; padding: 9px 12px; border-radius: 8px; margin: 10px 0; display: none; }
+  .msg.show { display: block; }
+  .msg.err { background: #fee2e2; color: #991b1b; }
+  .msg.ok { background: #dcfce7; color: #166534; }
+  .msg.load { background: #fef9c3; color: #854d0e; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; margin-top: 10px; }
+  th { background: #1a1a1a; color: #fff; font-size: 12px; padding: 7px 8px; text-align: left; }
+  th.n { text-align: center; width: 64px; }
+  td { border-bottom: 1px solid #eee; padding: 5px 8px; font-size: 13px; }
+  td.n { text-align: center; }
+  td.n input { width: 52px; text-align: center; padding: 4px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; font-weight: 700; }
+  tr.grp td { background: #ececec; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: #555; }
+  tr.extra td:first-child { color: #b45309; }
+  .foot { margin: 14px 0 30px; }
+  canvas { display: none; }
+</style>
+</head>
+<body>
+
+<h1>🍫 32BarX — สรุปยอดขายจาก Loyverse</h1>
+<div class="sub">ดึงยอดขาย+Test รายวัน → ตาราง JPEG สำหรับเติมสต๊อก</div>
+
+<div class="bar">
+  <b>⚙️ ตั้งค่าการเชื่อมต่อ</b> (บันทึกในเครื่องนี้ครั้งเดียว)
+  <div class="row">
+    <input type="text" id="cfgUrl" class="cfg" placeholder="Apps Script Web app URL (/exec)">
+    <input type="text" id="cfgKey" class="cfg" placeholder="Access key" style="max-width:160px">
+    <button onclick="saveCfg()">บันทึก</button>
+  </div>
+</div>
+
+<div class="row">
+  <input type="date" id="date">
+  <button class="go" id="btnGo" onclick="loadDay()">ดึงข้อมูล</button>
+  <button class="jpg" id="btnJpg" onclick="makeJpg()" disabled>สร้าง JPEG</button>
+</div>
+
+<div id="msg" class="msg"></div>
+<div id="result"></div>
+<canvas id="cv" width="1080" height="1920"></canvas>
+
+<script>
+// ============================================================
+//  CATALOG — map ชื่อสินค้า Loyverse -> ช่องในตาราง (จัดกลุ่มตามฟอร์มเดิม)
+//  match ด้วย item_name (รวม Drink/Bar/Test/4Free1 อัตโนมัติ)
+//  split: ระบุ saleV/testV เพื่อแยกบรรทัดตาม variant (Cookies/Almond/Bark)
+//  เพิ่ม/ลบสินค้า = แก้ที่ลิสต์นี้ที่เดียว
+// ============================================================
+const COL = { L:"ซ้าย", M:"กลาง", R:"ขวา" };
+const CATALOG = [
+  // ---------- คอลัมน์ซ้าย ----------
+  { col:"L", group:"กลุ่มที่ 1", form:"1. HB",  item:".1.House Blend" },
+  { col:"L", group:"กลุ่มที่ 1", form:"2. PHATTA", item:".2.Phatthalung" },
+  { col:"L", group:"กลุ่มที่ 1", form:"3. LP",  item:".3. Lamphun" },
+  { col:"L", group:"กลุ่มที่ 1", form:"4. PK",  item:".4. Phuket" },
+  { col:"L", group:"กลุ่มที่ 1", form:"5. SURAT", item:".5. Surat 70%" },
+  { col:"L", group:"กลุ่มที่ 1", form:"6. PD",  item:".6.Pridi" },
+  { col:"L", group:"กลุ่มที่ 1", form:"7. CR90%", item:".7.CR 90%" },
+  { col:"L", group:"กลุ่มที่ 1", form:"8. DC",  item:".8.Doi Chang" },
+  { col:"L", group:"กลุ่มที่ 1", form:"9. MILK", item:".9.Milk Choc" },
+  { col:"L", group:"กลุ่มที่ 1", form:"10. Surat 100", item:"10.Surat 100%" },
+  { col:"L", group:"กลุ่มที่ 1", form:"11. Tak", item:"11. Tak" },
+  { col:"L", group:"กลุ่มที่ 1", form:"12. Rayong", item:"12.RAYONG" },
+  { col:"L", group:"กลุ่มที่ 1", form:"13. Mango Sticky", item:"13. Mango Sticky Rice bar" },
+  { col:"L", group:"กลุ่มที่ 1", form:"14. Straw Yogurt", item:"14.Strawberry Yogurt" },
+  { col:"L", group:"กลุ่มที่ 1", form:"15. Caramel White Choc", item:"__ยังไม่มี_caramelwhite__" },
+  { col:"L", group:"กลุ่มที่ 1", form:"16. บานอฟฟี่", item:"__ยังไม่มี_banoffee__" },
+  { col:"L", group:"กลุ่มที่ 1", form:"17. Craft Cola", item:"15. Craft CoLa" },
+  { col:"L", group:"อื่นๆ (กล่อง/เซ็ต)", form:"30. กล่องช้าง Set B", item:"30.SET B ช้าง" },
+  { col:"L", group:"อื่นๆ (กล่อง/เซ็ต)", form:"31. Set 6 Tin", item:"31.Tin of 6 กล่องเหล็ก" },
+  { col:"L", group:"อื่นๆ (กล่อง/เซ็ต)", form:"32. Set D กล่องใหญ่", item:"32.Set D กล่องใหญ่" },
+  { col:"L", group:"อื่นๆ (กล่อง/เซ็ต)", form:"33. Set 4444", item:"33. 153 HB Collection" },
+
+  // ---------- คอลัมน์กลาง ----------
+  { col:"M", group:"Bon Bon", form:"ดาว", item:"Star Caramal" },
+  { col:"M", group:"Bon Bon", form:"เมี่ยงคำ", item:"Herb" },
+  { col:"M", group:"Bon Bon", form:"Passion Fruit", item:"Passion Fruit" },
+  { col:"M", group:"Bon Bon", form:"หมูแดง", item:"BBQ Pork Buns" },
+  { col:"M", group:"Bon Bon", form:"Strawberry Almond", item:"Strawberry Almond" },
+  { col:"M", group:"Bon Bon", form:"Strawberry Rose", item:"Strawberry Rose'" },
+  { col:"M", group:"Bon Bon", form:"Dark Almonds Crush", item:"Almond Crush" },
+  { col:"M", group:"Bon Bon", form:"ไข่เค็มลาวา", item:"Salted Egg Lava" },
+  { col:"M", group:"Bon Bon", form:"อัญชันมะนาว", item:"Butterfly Pea Lime" },
+  { col:"M", group:"Bon Bon", form:"แกงเขียวหวาน", item:"Green Curry" },
+  { col:"M", group:"Bon Bon", form:"เหนียวม่วง", item:"Mango Sticky Rice" },
+  { col:"M", group:"Bon Bon", form:"มัสมั่น", item:"Mussaman Curry" },
+  { col:"M", group:"Bon Bon", form:"ต้มข่า", item:"Tom Kha Kai" },
+  { col:"M", group:"Bon Bon", form:"Milk Caramel", item:"Milk caramel" },
+  { col:"M", group:"Bon Bon", form:"Lychee Rose", item:"Lychee Rose" },
+  { col:"M", group:"Bon Bon", form:"น้ำปลาหวาน", item:"Nhampla Whan" },
+  { col:"M", group:"Bon Bon", form:"Nama Almond", item:"Nama - Almond" },
+  { col:"M", group:"Bon Bon", form:"Nama Orange", item:"Nama- Orange" },
+  { col:"M", group:"Almond เคลือบช็อก", form:"Dark 60g",   item:"52.Almond เคลือบช็อก", saleV:["Dark 60g เหลี่ยม"], testV:["Test D60g"] },
+  { col:"M", group:"Almond เคลือบช็อก", form:"Dark 100g",  item:"52.Almond เคลือบช็อก", saleV:["Dark 100g กระปุก"], testV:["Test D100g"] },
+  { col:"M", group:"Almond เคลือบช็อก", form:"Dark 250g",  item:"52.Almond เคลือบช็อก", saleV:["Dark 250g หลอดไฟ"], testV:["Test D250g"] },
+  { col:"M", group:"Almond เคลือบช็อก", form:"Caramel 60g",  item:"52.Almond เคลือบช็อก", saleV:["Caramel 60g เหลี่ยม"], testV:["Test C60g"] },
+  { col:"M", group:"Almond เคลือบช็อก", form:"Caramel 100g", item:"52.Almond เคลือบช็อก", saleV:["Caramel 100g กระปุก"], testV:["Test C100g"] },
+  { col:"M", group:"Almond เคลือบช็อก", form:"Caramel 250g", item:"52.Almond เคลือบช็อก", saleV:["Caramel 250g หลอดไฟ"], testV:["TestC250g"] },
+  { col:"M", group:"Almond เคลือบช็อก", form:"White 100g",  item:"52.Almond เคลือบช็อก", saleV:["White 100 g"], testV:["Test White 100g"] },
+  { col:"M", group:"Almond เคลือบช็อก", form:"White 250g",  item:"52.Almond เคลือบช็อก", saleV:["White 250g หลอดไฟ"], testV:["Test White 250g"] },
+
+  // ---------- คอลัมน์ขวา ----------
+  { col:"R", group:"อื่นๆ 2", form:"40. Cookies HB",   item:"41. Cookies", saleV:["HB"], testV:["Test HB"] },
+  { col:"R", group:"อื่นๆ 2", form:"Cookies HB Set 4", item:"41. Cookies", saleV:["Set 4 HB"], testV:[] },
+  { col:"R", group:"อื่นๆ 2", form:"Cookies Jumbo",    item:"41. Cookies", saleV:["Jumbo กี้"], testV:["Test Jumbo กี้"] },
+  { col:"R", group:"อื่นๆ 2", form:"Cookies Jumbo Set 3", item:"41. Cookies", saleV:["Set 3 Jumbo"], testV:[] },
+  { col:"R", group:"อื่นๆ 2", form:"Cookies วานิช",    item:"41. Cookies", saleV:["Vanich House"], testV:["Test Vanich House"] },
+  { col:"R", group:"อื่นๆ 2", form:"41. Banana Choc",  item:"41. Banana Choc" },
+  { col:"R", group:"อื่นๆ 2", form:"42. ส้มเคลือบ",     item:"42. Orange ส้มเคลือบ" },
+  { col:"R", group:"อื่นๆ 2", form:"43. NAMA",         item:"43.NAMA Chocolate" },
+  { col:"R", group:"อื่นๆ 2", form:"44. Brownie",      item:"44. BROWNIE" },
+  { col:"R", group:"อื่นๆ 2", form:"45. Snackbars",    item:"45. Snack Bar" },
+  { col:"R", group:"อื่นๆ 2", form:"50. หัวใจ",         item:"50. Mini heart chocolate" },
+  { col:"R", group:"อื่นๆ 2", form:"51. Barks Dark 120g",   item:"51.Barks", saleV:["Dark Choc 120 g"], testV:[] },
+  { col:"R", group:"อื่นๆ 2", form:"51. Barks Dark 170g",   item:"51.Barks", saleV:["Dark Choc 170 g"], testV:["Test"] },
+  { col:"R", group:"อื่นๆ 2", form:"51. Barks Caramel 120g", item:"51.Barks", saleV:["Caramel 120 g"], testV:[] },
+  { col:"R", group:"อื่นๆ 2", form:"51. Barks Caramel 170g", item:"51.Barks", saleV:["Caramel 170 g"], testV:[] },
+  { col:"R", group:"อื่นๆ 2", form:"60. Veluto 32",    item:"31. VELUTO 32" },
+  { col:"R", group:"อื่นๆ 2", form:"61. Cocoa Powder", item:"61. Cocoa Powder ผงโกโก้ 250g." },
+  { col:"R", group:"อื่นๆ 2", form:"62. Cacao Nibs",   item:"62. Cacao Nibs (นิปส์)" },
+  { col:"R", group:"อื่นๆ 2", form:"66. Craft Soda",   item:"66. Craft Soda" },
+  { col:"R", group:"อื่นๆ 2", form:"67. โก เล้ง เต้",   item:"67.Sugar cane โกเล้งเต๋" },
+  { col:"R", group:"อื่นๆ 2", form:"70. ไอติม PROUD",  item:"70. PROUD (Ice cream)" },
+  { col:"R", group:"อื่นๆ 2", form:"71. ไอติม Nibs",   item:"71. Nibs (Ice cream)" },
+  { col:"R", group:"อื่นๆ 2", form:"75. Key Chain",    item:"75.Key Chain 32Bar" },
+  { col:"R", group:"อื่นๆ 2", form:"76. Postcard",     item:"76.Post Card" },
+  { col:"R", group:"อื่นๆ 2", form:"90. Guide Book",   item:"99. Guide book หนังสือเที่ยว" },
+
+  // ---------- กลุ่มที่ 4 (note operation — ไม่มี Loyverse, กรอกมือ) ----------
+  { col:"R", group:"กลุ่มที่ 4 (กรอกมือ)", form:"Ice ball (ถุง)", item:"__manual_iceball__", manual:true },
+  { col:"R", group:"กลุ่มที่ 4 (กรอกมือ)", form:"ถ้วย (แถว) C|H", item:"__manual_cup__", manual:true },
+  { col:"R", group:"กลุ่มที่ 4 (กรอกมือ)", form:"นม (Gallon)", item:"__manual_milk__", manual:true },
+  { col:"R", group:"กลุ่มที่ 4 (กรอกมือ)", form:"นม Oat", item:"__manual_oat__", manual:true },
+  { col:"R", group:"กลุ่มที่ 4 (กรอกมือ)", form:"นม Almond", item:"__manual_almondmilk__", manual:true },
+];
+
+// ---------- utils ----------
+function norm(s){ return (s||"").replace(/[\u2018\u2019\u2032`]/g,"'").replace(/\s+/g," ").trim().toLowerCase(); }
+function $(id){ return document.getElementById(id); }
+function msg(t, cls){ const m=$("msg"); m.textContent=t; m.className="msg show "+cls; }
+function hideMsg(){ $("msg").className="msg"; }
+
+// ---------- config ----------
+function saveCfg(){
+  localStorage.setItem("lv_url", $("cfgUrl").value.trim());
+  localStorage.setItem("lv_key", $("cfgKey").value.trim());
+  msg("บันทึกการตั้งค่าแล้ว", "ok");
+}
+function loadCfg(){
+  $("cfgUrl").value = localStorage.getItem("lv_url") || "";
+  $("cfgKey").value = localStorage.getItem("lv_key") || "";
+}
+
+let DATA = null; // ผลรวมล่าสุด { rows:[{...catalog, total}], extra:[{name,total}], date }
+
+// ---------- ดึง + รวมตาม CATALOG ----------
+async function loadDay(){
+  const url = localStorage.getItem("lv_url"), key = localStorage.getItem("lv_key");
+  if(!url || !key){ msg("กรุณาตั้งค่า URL + key ก่อน", "err"); return; }
+  const date = $("date").value;
+  if(!date){ msg("เลือกวันที่ก่อน", "err"); return; }
+
+  $("btnGo").disabled = true; $("btnJpg").disabled = true;
+  msg("กำลังดึงข้อมูลจาก Loyverse...", "load");
+  try{
+    const res = await fetch(url + "?key=" + encodeURIComponent(key) + "&date=" + encodeURIComponent(date));
+    const json = await res.json();
+    if(json.error) throw new Error(json.error);
+
+    // เตรียมช่องตาม CATALOG
+    const rows = CATALOG.map(c => ({ ...c, sale:0, test:0, total:0, hit:false }));
+    const used = new Set();      // sku ที่ลงช่องแล้ว
+    const apiItems = json.items || [];
+
+    // 1) ลง split ก่อน (item + variant ตรง list)
+    apiItems.forEach((ai, idx) => {
+      const an = norm(ai.item_name), av = norm(ai.variant);
+      for(const r of rows){
+        if(r.manual) continue;
+        if(norm(r.item)!==an) continue;
+        if(!r.saleV && !r.testV) continue; // เฉพาะ split
+        const inSale = (r.saleV||[]).some(v=>norm(v)===av);
+        const inTest = (r.testV||[]).some(v=>norm(v)===av);
+        if(inSale){ r.sale+=ai.sale; r.test+=ai.test; r.hit=true; used.add(idx); break; }
+        if(inTest){ r.test+=ai.test; r.sale+=ai.sale; r.hit=true; used.add(idx); break; }
+      }
+    });
+    // 2) ลง catch-all (item ตรง, ไม่ใช่ split)
+    apiItems.forEach((ai, idx) => {
+      if(used.has(idx)) return;
+      const an = norm(ai.item_name);
+      for(const r of rows){
+        if(r.manual || r.saleV || r.testV) continue;
+        if(norm(r.item)===an){ r.sale+=ai.sale; r.test+=ai.test; r.hit=true; used.add(idx); break; }
+      }
+    });
+    // 3) ที่เหลือ -> อื่นๆ เพิ่มเติม
+    const extraMap = {};
+    apiItems.forEach((ai, idx) => {
+      if(used.has(idx)) return;
+      const k = ai.item_name;
+      if(!extraMap[k]) extraMap[k] = { name:k, sale:0, test:0 };
+      extraMap[k].sale += ai.sale; extraMap[k].test += ai.test;
+    });
+
+    rows.forEach(r => r.total = r.sale + r.test);
+    const extra = Object.values(extraMap).map(e => ({ name:e.name, total:e.sale+e.test })).filter(e=>e.total!==0);
+    DATA = { rows, extra, date, meta: json.meta };
+    renderTable();
+    msg("ดึงสำเร็จ ✓ ใบขาย " + json.meta.receipts + " | refund " + json.meta.refunds + " — ตรวจแล้วกดสร้าง JPEG", "ok");
+    $("btnJpg").disabled = false;
+  }catch(err){
+    msg("ดึงไม่สำเร็จ: " + err.message, "err");
+  }finally{
+    $("btnGo").disabled = false;
+  }
+}
+
+// ---------- แสดงตาราง (แก้ค่าได้) ----------
+function renderTable(){
+  if(!DATA){ return; }
+  let html = "<table><thead><tr><th>รายการ</th><th class='n'>เติม (ขาย+Test)</th></tr></thead><tbody>";
+  let lastGroup = "";
+  DATA.rows.forEach((r,i) => {
+    if(r.group!==lastGroup){ html += "<tr class='grp'><td colspan='2'>"+r.group+"</td></tr>"; lastGroup=r.group; }
+    html += "<tr><td>"+r.form+"</td><td class='n'><input type='number' value='"+r.total+"' onchange='editVal("+i+",this.value)'></td></tr>";
+  });
+  if(DATA.extra.length){
+    html += "<tr class='grp'><td colspan='2'>อื่นๆ เพิ่มเติม (ไม่อยู่ในฟอร์ม)</td></tr>";
+    DATA.extra.forEach((e,i) => {
+      html += "<tr class='extra'><td>"+e.name+"</td><td class='n'><input type='number' value='"+e.total+"' onchange='editExtra("+i+",this.value)'></td></tr>";
+    });
+  }
+  html += "</tbody></table>";
+  $("result").innerHTML = html;
+}
+function editVal(i,v){ DATA.rows[i].total = Number(v)||0; }
+function editExtra(i,v){ DATA.extra[i].total = Number(v)||0; }
+
+// ---------- วาด JPEG 1080x1920 ----------
+function makeJpg(){
+  if(!DATA){ return; }
+  const cv = $("cv"), x = cv.getContext("2d");
+  x.fillStyle = "#fff"; x.fillRect(0,0,1080,1920);
+
+  // header
+  x.fillStyle = "#999"; x.font = "22px Sarabun, sans-serif";
+  x.fillText("สรุปยอดขาย", 40, 40);
+  x.fillStyle = "#111"; x.font = "700 60px Sarabun, sans-serif";
+  const d = DATA.date.split("-"); // YYYY-MM-DD -> D/M/YY(พ.ศ.)
+  const thYear = (Number(d[0]) + 543) % 100;
+  x.fillText(parseInt(d[2])+"/"+parseInt(d[1])+"/"+thYear, 40, 100);
+  x.fillStyle = "#bbb"; x.font = "22px Sarabun, sans-serif"; x.textAlign = "right";
+  x.fillText("Test + ขาย", 1040, 40); x.textAlign = "left";
+
+  // จัดข้อมูลเป็น 3 คอลัมน์
+  const cols = { L:[], M:[], R:[] };
+  let lastG = {};
+  DATA.rows.forEach(r => {
+    if(lastG[r.col]!==r.group){ cols[r.col].push({type:"grp", text:r.group}); lastG[r.col]=r.group; }
+    cols[r.col].push({type:"row", name:r.form, val:r.total});
+  });
+  DATA.extra.forEach((e,i) => {
+    if(i===0) cols.R.push({type:"grp", text:"อื่นๆ เพิ่มเติม"});
+    cols.R.push({type:"row", name:e.name, val:e.total});
+  });
+
+  // วาดแต่ละคอลัมน์
+  const colX = { L:40, M:392, R:744 }, colW = 308;
+  const top = 150, bottom = 1850;
+  Object.keys(cols).forEach(c => {
+    const items = cols[c];
+    const rowH = Math.min(46, Math.max(26, (bottom-top)/Math.max(items.length,1)));
+    let y = top;
+    items.forEach(it => {
+      if(it.type==="grp"){
+        x.fillStyle="#eee"; x.fillRect(colX[c], y-rowH+8, colW, rowH-4);
+        x.fillStyle="#777"; x.font="600 "+Math.min(16,rowH*0.42)+"px Sarabun, sans-serif";
+        x.fillText(it.text.toUpperCase(), colX[c]+6, y);
+      } else {
+        x.fillStyle="#222"; x.font=Math.min(26,rowH*0.6)+"px Sarabun, sans-serif";
+        let nm = it.name; while(x.measureText(nm).width > colW-70 && nm.length>4){ nm=nm.slice(0,-2); }
+        x.fillText(nm, colX[c], y);
+        x.textAlign="right";
+        if(it.val>0){ x.fillStyle="#111"; x.font="700 "+Math.min(34,rowH*0.78)+"px Sarabun, sans-serif"; x.fillText(it.val, colX[c]+colW, y); }
+        else { x.fillStyle="#ccc"; x.font="24px Sarabun, sans-serif"; x.fillText("−", colX[c]+colW, y); }
+        x.textAlign="left";
+        x.strokeStyle="#f0f0f0"; x.beginPath(); x.moveTo(colX[c],y+6); x.lineTo(colX[c]+colW,y+6); x.stroke();
+      }
+      y += rowH;
+    });
+  });
+
+  // export
+  const dataUrl = cv.toDataURL("image/jpeg", 0.92);
+  const a = document.createElement("a");
+  a.href = dataUrl; a.download = "32barx-สรุปยอดขาย-"+DATA.date+".jpg"; a.click();
+  msg("สร้าง JPEG แล้ว ✓ (ดาวน์โหลดอัตโนมัติ)", "ok");
+}
+
+// init
+loadCfg();
+$("date").value = new Date().toISOString().slice(0,10);
+</script>
+</body>
+</html>
