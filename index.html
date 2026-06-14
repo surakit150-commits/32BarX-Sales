@@ -387,7 +387,7 @@ function renderUpload() {
 function renderLoading() {
   return `<div class="card"><div class="loading">
     <span class="spinner">⏳</span>
-    <div style="font-weight:600;margin-bottom:6px">AI กำลังอ่านข้อมูล แบ่งอ่าน 5 ส่วนพร้อมกัน (Opus)...</div>
+    <div style="font-weight:600;margin-bottom:6px">AI กำลังอ่านข้อมูล แบ่งอ่าน 6 ส่วนพร้อมกัน (Opus)...</div>
     <div style="font-size:13px;color:#999">อ่านครบทั้ง 5 ค่า อาจใช้เวลาสักครู่</div>
   </div></div>`;
 }
@@ -599,14 +599,19 @@ BonBon (บนลงล่าง): Bon Bon ดาว, Bon Bon เมี่ยง
 Almond เคลือบช็อก: Dark 60g, Dark 100g, Dark 250g, Caramel 60g, Caramel 100g, Caramel 250g`,
     finance: false, date: false },
 
-  // 4) ขวา-บน: อื่นๆ2 ครึ่งบน
-  { x0: 0.65, x1: 1.0, y0: 0.0, y1: 0.62,
-    sections: `อื่นๆ: 33. Set 4444, 40. Cookies HB, Cookies HB Set 4, Cookies Jumbo, Cookies Jumbo Set 3, Cookies วานิช, 41. Banana Choc, 42. ส้มเคลือบ, 43. NAMA, 44. Brownie, 45. Snackbars, 50. หัวใจ`,
+  // 4) ขวา-บน: 33 + Cookies + Banana + ส้มเคลือบ
+  { x0: 0.64, x1: 1.0, y0: 0.0, y1: 0.44,
+    sections: `อื่นๆ: 33. Set 4444, 40. Cookies HB, Cookies HB Set 4, Cookies Jumbo, Cookies Jumbo Set 3, Cookies วานิช, 41. Banana Choc, 42. ส้มเคลือบ, 43. NAMA`,
     finance: false, date: false },
 
-  // 5) ขวา-ล่าง: อื่นๆ2 ครึ่งล่าง (overlap กับโซน 4)
-  { x0: 0.65, x1: 1.0, y0: 0.46, y1: 1.0,
-    sections: `อื่นๆ: 44. Brownie, 45. Snackbars, 50. หัวใจ, 51. Barks, 60. Veluto 32, 61. Cocoa Powder, 62. Cacao Nibs, 66. Craft Soda, 67. โก เล้ง เต้, 70. ไอติม PROUD, 71. ไอติม Nibs, 75. Key Chain, 76. Postcard, 90. Guide Book`,
+  // 5) ขวา-กลาง: NAMA → Cacao (overlap กับ 4 และ 6)
+  { x0: 0.64, x1: 1.0, y0: 0.34, y1: 0.72,
+    sections: `อื่นๆ: 42. ส้มเคลือบ, 43. NAMA, 44. Brownie, 45. Snackbars, 50. หัวใจ, 51. Barks, 60. Veluto 32, 61. Cocoa Powder, 62. Cacao Nibs`,
+    finance: false, date: false },
+
+  // 6) ขวา-ล่าง: Craft Soda → Guide Book (overlap กับ 5)
+  { x0: 0.64, x1: 1.0, y0: 0.62, y1: 1.0,
+    sections: `อื่นๆ: 61. Cocoa Powder, 62. Cacao Nibs, 66. Craft Soda, 67. โก เล้ง เต้, 70. ไอติม PROUD, 71. ไอติม Nibs, 75. Key Chain, 76. Postcard, 90. Guide Book`,
     finance: false, date: false },
 ];
 
