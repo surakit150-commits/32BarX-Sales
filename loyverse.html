@@ -53,6 +53,7 @@
   <input type="date" id="date">
   <button class="go" id="btnGo" onclick="loadDay()">ดึงข้อมูล</button>
   <button class="jpg" id="btnJpg" onclick="makeJpg()" disabled>สร้าง JPEG</button>
+  <button class="go" id="btnStock" onclick="sendStock()" disabled style="background:#dc2626">ส่งตัด stock</button>
 </div>
 
 <div id="msg" class="msg"></div>
@@ -74,92 +75,92 @@ const COL = { L:"ซ้าย", M:"กลาง", R:"ขวา" };
 //  map ด้วย "SKU" (ทนต่อการเปลี่ยนชื่อใน Loyverse + เพิ่มสินค้าต่อท้ายได้)
 //  sku: รวมทุก SKU ของสินค้านั้น (ขาย+test+4Free1+EXP+พนักงาน) — ตัด stock = ผลรวม
 //  ตาราง JPEG ยังแยก ขาย/test อัตโนมัติ (backend แยก sale/test ตาม variant ให้แล้ว)
-//  sheetCol: ชื่อหัวคอลัมน์ในชีต Stock Dairy (สำหรับเขียนตัด stock — เฟส 2)
-//  เพิ่มสินค้าใหม่ = เพิ่ม 1 บรรทัด (sku + sheetCol) ไม่ต้องเรียงลำดับ
+//  colId: รหัสคอลัมน์ถาวร — ผูกกับชีตผ่านแถว __COLMAP__ (ไม่ยึดตำแหน่ง/ชื่อหัวตาราง)
+//  เพิ่มสินค้าใหม่ = เพิ่ม 1 บรรทัด (sku + colId) + เพิ่มรหัสในแถว __COLMAP__ ของชีต
 // ============================================================
 const CATALOG = [
   // ---------- คอลัมน์ซ้าย ----------
-  { col:"L", group:"กลุ่มที่ 1", form:"1. HB",   sku:["10016","10275","10097","10186"], sheetCol:"1. HB" },
-  { col:"L", group:"กลุ่มที่ 1", form:"2. PHATTA", sku:["10106","10108","10187"], sheetCol:"2. PHATTA" },
-  { col:"L", group:"กลุ่มที่ 1", form:"3. LP",   sku:["10094","10092","10103"], sheetCol:"3. LP" },
-  { col:"L", group:"กลุ่มที่ 1", form:"4. PK",   sku:["10004","10000","10191"], sheetCol:"4. PK" },
-  { col:"L", group:"กลุ่มที่ 1", form:"5. SURAT", sku:["10079","10077","10192"], sheetCol:"5. SURAT" },
-  { col:"L", group:"กลุ่มที่ 1", form:"6. PD",   sku:["10076","10075","10193"], sheetCol:"6. PD" },
-  { col:"L", group:"กลุ่มที่ 1", form:"7. CR90%", sku:["10158","10173","10194"], sheetCol:"7. CR90%" },
-  { col:"L", group:"กลุ่มที่ 1", form:"8. DC",   sku:["100502","100422","10195"], sheetCol:"8. DC" },
-  { col:"L", group:"กลุ่มที่ 1", form:"9. MILK", sku:["10034","10032","10196"], sheetCol:"9. MILK" },
-  { col:"L", group:"กลุ่มที่ 1", form:"10. Surat 100", sku:["10100","10099","10197"], sheetCol:"10. Surat 100" },
-  { col:"L", group:"กลุ่มที่ 1", form:"11. Tak", sku:["10062","10060","10198"], sheetCol:"11. Tak" },
-  { col:"L", group:"กลุ่มที่ 1", form:"12. Rayong", sku:["10107","10105","10199"], sheetCol:"12. Rayong" },
-  { col:"L", group:"กลุ่มที่ 1", form:"13. Mango Sticky", sku:["10200","10201"], sheetCol:"13. Mango Sticky" },
-  { col:"L", group:"กลุ่มที่ 1", form:"14. Straw Yogurt", sku:["10017","10018","10139"], sheetCol:"14. Straw Yogurt" },
-  { col:"L", group:"กลุ่มที่ 1", form:"15. Caramel White Choc", sku:[], sheetCol:"15. Caramel White Choc" },
-  { col:"L", group:"กลุ่มที่ 1", form:"16. บานอฟฟี่", sku:[], sheetCol:"16. บานอฟฟี่" },
-  { col:"L", group:"กลุ่มที่ 1", form:"17. Craft Cola", sku:["10295","10294","10296"], sheetCol:"17. Craft Cola" },
-  { col:"L", group:"อื่นๆ (กล่อง/เซ็ต)", form:"30. กล่องช้าง Set B", sku:["10113","10190"], sheetCol:"30. กล่องช้าง Set B" },
-  { col:"L", group:"อื่นๆ (กล่อง/เซ็ต)", form:"31. Set 6 Tin", sku:["10211","10253"], sheetCol:"31. Set 6 Tin" },
-  { col:"L", group:"อื่นๆ (กล่อง/เซ็ต)", form:"32. Set D กล่องใหญ่", sku:["10162","10204"], sheetCol:"32. Set D กล่องใหญ่" },
-  { col:"L", group:"อื่นๆ (กล่อง/เซ็ต)", form:"33. Set 4444", sku:["10185"], sheetCol:"33. Set 4444" },
+  { col:"L", group:"กลุ่มที่ 1", form:"1. HB",   sku:["10016","10275","10097","10186"], colId:"COL_HB" },
+  { col:"L", group:"กลุ่มที่ 1", form:"2. PHATTA", sku:["10106","10108","10187"], colId:"COL_PHATTA" },
+  { col:"L", group:"กลุ่มที่ 1", form:"3. LP",   sku:["10094","10092","10103"], colId:"COL_LP" },
+  { col:"L", group:"กลุ่มที่ 1", form:"4. PK",   sku:["10004","10000","10191"], colId:"COL_PK" },
+  { col:"L", group:"กลุ่มที่ 1", form:"5. SURAT", sku:["10079","10077","10192"], colId:"COL_SURAT" },
+  { col:"L", group:"กลุ่มที่ 1", form:"6. PD",   sku:["10076","10075","10193"], colId:"COL_PD" },
+  { col:"L", group:"กลุ่มที่ 1", form:"7. CR90%", sku:["10158","10173","10194"], colId:"COL_CR90" },
+  { col:"L", group:"กลุ่มที่ 1", form:"8. DC",   sku:["100502","100422","10195"], colId:"COL_DC" },
+  { col:"L", group:"กลุ่มที่ 1", form:"9. MILK", sku:["10034","10032","10196"], colId:"COL_MILK" },
+  { col:"L", group:"กลุ่มที่ 1", form:"10. Surat 100", sku:["10100","10099","10197"], colId:"COL_SURAT100" },
+  { col:"L", group:"กลุ่มที่ 1", form:"11. Tak", sku:["10062","10060","10198"], colId:"COL_TAK" },
+  { col:"L", group:"กลุ่มที่ 1", form:"12. Rayong", sku:["10107","10105","10199"], colId:"COL_RAYONG" },
+  { col:"L", group:"กลุ่มที่ 1", form:"13. Mango Sticky", sku:["10200","10201"], colId:"COL_MANGO_STICKY" },
+  { col:"L", group:"กลุ่มที่ 1", form:"14. Straw Yogurt", sku:["10017","10018","10139"], colId:"COL_STRAW_YOGURT" },
+  { col:"L", group:"กลุ่มที่ 1", form:"15. Caramel White Choc", sku:[], colId:"COL_CARAMEL_WHITE" },
+  { col:"L", group:"กลุ่มที่ 1", form:"16. บานอฟฟี่", sku:[], colId:"COL_BANOFFEE" },
+  { col:"L", group:"กลุ่มที่ 1", form:"17. Craft Cola", sku:["10295","10294","10296"], colId:"COL_CRAFT_COLA" },
+  { col:"L", group:"อื่นๆ (กล่อง/เซ็ต)", form:"30. กล่องช้าง Set B", sku:["10113","10190"], colId:"COL_BOX_CHANG" },
+  { col:"L", group:"อื่นๆ (กล่อง/เซ็ต)", form:"31. Set 6 Tin", sku:["10211","10253"], colId:"COL_SET6TIN" },
+  { col:"L", group:"อื่นๆ (กล่อง/เซ็ต)", form:"32. Set D กล่องใหญ่", sku:["10162","10204"], colId:"COL_SETD" },
+  { col:"L", group:"อื่นๆ (กล่อง/เซ็ต)", form:"33. Set 4444", sku:["10185"], colId:"COL_SET4444" },
 
   // ---------- คอลัมน์กลาง: Bon Bon (Normal + Test + 4Free1) ----------
-  { col:"M", group:"Bon Bon", form:"ดาว", sku:["10180","10232","10290"], sheetCol:"Bon Bon ดาว" },
-  { col:"M", group:"Bon Bon", form:"เมี่ยงคำ", sku:["10174","10226","10282"], sheetCol:"Bon Bon เมี่ยงคำ" },
-  { col:"M", group:"Bon Bon", form:"Passion Fruit", sku:["10116","10230","10288"], sheetCol:"Bon Bon Passion Fruit" },
-  { col:"M", group:"Bon Bon", form:"หมูแดง", sku:["10184","10223","10279"], sheetCol:"Bon Bon หมูแดง" },
-  { col:"M", group:"Bon Bon", form:"Strawberry Almond", sku:["10178","10233","10291"], sheetCol:"Bon Bon Strawberry Almond" },
-  { col:"M", group:"Bon Bon", form:"Strawberry Rose", sku:["10181","10234","10292"], sheetCol:"Bon Bon Strawberry Rose" },
-  { col:"M", group:"Bon Bon", form:"Dark Almonds Crush", sku:["10256","10257","10280"], sheetCol:"Bon Bon Dark Almonds Crush" },
-  { col:"M", group:"Bon Bon", form:"Milk Almonds Crush", sku:["10306","10308","10309"], sheetCol:"Bon Bon Milk Almonds Crush" },
-  { col:"M", group:"Bon Bon", form:"White Almonds Crush", sku:["10310","10311","10312"], sheetCol:"Bon Bon White Almonds Crush" },
-  { col:"M", group:"Bon Bon", form:"Caramel Almonds Crush", sku:["10313","10314","10315"], sheetCol:"Bon Bon Caramel Almonds Crush" },
-  { col:"M", group:"Bon Bon", form:"ไข่เค็มลาวา", sku:["10176","10231","10289"], sheetCol:"Bon Bon ไข่เค็มลาวา" },
-  { col:"M", group:"Bon Bon", form:"อัญชันมะนาว", sku:["10177","10224","10278"], sheetCol:"Bon Bon อัญชันมะนาว" },
-  { col:"M", group:"Bon Bon", form:"แกงเขียวหวาน", sku:["10179","10225","10281"], sheetCol:"Bon Bon แกงเขียวหวาน" },
-  { col:"M", group:"Bon Bon", form:"เหนียวม่วง", sku:["10093","10227","10284"], sheetCol:"Bon Bon เหนียวม่วง" },
-  { col:"M", group:"Bon Bon", form:"มัสมั่น", sku:["10175","10228","10286"], sheetCol:"Bon Bon มัสมั่น" },
-  { col:"M", group:"Bon Bon", form:"ต้มข่า", sku:["10078","10235","10293"], sheetCol:"Bon Bon ต้มข่า" },
-  { col:"M", group:"Bon Bon", form:"Milk Caramel", sku:["10240","10244","10285"], sheetCol:"Bon Bon Milk Caramel" },
-  { col:"M", group:"Bon Bon", form:"Lychee Rose", sku:["10242","10243","10283"], sheetCol:"Bon Bon Lychee Rose" },
-  { col:"M", group:"Bon Bon", form:"น้ำปลาหวาน", sku:["10183","10229","10287"], sheetCol:"Bon Bon น้ำปลาหวาน" },
-  { col:"M", group:"Bon Bon", form:"Nama Almond", sku:["10300","10302","10305"], sheetCol:"Bon Bon Nama Almond" },
-  { col:"M", group:"Bon Bon", form:"Nama Orange", sku:["10301","10303","10304"], sheetCol:"Bon Bon Nama Orange" },
+  { col:"M", group:"Bon Bon", form:"ดาว", sku:["10180","10232","10290"], colId:"COL_BB_DAO" },
+  { col:"M", group:"Bon Bon", form:"เมี่ยงคำ", sku:["10174","10226","10282"], colId:"COL_BB_MIANGKHAM" },
+  { col:"M", group:"Bon Bon", form:"Passion Fruit", sku:["10116","10230","10288"], colId:"COL_BB_PASSION" },
+  { col:"M", group:"Bon Bon", form:"หมูแดง", sku:["10184","10223","10279"], colId:"COL_BB_MOODAENG" },
+  { col:"M", group:"Bon Bon", form:"Strawberry Almond", sku:["10178","10233","10291"], colId:"COL_BB_STRAW_ALMOND" },
+  { col:"M", group:"Bon Bon", form:"Strawberry Rose", sku:["10181","10234","10292"], colId:"COL_BB_STRAW_ROSE" },
+  { col:"M", group:"Bon Bon", form:"Dark Almonds Crush", sku:["10256","10257","10280"], colId:"COL_BB_CRUSH_DARK" },
+  { col:"M", group:"Bon Bon", form:"Milk Almonds Crush", sku:["10306","10308","10309"], colId:"COL_BB_CRUSH_MILK" },
+  { col:"M", group:"Bon Bon", form:"White Almonds Crush", sku:["10310","10311","10312"], colId:"COL_BB_CRUSH_WHITE" },
+  { col:"M", group:"Bon Bon", form:"Caramel Almonds Crush", sku:["10313","10314","10315"], colId:"COL_BB_CRUSH_CARAMEL" },
+  { col:"M", group:"Bon Bon", form:"ไข่เค็มลาวา", sku:["10176","10231","10289"], colId:"COL_BB_SALTEDEGG" },
+  { col:"M", group:"Bon Bon", form:"อัญชันมะนาว", sku:["10177","10224","10278"], colId:"COL_BB_ANCHAN" },
+  { col:"M", group:"Bon Bon", form:"แกงเขียวหวาน", sku:["10179","10225","10281"], colId:"COL_BB_GREENCURRY" },
+  { col:"M", group:"Bon Bon", form:"เหนียวม่วง", sku:["10093","10227","10284"], colId:"COL_BB_STICKYRICE" },
+  { col:"M", group:"Bon Bon", form:"มัสมั่น", sku:["10175","10228","10286"], colId:"COL_BB_MUSSAMAN" },
+  { col:"M", group:"Bon Bon", form:"ต้มข่า", sku:["10078","10235","10293"], colId:"COL_BB_TOMKHA" },
+  { col:"M", group:"Bon Bon", form:"Milk Caramel", sku:["10240","10244","10285"], colId:"COL_BB_MILKCARAMEL" },
+  { col:"M", group:"Bon Bon", form:"Lychee Rose", sku:["10242","10243","10283"], colId:"COL_BB_LYCHEEROSE" },
+  { col:"M", group:"Bon Bon", form:"น้ำปลาหวาน", sku:["10183","10229","10287"], colId:"COL_BB_NAMPLA" },
+  { col:"M", group:"Bon Bon", form:"Nama Almond", sku:["10300","10302","10305"], colId:"COL_BB_NAMA_ALMOND" },
+  { col:"M", group:"Bon Bon", form:"Nama Orange", sku:["10301","10303","10304"], colId:"COL_BB_NAMA_ORANGE" },
   // ---------- Almond เคลือบช็อก (ขาย + Test รวมต่อขนาด) ----------
-  { col:"M", group:"Almond เคลือบช็อก", form:"Dark 60g",    sku:["10262","10268"], sheetCol:"Dark 60g" },
-  { col:"M", group:"Almond เคลือบช็อก", form:"Dark 100g",   sku:["10263","10269"], sheetCol:"Dark 100g" },
-  { col:"M", group:"Almond เคลือบช็อก", form:"Dark 250g",   sku:["10264","10270"], sheetCol:"Dark 250g" },
-  { col:"M", group:"Almond เคลือบช็อก", form:"Caramel 60g",  sku:["10265","10271"], sheetCol:"Caramel 60g" },
-  { col:"M", group:"Almond เคลือบช็อก", form:"Caramel 100g", sku:["10266","10272"], sheetCol:"Caramel 100g" },
-  { col:"M", group:"Almond เคลือบช็อก", form:"Caramel 250g", sku:["10267","10273"], sheetCol:"Caramel 250g" },
-  { col:"M", group:"Almond เคลือบช็อก", form:"White 100g",   sku:["10274","10298"], sheetCol:"White 100g" },
-  { col:"M", group:"Almond เคลือบช็อก", form:"White 250g",   sku:["10297","10299"], sheetCol:"White 250g" },
+  { col:"M", group:"Almond เคลือบช็อก", form:"Dark 60g",    sku:["10262","10268"], colId:"COL_ALM_DARK60" },
+  { col:"M", group:"Almond เคลือบช็อก", form:"Dark 100g",   sku:["10263","10269"], colId:"COL_ALM_DARK100" },
+  { col:"M", group:"Almond เคลือบช็อก", form:"Dark 250g",   sku:["10264","10270"], colId:"COL_ALM_DARK250" },
+  { col:"M", group:"Almond เคลือบช็อก", form:"Caramel 60g",  sku:["10265","10271"], colId:"COL_ALM_CARAMEL60" },
+  { col:"M", group:"Almond เคลือบช็อก", form:"Caramel 100g", sku:["10266","10272"], colId:"COL_ALM_CARAMEL100" },
+  { col:"M", group:"Almond เคลือบช็อก", form:"Caramel 250g", sku:["10267","10273"], colId:"COL_ALM_CARAMEL250" },
+  { col:"M", group:"Almond เคลือบช็อก", form:"White 100g",   sku:["10274","10298"], colId:"COL_ALM_WHITE100" },
+  { col:"M", group:"Almond เคลือบช็อก", form:"White 250g",   sku:["10297","10299"], colId:"COL_ALM_WHITE250" },
 
   // ---------- คอลัมน์ขวา ----------
   // Cookies (รวม EXP + พนักงาน + Test เข้าตัวหลักของแต่ละชนิด)
-  { col:"R", group:"อื่นๆ 2", form:"40. Cookies HB",   sku:["10134","10276","10118","10241"], sheetCol:"40. Cookies HB" },
-  { col:"R", group:"อื่นๆ 2", form:"Cookies HB Set 4", sku:["10247"], sheetCol:"Cookies HB Set 4" },
-  { col:"R", group:"อื่นๆ 2", form:"Cookies Jumbo",    sku:["10149","10277","10236","10246"], sheetCol:"Cookies Jumbo" },
-  { col:"R", group:"อื่นๆ 2", form:"Cookies Jumbo Set 3", sku:["10248"], sheetCol:"Cookies Jumbo Set 3" },
-  { col:"R", group:"อื่นๆ 2", form:"Cookies วานิช",    sku:["10135","10182","10245"], sheetCol:"Cookies วานิช" },
-  { col:"R", group:"อื่นๆ 2", form:"41. Banana Choc",  sku:["10207","10208"], sheetCol:"41. Banana Choc" },
-  { col:"R", group:"อื่นๆ 2", form:"42. ส้มเคลือบ",     sku:["10237","10238"], sheetCol:"42. ส้มเคลือบ" },
-  { col:"R", group:"อื่นๆ 2", form:"43. NAMA",         sku:["10254","10260"], sheetCol:"43. NAMA" },
-  { col:"R", group:"อื่นๆ 2", form:"44. Brownie",      sku:["10222","10261"], sheetCol:"44. Brownie" },
-  { col:"R", group:"อื่นๆ 2", form:"45. Snackbars",    sku:["10205","10206","10307"], sheetCol:"45. Snackbars" },
-  { col:"R", group:"อื่นๆ 2", form:"50. หัวใจ",         sku:["10001","10219"], sheetCol:"50. หัวใจ" },
-  { col:"R", group:"อื่นๆ 2", form:"51. Barks Dark 120g",   sku:["10252"], sheetCol:"51. Barks Dark 120g" },
-  { col:"R", group:"อื่นๆ 2", form:"51. Barks Dark 170g",   sku:["10089","10239"], sheetCol:"51. Barks Dark 170g" },
-  { col:"R", group:"อื่นๆ 2", form:"51. Barks Caramel 120g", sku:["10250"], sheetCol:"51. Barks Caramel 120g" },
-  { col:"R", group:"อื่นๆ 2", form:"51. Barks Caramel 170g", sku:["10251"], sheetCol:"51. Barks Caramel 170g" },
-  { col:"R", group:"อื่นๆ 2", form:"60. Veluto 32",    sku:["10131","10255"], sheetCol:"60. Veluto 32" },
-  { col:"R", group:"อื่นๆ 2", form:"61. Cocoa Powder", sku:["10056","10213"], sheetCol:"61. Cocoa Powder" },
-  { col:"R", group:"อื่นๆ 2", form:"62. Cacao Nibs",   sku:["10104","10214"], sheetCol:"62. Cacao Nibs" },
-  { col:"R", group:"อื่นๆ 2", form:"66. Craft Soda",   sku:["10163","10212"], sheetCol:"66. Craft Soda" },
-  { col:"R", group:"อื่นๆ 2", form:"67. โก เล้ง เต้",   sku:["10003","10220"], sheetCol:"67. โก เล้ง เต้" },
-  { col:"R", group:"อื่นๆ 2", form:"70. ไอติม PROUD",  sku:["10132","10210"], sheetCol:"70. ไอติม PROUD" },
-  { col:"R", group:"อื่นๆ 2", form:"71. ไอติม Nibs",   sku:["10146","10209"], sheetCol:"71. ไอติม Nibs" },
-  { col:"R", group:"อื่นๆ 2", form:"75. Key Chain",    sku:["10258","10259"], sheetCol:"75. Key Chain" },
-  { col:"R", group:"อื่นๆ 2", form:"76. Postcard",     sku:["10019","10033","10096"], sheetCol:"76. Postcard" },
-  { col:"R", group:"อื่นๆ 2", form:"90. Guide Book",   sku:["10086","10217"], sheetCol:"90. Guide Book" },
+  { col:"R", group:"อื่นๆ 2", form:"40. Cookies HB",   sku:["10134","10276","10118","10241"], colId:"COL_COOKIES_HB" },
+  { col:"R", group:"อื่นๆ 2", form:"Cookies HB Set 4", sku:["10247"], colId:"COL_COOKIES_HB_SET4" },
+  { col:"R", group:"อื่นๆ 2", form:"Cookies Jumbo",    sku:["10149","10277","10236","10246"], colId:"COL_COOKIES_JUMBO" },
+  { col:"R", group:"อื่นๆ 2", form:"Cookies Jumbo Set 3", sku:["10248"], colId:"COL_COOKIES_JUMBO_SET3" },
+  { col:"R", group:"อื่นๆ 2", form:"Cookies วานิช",    sku:["10135","10182","10245"], colId:"COL_COOKIES_VANICH" },
+  { col:"R", group:"อื่นๆ 2", form:"41. Banana Choc",  sku:["10207","10208"], colId:"COL_BANANA" },
+  { col:"R", group:"อื่นๆ 2", form:"42. ส้มเคลือบ",     sku:["10237","10238"], colId:"COL_ORANGE" },
+  { col:"R", group:"อื่นๆ 2", form:"43. NAMA",         sku:["10254","10260"], colId:"COL_NAMA_CHOC" },
+  { col:"R", group:"อื่นๆ 2", form:"44. Brownie",      sku:["10222","10261"], colId:"COL_BROWNIE" },
+  { col:"R", group:"อื่นๆ 2", form:"45. Snackbars",    sku:["10205","10206","10307"], colId:"COL_SNACKBAR" },
+  { col:"R", group:"อื่นๆ 2", form:"50. หัวใจ",         sku:["10001","10219"], colId:"COL_HEART" },
+  { col:"R", group:"อื่นๆ 2", form:"51. Barks Dark 120g",   sku:["10252"], colId:"COL_BARK" },
+  { col:"R", group:"อื่นๆ 2", form:"51. Barks Dark 170g",   sku:["10089","10239"], colId:"COL_BARK" },
+  { col:"R", group:"อื่นๆ 2", form:"51. Barks Caramel 120g", sku:["10250"], colId:"COL_BARK" },
+  { col:"R", group:"อื่นๆ 2", form:"51. Barks Caramel 170g", sku:["10251"], colId:"COL_BARK" },
+  { col:"R", group:"อื่นๆ 2", form:"60. Veluto 32",    sku:["10131","10255"], colId:"COL_VELUTO" },
+  { col:"R", group:"อื่นๆ 2", form:"61. Cocoa Powder", sku:["10056","10213"], colId:"COL_COCOA" },
+  { col:"R", group:"อื่นๆ 2", form:"62. Cacao Nibs",   sku:["10104","10214"], colId:"COL_NIBS" },
+  { col:"R", group:"อื่นๆ 2", form:"66. Craft Soda",   sku:["10163","10212"], colId:"COL_SODA" },
+  { col:"R", group:"อื่นๆ 2", form:"67. โก เล้ง เต้",   sku:["10003","10220"], colId:"COL_KOLENGTE" },
+  { col:"R", group:"อื่นๆ 2", form:"70. ไอติม PROUD",  sku:["10132","10210"], colId:"COL_ICE_PROUD" },
+  { col:"R", group:"อื่นๆ 2", form:"71. ไอติม Nibs",   sku:["10146","10209"], colId:"COL_ICE_NIBS" },
+  { col:"R", group:"อื่นๆ 2", form:"75. Key Chain",    sku:["10258","10259"], colId:"COL_KEYCHAIN" },
+  { col:"R", group:"อื่นๆ 2", form:"76. Postcard",     sku:["10019","10033","10096"], colId:"COL_POSTCARD" },
+  { col:"R", group:"อื่นๆ 2", form:"90. Guide Book",   sku:["10086","10217"], colId:"COL_GUIDEBOOK" },
 
 ];
 
@@ -231,6 +232,7 @@ async function loadDay(){
     renderTable();
     msg("ดึงสำเร็จ ✓ ใบขาย " + json.meta.receipts + " | refund " + json.meta.refunds + " — ตรวจแล้วกดสร้าง JPEG", "ok");
     $("btnJpg").disabled = false;
+    $("btnStock").disabled = false;
   }catch(err){
     msg("ดึงไม่สำเร็จ: " + err.message, "err");
   }finally{
@@ -258,6 +260,48 @@ function renderTable(){
 }
 function editVal(i,v){ DATA.rows[i].total = Number(v)||0; }
 function editExtra(i,v){ DATA.extra[i].total = Number(v)||0; }
+
+// ---------- ส่งตัด stock ไป webhook (รวมยอดตาม colId) ----------
+async function sendStock(){
+  if(!DATA){ msg("ยังไม่มีข้อมูล กดดึงก่อน", "err"); return; }
+  const url = localStorage.getItem("lv_url"), key = localStorage.getItem("lv_key");
+  if(!url || !key){ msg("กรุณาตั้งค่า URL + key ก่อน", "err"); return; }
+
+  // รวมยอด (total = ขาย+test) ตาม colId — colId ซ้ำ (เช่น Barks 4 แบบ) บวกกัน
+  const colValues = {};
+  DATA.rows.forEach(r => {
+    if(!r.colId) return;
+    const v = Number(r.total) || 0;
+    if(v === 0) return;
+    colValues[r.colId] = (colValues[r.colId] || 0) + v;
+  });
+
+  if(Object.keys(colValues).length === 0){ msg("ไม่มียอดให้ตัด stock", "err"); return; }
+
+  if(!confirm("ยืนยันส่งตัด stock วันที่ " + DATA.date + " ?\nจำนวน " + Object.keys(colValues).length + " รายการ")) return;
+
+  $("btnStock").disabled = true;
+  msg("กำลังส่งตัด stock...", "load");
+  try{
+    const res = await fetch(url, {
+      method: "POST",
+      // ใช้ text/plain กัน CORS preflight (Apps Script web app รับ JSON ใน body ได้)
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ key: key, date: DATA.date, colValues: colValues })
+    });
+    const json = await res.json();
+    if(json.error) throw new Error(json.error);
+    let m2 = "ตัด stock สำเร็จ ✓ บันทึกแถวที่ " + (json.row || "-");
+    if(json.skipped && json.skipped.length){
+      m2 += " | ⚠️ ข้าม " + json.skipped.length + " รายการ (ไม่เจอคอลัมน์): " + json.skipped.join(", ");
+    }
+    msg(m2, json.skipped && json.skipped.length ? "err" : "ok");
+  }catch(err){
+    msg("ตัด stock ไม่สำเร็จ: " + err.message, "err");
+    $("btnStock").disabled = false;
+  }
+}
+
 
 // ---------- วาด JPEG 1080x1920 ----------
 function makeJpg(){
