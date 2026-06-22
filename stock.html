@@ -123,20 +123,10 @@ const MANAGERS = ["Bell", "Kit", "Pae", "Gift"]; // Bell = default
 
 const BARS_PER_KG = 28; // Chocolate Mass 1 กก. ผลิตได้ 28 บาร์ — ใช้แปลงเรทขายบาร์เป็น กก./วัน
 
-const ITEMS_BAR = [
-  "1. HB", "2. PHATTA", "3. LP", "4. PK", "5. SURAT", "6. PD",
-  "7. CR90%", "8. DC", "9. MILK", "10. Surat 100", "11. Tak", "12. Rayong",
-  "13. Mango Sticky", "14. Straw Yogurt", "15. Caramel White Choc",
-  "16. บานอฟฟี่", "17. Craft Cola"
-];
-
-const ITEMS_MASS = [
-  "1. HB ปรุงแล้ว", "1. HB ยังไม่ได้ปรุง",
-  "2. PHATTA", "3. LP", "4. PK", "5. SURAT", "6. PD",
-  "7. CR90%", "8. DC", "9. MILK", "10. Surat 100", "11. Tak", "12. Rayong",
-  "13. Mango Sticky", "14. Straw Yogurt", "15. Caramel White Choc",
-  "16. บานอฟฟี่", "17. Craft Cola"
-];
+// รายการสินค้าโหลดจาก webhook แบบ dynamic
+// ไม่ hardcode อีกต่อไป — เพิ่มสินค้าใน Spreadsheet row 1 col C-AZ แล้ว app เห็นเลย
+let ITEMS_BAR  = [];
+let ITEMS_MASS = [];
 
 const TABS = { summary: "📊 สรุปยอด", bar: "🍫 Chocolate Bar", mass: "🫕 Mass" };
 
@@ -159,7 +149,9 @@ let state = {
   errorMsg: "",
   summary: null,             // ข้อมูลจาก webhook
   summaryLoading: false,
-  summaryError: ""
+  summaryError: "",
+  catalogLoading: false,     // โหลด catalog สินค้า
+  catalogError: ""
 };
 
 const $app = document.getElementById("app");
@@ -199,6 +191,17 @@ function itemsOf(cat) { return cat === "mass" ? ITEMS_MASS : ITEMS_BAR; }
 function unitOf(cat)  { return cat === "mass" ? "กก." : ""; }
 
 function formHtml(cat) {
+  if (state.catalogLoading) {
+    return `<div class="card"><div class="loading"><span class="spinner">⏳</span>กำลังโหลดรายการสินค้า...</div></div>`;
+  }
+  if (state.catalogError) {
+    return `<div class="card"><h2>โหลดรายการสินค้าไม่สำเร็จ ❌</h2>
+      <div class="error">${escHtml(state.catalogError)}</div>
+      <button class="btn btn-dark" id="reloadCatalogBtn">🔄 โหลดใหม่</button></div>`;
+  }
+  if (ITEMS_BAR.length === 0) {
+    return `<div class="card"><div class="loading">⏳ กำลังเริ่มโหลดรายการสินค้า...</div></div>`;
+  }
   const a = ACTIONS[state.action];
   const unit = unitOf(cat);
   return `
@@ -244,6 +247,9 @@ function formHtml(cat) {
 }
 
 function bindForm(cat) {
+  const reloadCatBtn = $app.querySelector("#reloadCatalogBtn");
+  if (reloadCatBtn) { reloadCatBtn.onclick = loadCatalog; return; }
+
   $app.querySelectorAll(".mgr-btn").forEach(b =>
     b.onclick = () => { state.manager = b.dataset.mgr; render(); });
 
@@ -527,8 +533,44 @@ function loadSummary() {
 function escId(s)   { return s.replace(/[^a-zA-Z0-9ก-๙]/g, "_"); }
 function escHtml(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
+// ─────────── loadCatalog ───────────
+function loadCatalog() {
+  state.catalogLoading = true;
+  state.catalogError = "";
+  render();
+
+  const cbName = "__catCb" + Date.now();
+  let finished = false;
+  const tag = document.createElement("script");
+
+  function finish(err, data) {
+    if (finished) return;
+    finished = true;
+    delete window[cbName];
+    tag.remove();
+    if (err) {
+      state.catalogError = err;
+    } else if (!data.ok) {
+      state.catalogError = data.error || "ไม่ทราบสาเหตุ";
+    } else {
+      ITEMS_BAR  = data.bar.map(it => it.label);
+      ITEMS_MASS = data.mass.map(it => it.label);
+    }
+    state.catalogLoading = false;
+    render();
+  }
+
+  window[cbName] = data => finish(null, data);
+  tag.onerror = () => finish("โหลดรายการสินค้าไม่สำเร็จ — เช็คอินเทอร์เน็ต");
+  setTimeout(() => finish("หมดเวลารอ (20 วิ) — ลองกดโหลดใหม่"), 20000);
+
+  tag.src = STOCK_WEBHOOK + "?mode=catalog&callback=" + cbName;
+  document.body.appendChild(tag);
+}
+
 render();
-loadSummary(); // เปิดมาที่ tab สรุปยอด โหลดข้อมูลเลย
+loadSummary();
+loadCatalog(); // โหลด catalog พร้อมกัน
 </script>
 </body>
 </html>
