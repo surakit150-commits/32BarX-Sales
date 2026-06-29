@@ -436,19 +436,16 @@ input.error, select.error { border-color: var(--red); }
 </div>
 
 <!-- ══ PASSCODE GATE ══ -->
-<div id="passcode-overlay" style="display:none;position:fixed;inset:0;background:rgba(44,26,14,0.7);z-index:300;align-items:center;justify-content:center;padding:1rem">
+<div id="passcode-overlay" style="display:none;position:fixed;inset:0;background:rgba(44,26,14,0.85);z-index:300;align-items:center;justify-content:center;padding:1rem">
   <div style="background:var(--white);border-radius:16px;width:100%;max-width:360px;padding:2rem;text-align:center;box-shadow:0 8px 40px rgba(44,26,14,0.3)">
     <div style="font-size:32px;margin-bottom:0.75rem">🍫</div>
     <div style="font-size:18px;font-weight:700;color:var(--brown-dark);margin-bottom:4px">32BarX Recipe</div>
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:1.5rem">ใส่รหัสเพื่อดูราคาต้นทุน หรือกด "ข้าม" เพื่อเข้าใช้งานแบบไม่แสดงราคา</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:1.5rem">กรุณาใส่รหัสผ่านเพื่อเข้าใช้งาน</div>
     <input type="password" id="passcode-input" placeholder="รหัสผ่าน"
       style="width:100%;padding:12px;border:1px solid var(--border-mid);border-radius:8px;font-size:18px;text-align:center;letter-spacing:0.2em;outline:none;margin-bottom:8px"
       onkeydown="if(event.key==='Enter')submitPasscode()">
     <div id="passcode-error" style="display:none;font-size:12px;color:var(--red);margin-bottom:8px"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
-      <button onclick="skipPasscode()" style="padding:11px;border:1px solid var(--border-mid);background:var(--white);border-radius:8px;font-size:14px;cursor:pointer;color:var(--text-muted)">ข้าม</button>
-      <button onclick="submitPasscode()" style="padding:11px;background:var(--brown-mid);color:var(--white);border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">เข้าสู่ระบบ</button>
-    </div>
+    <button onclick="submitPasscode()" style="width:100%;padding:12px;background:var(--brown-mid);color:var(--white);border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px">เข้าสู่ระบบ</button>
   </div>
 </div>
 
@@ -456,10 +453,11 @@ input.error, select.error { border-color: var(--red); }
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbynbMcd7lP2FSGmQl1F8L6ghRVdTAtGutW_NX-V-AoxyfthMfl-RaplPA6yXJYjBofB/exec';
-const DELETE_PASSWORD = '150';
+const DELETE_PASSWORD  = '150';
+const GUEST_CODE       = '32';
 const FULL_ACCESS_CODE = '831';
 
-let isFullMode = false; // false = guest (hide prices)
+let isFullMode = false;
 
 let ingredients   = [];
 let chocolates    = [];
@@ -485,21 +483,21 @@ function submitPasscode() {
   if (val === FULL_ACCESS_CODE) {
     isFullMode = true;
     document.getElementById('passcode-error').style.display = 'none';
-  } else if (val === '') {
-    // treat empty submit same as skip
+    closePasscodeGate();
+  } else if (val === GUEST_CODE) {
     isFullMode = false;
+    document.getElementById('passcode-error').style.display = 'none';
+    closePasscodeGate();
   } else {
-    document.getElementById('passcode-error').textContent = 'รหัสไม่ถูกต้อง — เข้าสู่โหมดซ่อนราคา';
-    document.getElementById('passcode-error').style.display = 'block';
-    isFullMode = false;
+    const errEl = document.getElementById('passcode-error');
+    errEl.textContent = val === '' ? 'กรุณาใส่รหัสผ่าน' : 'รหัสผ่านไม่ถูกต้อง';
+    errEl.style.display = 'block';
+    document.getElementById('passcode-input').value = '';
+    document.getElementById('passcode-input').focus();
   }
-  closePasscodeGate();
 }
 
-function skipPasscode() {
-  isFullMode = false;
-  closePasscodeGate();
-}
+function skipPasscode() { /* disabled */ }
 
 function closePasscodeGate() {
   document.getElementById('passcode-overlay').style.display = 'none';
