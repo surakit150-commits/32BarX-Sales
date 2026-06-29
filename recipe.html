@@ -305,10 +305,13 @@ input.error, select.error { border-color: var(--red); }
 <body>
 
 <header>
-  <div class="logo">32Bar<span>X</span> &nbsp;Recipe <span style="font-size:11px;font-weight:400;color:var(--text-light);letter-spacing:0.02em">v1.0</span></div>
-  <div class="nav-tabs">
+  <div class="logo">32Bar<span>X</span> &nbsp;Recipe <span style="font-size:11px;font-weight:400;color:var(--text-light);letter-spacing:0.02em">v1.1</span></div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span id="mode-badge" style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,0.1);color:var(--text-light)">Guest</span>
+    <div class="nav-tabs">
     <button class="nav-tab active" onclick="showPanel('library')">คลังสูตร</button>
     <button class="nav-tab" onclick="showPanel('new')">+ สูตรใหม่</button>
+  </div>
   </div>
 </header>
 
@@ -432,10 +435,31 @@ input.error, select.error { border-color: var(--red); }
   </div>
 </div>
 
+<!-- ══ PASSCODE GATE ══ -->
+<div id="passcode-overlay" style="display:none;position:fixed;inset:0;background:rgba(44,26,14,0.7);z-index:300;align-items:center;justify-content:center;padding:1rem">
+  <div style="background:var(--white);border-radius:16px;width:100%;max-width:360px;padding:2rem;text-align:center;box-shadow:0 8px 40px rgba(44,26,14,0.3)">
+    <div style="font-size:32px;margin-bottom:0.75rem">🍫</div>
+    <div style="font-size:18px;font-weight:700;color:var(--brown-dark);margin-bottom:4px">32BarX Recipe</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:1.5rem">ใส่รหัสเพื่อดูราคาต้นทุน หรือกด "ข้าม" เพื่อเข้าใช้งานแบบไม่แสดงราคา</div>
+    <input type="password" id="passcode-input" placeholder="รหัสผ่าน"
+      style="width:100%;padding:12px;border:1px solid var(--border-mid);border-radius:8px;font-size:18px;text-align:center;letter-spacing:0.2em;outline:none;margin-bottom:8px"
+      onkeydown="if(event.key==='Enter')submitPasscode()">
+    <div id="passcode-error" style="display:none;font-size:12px;color:var(--red);margin-bottom:8px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+      <button onclick="skipPasscode()" style="padding:11px;border:1px solid var(--border-mid);background:var(--white);border-radius:8px;font-size:14px;cursor:pointer;color:var(--text-muted)">ข้าม</button>
+      <button onclick="submitPasscode()" style="padding:11px;background:var(--brown-mid);color:var(--white);border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">เข้าสู่ระบบ</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbynbMcd7lP2FSGmQl1F8L6ghRVdTAtGutW_NX-V-AoxyfthMfl-RaplPA6yXJYjBofB/exec';
+const DELETE_PASSWORD = '150';
+const FULL_ACCESS_CODE = '831';
+
+let isFullMode = false; // false = guest (hide prices)
 
 let ingredients   = [];
 let chocolates    = [];
@@ -448,8 +472,54 @@ let rowCount      = 0;
 
 // ── INIT ──────────────────────────────────────
 (async function init() {
-  await Promise.all([loadAllData(), loadRecipes()]);
+  showPasscodeGate();
 })();
+
+function showPasscodeGate() {
+  document.getElementById('passcode-overlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('passcode-input').focus(), 100);
+}
+
+function submitPasscode() {
+  const val = document.getElementById('passcode-input').value.trim();
+  if (val === FULL_ACCESS_CODE) {
+    isFullMode = true;
+    document.getElementById('passcode-error').style.display = 'none';
+  } else if (val === '') {
+    // treat empty submit same as skip
+    isFullMode = false;
+  } else {
+    document.getElementById('passcode-error').textContent = 'รหัสไม่ถูกต้อง — เข้าสู่โหมดซ่อนราคา';
+    document.getElementById('passcode-error').style.display = 'block';
+    isFullMode = false;
+  }
+  closePasscodeGate();
+}
+
+function skipPasscode() {
+  isFullMode = false;
+  closePasscodeGate();
+}
+
+function closePasscodeGate() {
+  document.getElementById('passcode-overlay').style.display = 'none';
+  // update mode badge in header
+  const badge = document.getElementById('mode-badge');
+  if (isFullMode) {
+    badge.textContent = 'Full Access';
+    badge.style.background = 'rgba(193,122,58,0.25)';
+    badge.style.color = 'var(--cocoa)';
+  } else {
+    badge.textContent = 'Guest';
+    badge.style.background = 'rgba(255,255,255,0.1)';
+    badge.style.color = 'var(--text-light)';
+  }
+  startApp();
+}
+
+async function startApp() {
+  await Promise.all([loadAllData(), loadRecipes()]);
+}
 
 // ── PANELS ────────────────────────────────────
 function showPanel(name) {
@@ -617,11 +687,11 @@ function recipeCard(r) {
   const chocCount = (r.chocolates || []).length;
   const cat       = (r.category || '').trim();
   const cp        = computeCurrentCost(r);
-  const yld       = r.yield || 1;
 
-  // cost display with change indicator
   let costDisplay;
-  if (cp.status === 'same') {
+  if (!isFullMode) {
+    costDisplay = `<span class="card-cost" style="color:var(--text-light);font-size:14px">—</span>`;
+  } else if (cp.status === 'same') {
     costDisplay = `<span class="card-cost">฿${cp.currentTotal.toFixed(2)}</span>`;
   } else if (cp.status === 'missing') {
     costDisplay = `<span class="card-cost">฿${r.totalCost.toFixed(2)}</span> <span class="price-changed-badge price-missing" style="font-size:10px;padding:1px 6px">⚠</span>`;
@@ -826,6 +896,7 @@ function chocRowChanged(rowId) {
   const name = document.getElementById(rowId + '-val').value;
   const g    = parseFloat(document.getElementById(rowId + '-grams').value) || 0;
   const el   = document.getElementById(rowId + '-cost');
+  if (!isFullMode) { el.textContent = '—'; el.style.color = 'var(--text-light)'; return; }
   if (hasp && !isNaN(cpg) && g) {
     el.textContent = '฿' + (cpg * g).toFixed(2); el.style.color = '';
   } else if (name && !hasp) {
@@ -860,6 +931,7 @@ function ingRowChanged(rowId) {
   const cpg = parseFloat(document.getElementById(rowId + '-cpg').value);
   const g   = parseFloat(document.getElementById(rowId + '-grams').value) || 0;
   const el  = document.getElementById(rowId + '-cost');
+  if (!isFullMode) { el.textContent = '—'; el.style.color = 'var(--text-light)'; return; }
   el.textContent = (!isNaN(cpg) && g) ? '฿' + (cpg * g).toFixed(2) : '฿—';
   recalc();
 }
@@ -888,12 +960,13 @@ function recalc() {
   const perUnit = total / yld;
   const selling = parseFloat(document.getElementById('recipe-price').value) || 0;
 
-  document.getElementById('sum-choc').textContent  = '฿' + chocTotal.toFixed(2);
-  document.getElementById('sum-ing').textContent   = '฿' + ingTotal.toFixed(2);
-  document.getElementById('sum-total').textContent = '฿' + total.toFixed(2);
+  const DASH = '—';
+  document.getElementById('sum-choc').textContent  = isFullMode ? '฿' + chocTotal.toFixed(2) : DASH;
+  document.getElementById('sum-ing').textContent   = isFullMode ? '฿' + ingTotal.toFixed(2)  : DASH;
+  document.getElementById('sum-total').textContent = isFullMode ? '฿' + total.toFixed(2)      : DASH;
 
-  let perUnitText = '฿' + perUnit.toFixed(2);
-  if (selling > 0) {
+  let perUnitText = isFullMode ? '฿' + perUnit.toFixed(2) : DASH;
+  if (isFullMode && selling > 0) {
     const margin = (selling - perUnit) / selling * 100;
     perUnitText += ' · ' + margin.toFixed(1) + '%';
     document.getElementById('sum-per-unit').style.color = margin >= 40 ? '#6FBF73' : margin >= 20 ? '#FFB74D' : '#EF9A9A';
@@ -998,9 +1071,9 @@ function openRecipe(id) {
   const yld = r.yield || 1;
   const currentPerUnit = cp.status !== 'missing' ? cp.currentTotal / yld : r.costPerUnit;
 
-  // price change banner
+  // price change banner (full mode only)
   let bannerHtml = '';
-  if (cp.status !== 'same') {
+  if (isFullMode && cp.status !== 'same') {
     const diff = cp.currentTotal - r.totalCost;
     if (cp.status === 'missing') {
       bannerHtml = `<div class="price-change-banner" style="background:#F3E5F5;border-color:rgba(106,27,154,0.25)">
@@ -1016,44 +1089,56 @@ function openRecipe(id) {
     }
   }
 
-  // stats — use current cost where available
+  // stats
   const displayTotal   = cp.status !== 'missing' ? cp.currentTotal   : r.totalCost;
   const displayPerUnit = cp.status !== 'missing' ? currentPerUnit    : r.costPerUnit;
   const margin = r.sellingPrice > 0 ? ((r.sellingPrice - displayPerUnit) / r.sellingPrice * 100) : null;
   const mClass = margin === null ? '' : margin >= 40 ? 'margin-good' : margin >= 20 ? 'margin-warn' : 'margin-bad';
+  const D = '—'; // guest dash
 
-  const totalStatHtml = cp.status === 'same'
-    ? `<div class="detail-stat"><div class="label">ต้นทุนรวม</div><div class="value">฿${displayTotal.toFixed(2)}</div></div>`
-    : `<div class="detail-stat"><div class="label">ต้นทุนรวม</div>
-        <div class="value" style="font-size:18px">฿${displayTotal.toFixed(2)}</div>
-        ${cp.status !== 'missing' ? `<div style="font-size:11px;color:var(--text-light);text-decoration:line-through;margin-top:2px">เดิม ฿${r.totalCost.toFixed(2)}</div>` : ''}
-      </div>`;
+  const totalStatHtml = !isFullMode
+    ? `<div class="detail-stat"><div class="label">ต้นทุนรวม</div><div class="value" style="color:var(--text-light)">${D}</div></div>`
+    : cp.status === 'same'
+      ? `<div class="detail-stat"><div class="label">ต้นทุนรวม</div><div class="value">฿${displayTotal.toFixed(2)}</div></div>`
+      : `<div class="detail-stat"><div class="label">ต้นทุนรวม</div>
+          <div class="value" style="font-size:18px">฿${displayTotal.toFixed(2)}</div>
+          ${cp.status !== 'missing' ? `<div style="font-size:11px;color:var(--text-light);text-decoration:line-through;margin-top:2px">เดิม ฿${r.totalCost.toFixed(2)}</div>` : ''}
+        </div>`;
 
-  const perUnitStatHtml = cp.status === 'same'
-    ? `<div class="detail-stat"><div class="label">ต้นทุน / ชิ้น</div><div class="value green">฿${displayPerUnit.toFixed(2)}</div></div>`
-    : `<div class="detail-stat"><div class="label">ต้นทุน / ชิ้น</div>
-        <div class="value green" style="font-size:18px">฿${displayPerUnit.toFixed(2)}</div>
-        ${cp.status !== 'missing' ? `<div style="font-size:11px;color:var(--text-light);text-decoration:line-through;margin-top:2px">เดิม ฿${r.costPerUnit.toFixed(2)}</div>` : ''}
-      </div>`;
+  const perUnitStatHtml = !isFullMode
+    ? `<div class="detail-stat"><div class="label">ต้นทุน / ชิ้น</div><div class="value" style="color:var(--text-light)">${D}</div></div>`
+    : cp.status === 'same'
+      ? `<div class="detail-stat"><div class="label">ต้นทุน / ชิ้น</div><div class="value green">฿${displayPerUnit.toFixed(2)}</div></div>`
+      : `<div class="detail-stat"><div class="label">ต้นทุน / ชิ้น</div>
+          <div class="value green" style="font-size:18px">฿${displayPerUnit.toFixed(2)}</div>
+          ${cp.status !== 'missing' ? `<div style="font-size:11px;color:var(--text-light);text-decoration:line-through;margin-top:2px">เดิม ฿${r.costPerUnit.toFixed(2)}</div>` : ''}
+        </div>`;
 
   document.getElementById('modal-stats').innerHTML = `
     ${totalStatHtml}
     <div class="detail-stat"><div class="label">Yield</div><div class="value">${r.yield} ชิ้น</div></div>
     ${perUnitStatHtml}
-    ${r.sellingPrice > 0 ? `
+    ${isFullMode && r.sellingPrice > 0 ? `
     <div class="detail-stat"><div class="label">ราคาขาย / ชิ้น</div><div class="value">฿${r.sellingPrice.toFixed(2)}</div></div>
     <div class="detail-stat"><div class="label">กำไร / ชิ้น</div><div class="value green">฿${(r.sellingPrice - displayPerUnit).toFixed(2)}</div></div>
-    <div class="detail-stat"><div class="label">Margin</div><div class="value"><span class="margin-badge ${mClass}">${margin !== null ? margin.toFixed(1) + '%' : '—'}</span></div></div>` : ''}`;
+    <div class="detail-stat"><div class="label">Margin</div><div class="value"><span class="margin-badge ${mClass}">${margin !== null ? margin.toFixed(1) + '%' : D}</span></div></div>` : ''}`;
 
   // build item lookup for current prices
   const chocItems = cp.items.filter(x => x.type === 'choc');
   const ingItems  = cp.items.filter(x => x.type === 'ing');
 
   function itemRow(item) {
+    if (!isFullMode) {
+      return `<tr>
+        <td>${esc(item.name)}</td>
+        <td style="text-align:right">${item.grams.toFixed(1)}</td>
+        <td style="text-align:right;color:var(--text-light)">—</td>
+        <td style="text-align:right;color:var(--text-light)">—</td>
+      </tr>`;
+    }
     const savedCostStr   = item.savedCost !== null ? '฿' + item.savedCost.toFixed(2) : '—';
     const currentCostStr = item.currentCost !== null ? '฿' + item.currentCost.toFixed(2) : null;
     const cpgStr         = item.currentCpg !== null ? '฿' + item.currentCpg.toFixed(4) : '—';
-
     let costCell;
     if (item.missing) {
       costCell = `<div class="td-missing">ไม่พบราคาปัจจุบัน</div><div class="td-cost-saved">${savedCostStr}</div>`;
@@ -1078,13 +1163,14 @@ function openRecipe(id) {
   let chocHtml = '';
   if (chocItems.length) {
     const chocCurrentTotal = chocItems.reduce((s,c) => s + (c.currentCost || c.savedCost || 0), 0);
+    const chocFoot = isFullMode ? `<tfoot><tr><td colspan="3">รวมช็อกโกแลต</td><td>฿${chocCurrentTotal.toFixed(2)}</td></tr></tfoot>` : '';
     chocHtml = `
       <div class="choc-header-band">🍫 ช็อกโกแลต</div>
       <div class="choc-table-wrap">
         <table class="ingredient-table">
-          <thead><tr><th>ชื่อ</th><th>กรัม</th><th>฿/g (ปัจจุบัน)</th><th>ต้นทุน</th></tr></thead>
+          <thead><tr><th>ชื่อ</th><th>กรัม</th><th>${isFullMode ? '฿/g (ปัจจุบัน)' : '฿/g'}</th><th>ต้นทุน</th></tr></thead>
           <tbody>${chocItems.map(itemRow).join('')}</tbody>
-          <tfoot><tr><td colspan="3">รวมช็อกโกแลต</td><td>฿${chocCurrentTotal.toFixed(2)}</td></tr></tfoot>
+          ${chocFoot}
         </table>
       </div>`;
   }
@@ -1093,12 +1179,13 @@ function openRecipe(id) {
   let ingHtml = '';
   if (ingItems.length) {
     const ingCurrentTotal = ingItems.reduce((s,i) => s + (i.currentCost || i.savedCost || 0), 0);
+    const ingFoot = isFullMode ? `<tfoot><tr><td colspan="3">รวมวัตถุดิบ</td><td>฿${ingCurrentTotal.toFixed(2)}</td></tr></tfoot>` : '';
     ingHtml = `
       <div class="modal-section-label">วัตถุดิบอื่นๆ</div>
       <table class="ingredient-table">
-        <thead><tr><th>ชื่อ</th><th>กรัม</th><th>฿/g (ปัจจุบัน)</th><th>ต้นทุน</th></tr></thead>
+        <thead><tr><th>ชื่อ</th><th>กรัม</th><th>${isFullMode ? '฿/g (ปัจจุบัน)' : '฿/g'}</th><th>ต้นทุน</th></tr></thead>
         <tbody>${ingItems.map(itemRow).join('')}</tbody>
-        <tfoot><tr><td colspan="3">รวมวัตถุดิบ</td><td>฿${ingCurrentTotal.toFixed(2)}</td></tr></tfoot>
+        ${ingFoot}
       </table>`;
   }
 
@@ -1131,7 +1218,10 @@ function editRecipe() {
 
 async function deleteRecipe() {
   if (!currentRecipe) return;
-  if (!confirm('ลบสูตร "' + currentRecipe.name + '" จริงๆ ไหม?')) return;
+  const pwd = prompt('กรอกรหัสผ่านเพื่อลบสูตร "' + currentRecipe.name + '"');
+  if (pwd === null) return; // cancelled
+  if (pwd !== DELETE_PASSWORD) { showToast('รหัสผ่านไม่ถูกต้อง', 'error'); return; }
+  if (!confirm('ยืนยันลบสูตร "' + currentRecipe.name + '" จริงๆ ไหม? ไม่สามารถกู้คืนได้')) return;
   try {
     const res  = await fetch(GAS_URL + '?mode=deleteRecipe&id=' + currentRecipe.id);
     const data = await res.json();
