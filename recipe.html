@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>32BarX — Recipe Cost Manager</title>
+<style>
+:root {
+  --brown-dark: #2C1A0E;
+  --brown-mid:  #5C3317;
+  --brown-warm: #8B4513;
+  --cocoa:      #C17A3A;
+  --choc-dark:  #3D1F0D;
+  --choc-mid:   #6B3520;
+  --choc-light: #F5EDE4;
+  --cream:      #F9F4EE;
+  --cream-dark: #EDE5D8;
+  --white:      #FFFFFF;
+  --text-main:  #1E1008;
+  --text-muted: #7A6050;
+  --text-light: #B0957A;
+  --border:     rgba(92,51,23,0.15);
+  --border-mid: rgba(92,51,23,0.25);
+  --green:      #2E7D32;
+  --green-bg:   #E8F5E9;
+  --red:        #C62828;
+  --red-bg:     #FFEBEE;
+  --shadow:     0 2px 12px rgba(44,26,14,0.1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Sarabun', -apple-system, sans-serif; background: var(--cream); color: var(--text-main); min-height: 100vh; }
+
+/* NAV */
+header { background: var(--brown-dark); padding: 0 1.5rem; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; }
+.logo { font-size: 18px; font-weight: 700; color: var(--cocoa); letter-spacing: 0.04em; }
+.logo span { color: var(--cream); font-weight: 300; }
+.nav-tabs { display: flex; gap: 4px; }
+.nav-tab { padding: 6px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; color: var(--cream-dark); border: none; background: transparent; transition: background 0.15s, color 0.15s; }
+.nav-tab.active, .nav-tab:hover { background: rgba(193,122,58,0.2); color: var(--cocoa); }
+.nav-tab.active { font-weight: 600; }
+
+main { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* LIBRARY HEADER */
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.section-title { font-size: 20px; font-weight: 700; color: var(--brown-dark); }
+.btn-primary { background: var(--brown-mid); color: var(--white); border: none; padding: 9px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+.btn-primary:hover { background: var(--brown-warm); }
+
+/* SEARCH + FILTER ROW */
+.filter-row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+.search-box { flex: 1; padding: 10px 14px; border: 1px solid var(--border-mid); border-radius: 8px; font-size: 15px; outline: none; background: var(--white); min-width: 0; }
+.search-box:focus { border-color: var(--cocoa); }
+
+/* CATEGORY FILTER CHIPS */
+.filter-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.25rem; align-items: center; }
+.filter-chip {
+  padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: 1.5px solid var(--border-mid); background: var(--white);
+  color: var(--text-muted); transition: all 0.15s; white-space: nowrap;
+}
+.filter-chip:hover { border-color: var(--cocoa); color: var(--cocoa); }
+.filter-chip.active {
+  background: var(--brown-mid); border-color: var(--brown-mid);
+  color: var(--white);
+}
+.filter-chip-count {
+  display: inline-block; background: rgba(255,255,255,0.25);
+  border-radius: 10px; padding: 0 6px; font-size: 11px; margin-left: 4px;
+}
+.filter-chip:not(.active) .filter-chip-count {
+  background: var(--cream-dark); color: var(--text-muted);
+}
+
+/* RECIPE GRID */
+.recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.recipe-card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s; }
+.recipe-card:hover { box-shadow: var(--shadow); border-color: var(--border-mid); }
+.recipe-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 4px; }
+.recipe-card-name { font-size: 16px; font-weight: 700; color: var(--brown-dark); }
+.cat-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: var(--cream-dark); color: var(--text-muted); white-space: nowrap; flex-shrink: 0; margin-left: 8px; }
+.recipe-card-date { font-size: 12px; color: var(--text-light); margin-bottom: 12px; }
+.recipe-card-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.stat-box { background: var(--cream); border-radius: 8px; padding: 8px; text-align: center; }
+.stat-label { font-size: 10px; color: var(--text-muted); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+.stat-value { font-size: 14px; font-weight: 700; color: var(--brown-mid); }
+.stat-value.green { color: var(--green); }
+.empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
+.empty-icon { font-size: 48px; margin-bottom: 1rem; }
+.empty-text { font-size: 16px; font-weight: 600; margin-bottom: 0.5rem; }
+.empty-sub  { font-size: 14px; }
+
+/* MODAL */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(44,26,14,0.5); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
+.overlay.open { display: flex; }
+.modal { background: var(--white); border-radius: 16px; width: 100%; max-width: 660px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(44,26,14,0.25); }
+.modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--white); border-radius: 16px 16px 0 0; z-index: 1; }
+.modal-title-wrap { display: flex; align-items: center; gap: 10px; }
+.modal-title { font-size: 18px; font-weight: 700; color: var(--brown-dark); }
+.modal-cat-badge { font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; background: var(--cream-dark); color: var(--text-muted); }
+.modal-body  { padding: 1.5rem; }
+.btn-close { background: none; border: 1px solid var(--border-mid); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 18px; color: var(--text-muted); display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+.btn-close:hover { background: var(--cream); }
+
+.detail-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+.detail-stat { background: var(--cream); border-radius: 10px; padding: 12px; text-align: center; }
+.detail-stat .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.detail-stat .value { font-size: 22px; font-weight: 700; color: var(--brown-mid); }
+.detail-stat .value.green { color: var(--green); }
+
+.modal-section-label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin: 1rem 0 6px; }
+.ingredient-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ingredient-table th { background: var(--cream-dark); padding: 8px 10px; text-align: left; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.ingredient-table th:nth-child(2), .ingredient-table th:nth-child(3), .ingredient-table th:nth-child(4),
+.ingredient-table td:nth-child(2), .ingredient-table td:nth-child(3), .ingredient-table td:nth-child(4) { text-align: right; }
+.ingredient-table td { padding: 10px; border-bottom: 1px solid var(--border); }
+.ingredient-table tr:last-child td { border-bottom: none; }
+.ingredient-table tfoot td { font-weight: 700; color: var(--brown-mid); border-top: 2px solid var(--border-mid); padding-top: 12px; }
+.choc-header-band { background: var(--choc-dark); border-radius: 6px 6px 0 0; padding: 6px 10px; font-size: 11px; font-weight: 700; color: var(--cocoa); text-transform: uppercase; letter-spacing: 0.06em; }
+.choc-table-wrap { border: 1px solid rgba(61,31,13,0.2); border-radius: 0 0 6px 6px; margin-bottom: 1rem; overflow: hidden; }
+
+.modal-actions { display: flex; gap: 8px; margin-top: 1.5rem; }
+.btn-secondary { flex: 1; padding: 10px; border: 1px solid var(--border-mid); background: var(--white); border-radius: 8px; font-size: 14px; cursor: pointer; color: var(--text-muted); transition: background 0.15s; }
+.btn-secondary:hover { background: var(--cream); }
+.btn-danger { padding: 10px 20px; background: var(--red-bg); border: 1px solid rgba(198,40,40,0.2); color: var(--red); border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 600; }
+.btn-danger:hover { background: #FFCDD2; }
+
+/* FORM */
+.form-card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem; }
+.choc-card { background: var(--choc-light); border: 1.5px solid rgba(61,31,13,0.2); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem; }
+.choc-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.choc-card-title { font-size: 15px; font-weight: 700; color: var(--choc-dark); display: flex; align-items: center; gap: 8px; }
+.choc-badge { background: var(--choc-dark); color: var(--cocoa); font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+.form-group { margin-bottom: 1rem; }
+.form-group:last-child { margin-bottom: 0; }
+label { display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+input[type=text], input[type=number], select {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--border-mid); border-radius: 8px;
+  font-size: 15px; color: var(--text-main); background: var(--white); outline: none; transition: border-color 0.15s;
+}
+input:focus, select:focus { border-color: var(--cocoa); }
+input.error, select.error { border-color: var(--red); }
+
+/* category selector combo */
+.cat-combo { position: relative; }
+.cat-combo select { border-radius: 8px 8px 0 0; border-bottom-color: transparent; }
+.cat-combo input { border-radius: 0 0 8px 8px; border-top: none; font-size: 14px; }
+.cat-combo input::placeholder { color: var(--text-light); font-style: italic; }
+.cat-new-label { font-size: 11px; color: var(--text-light); margin: 3px 0 0 2px; }
+
+/* ingredient/choc rows */
+.choc-row { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; align-items: end; margin-bottom: 8px; }
+.ing-row  { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; align-items: end; margin-bottom: 8px; }
+.cost-preview { padding: 10px 12px; background: var(--cream); border-radius: 8px; font-size: 14px; font-weight: 700; color: var(--brown-mid); text-align: right; border: 1px solid var(--border); min-width: 90px; }
+.cost-preview.choc-preview { background: rgba(61,31,13,0.07); border-color: rgba(61,31,13,0.2); color: var(--choc-mid); }
+.btn-remove { width: 36px; height: 36px; border: 1px solid rgba(198,40,40,0.25); background: var(--red-bg); color: var(--red); border-radius: 8px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.btn-remove:hover { background: #FFCDD2; }
+.btn-add { display: flex; align-items: center; gap: 6px; padding: 10px 16px; border: 1.5px dashed var(--border-mid); background: transparent; border-radius: 8px; font-size: 14px; color: var(--text-muted); cursor: pointer; width: 100%; justify-content: center; margin-top: 4px; transition: border-color 0.15s, color 0.15s; }
+.btn-add:hover { border-color: var(--cocoa); color: var(--cocoa); }
+.btn-add.choc-add { border-color: rgba(61,31,13,0.25); color: var(--choc-mid); }
+.btn-add.choc-add:hover { border-color: var(--choc-mid); color: var(--choc-dark); }
+
+/* cost summary */
+.cost-summary { background: var(--brown-dark); border-radius: 12px; padding: 1.25rem 1.5rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.25rem; }
+.cs-item .cs-label { font-size: 10px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.cs-item .cs-value { font-size: 20px; font-weight: 700; color: var(--cocoa); }
+.cs-item .cs-value.white { color: var(--white); }
+.cs-item .cs-value.choc-color { color: #D4956A; }
+
+.form-actions { display: flex; gap: 12px; justify-content: flex-end; }
+.btn-save { background: var(--brown-mid); color: var(--white); border: none; padding: 12px 32px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+.btn-save:hover { background: var(--brown-warm); }
+.btn-save:disabled { background: var(--text-light); cursor: default; }
+.btn-reset { background: none; border: 1px solid var(--border-mid); color: var(--text-muted); padding: 12px 20px; border-radius: 8px; font-size: 15px; cursor: pointer; }
+
+/* TOAST */
+.toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--brown-dark); color: var(--white); padding: 12px 24px; border-radius: 10px; font-size: 14px; z-index: 999; transition: transform 0.3s ease; pointer-events: none; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--green); }
+.toast.error   { background: var(--red); }
+
+.loading-wrap { display: flex; align-items: center; justify-content: center; padding: 3rem; color: var(--text-muted); gap: 10px; font-size: 15px; }
+.spinner { width: 20px; height: 20px; border: 2px solid var(--border-mid); border-top-color: var(--cocoa); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.margin-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+.margin-good { background: var(--green-bg); color: var(--green); }
+.margin-warn { background: #FFF8E1; color: #F57F17; }
+.margin-bad  { background: var(--red-bg); color: var(--red); }
+
+/* price-change indicators */
+.price-changed-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700;
+  background: #FFF3E0; color: #E65100;
+  border: 1px solid rgba(230,81,0,0.2);
+}
+.price-up   { background: #FFEBEE; color: var(--red);   border-color: rgba(198,40,40,0.2); }
+.price-down { background: var(--green-bg); color: var(--green); border-color: rgba(46,125,50,0.2); }
+.price-missing { background: #F3E5F5; color: #6A1B9A; border-color: rgba(106,27,154,0.2); }
+
+.cost-compare {
+  display: flex; flex-direction: column; gap: 1px;
+}
+.cost-old { font-size: 11px; color: var(--text-light); text-decoration: line-through; }
+.cost-new { font-size: 14px; font-weight: 700; }
+.cost-new.up   { color: var(--red); }
+.cost-new.down { color: var(--green); }
+.cost-new.same { color: var(--brown-mid); }
+
+/* table cell price diff */
+.td-cost-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.td-cost-current { font-weight: 700; font-size: 14px; }
+.td-cost-current.up   { color: var(--red); }
+.td-cost-current.down { color: var(--green); }
+.td-cost-saved { font-size: 11px; color: var(--text-light); text-decoration: line-through; }
+.td-missing { font-size: 12px; color: #6A1B9A; font-style: italic; }
+
+/* modal price-change summary banner */
+.price-change-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #FFF8E1; border: 1px solid rgba(230,81,0,0.25);
+  border-radius: 8px; padding: 10px 14px; margin-bottom: 1rem;
+  font-size: 13px;
+}
+.price-change-banner.up   { background: #FFEBEE; border-color: rgba(198,40,40,0.25); }
+.price-change-banner.down { background: var(--green-bg); border-color: rgba(46,125,50,0.25); }
+.banner-label { color: var(--text-muted); }
+.banner-diff  { font-weight: 700; }
+.banner-diff.up   { color: var(--red); }
+.banner-diff.down { color: var(--green); }
+
+@media (max-width: 600px) {
+  .form-row, .form-row-3 { grid-template-columns: 1fr; }
+  .choc-row, .ing-row { grid-template-columns: 1fr 1fr; }
+  .choc-row .cost-preview, .ing-row .cost-preview { grid-column: span 2; }
+  .cost-summary { grid-template-columns: 1fr 1fr; }
+  .detail-stats { grid-template-columns: 1fr 1fr; }
+  .recipe-card-stats { grid-template-columns: 1fr 1fr; }
+  .filter-row { flex-direction: column; align-items: stretch; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">32Bar<span>X</span> &nbsp;Recipe</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPanel('library')">คลังสูตร</button>
+    <button class="nav-tab" onclick="showPanel('new')">+ สูตรใหม่</button>
+  </div>
+</header>
+
+<main>
+
+<!-- ══ LIBRARY ══ -->
+<div id="panel-library" class="panel active">
+  <div class="section-header">
+    <div class="section-title">คลังสูตรช็อกโกแลต</div>
+    <button class="btn-primary" onclick="showPanel('new')">+ สร้างสูตรใหม่</button>
+  </div>
+
+  <div class="filter-row">
+    <input class="search-box" type="text" placeholder="ค้นหาชื่อสูตร…" id="search-input" oninput="applyFilters()">
+  </div>
+
+  <div class="filter-chips" id="category-chips">
+    <!-- chips rendered by JS -->
+  </div>
+
+  <div id="recipe-list"><div class="loading-wrap"><div class="spinner"></div> กำลังโหลด…</div></div>
+</div>
+
+<!-- ══ NEW RECIPE ══ -->
+<div id="panel-new" class="panel">
+  <div class="section-header">
+    <div class="section-title" id="form-title">สร้างสูตรใหม่</div>
+  </div>
+
+  <!-- basic info -->
+  <div class="form-card">
+    <div class="form-row">
+      <div class="form-group">
+        <label>ชื่อสูตร <span style="color:var(--red)">*</span></label>
+        <input type="text" id="recipe-name" placeholder="เช่น Dark 72% Surat">
+      </div>
+      <div class="form-group">
+        <label>หมวดหมู่ <span style="color:var(--red)">*</span></label>
+        <div class="cat-combo">
+          <select id="recipe-cat-select" onchange="catSelectChanged()">
+            <option value="">— เลือกหมวดหมู่ —</option>
+            <!-- options injected by JS -->
+            <option value="__new__">+ เพิ่มหมวดหมู่ใหม่…</option>
+          </select>
+          <input type="text" id="recipe-cat-new" placeholder="พิมพ์ชื่อหมวดหมู่ใหม่" style="display:none">
+          <div class="cat-new-label" id="cat-new-hint" style="display:none">กด Enter หรือบันทึกสูตรเพื่อเพิ่มหมวดหมู่ใหม่</div>
+        </div>
+      </div>
+    </div>
+    <div class="form-row-3">
+      <div class="form-group">
+        <label>จำนวน (ชิ้น / แผ่น / กก.)</label>
+        <input type="number" id="recipe-yield" value="1" min="1" oninput="recalc()">
+      </div>
+      <div class="form-group">
+        <label>ราคาขาย / หน่วย (บาท)</label>
+        <input type="number" id="recipe-price" placeholder="0" min="0" oninput="recalc()">
+      </div>
+      <div class="form-group">
+        <label>หมายเหตุ</label>
+        <input type="text" id="recipe-note" placeholder="บันทึกเพิ่มเติม">
+      </div>
+    </div>
+  </div>
+
+  <!-- chocolate section -->
+  <div class="choc-card">
+    <div class="choc-card-header">
+      <div class="choc-card-title">🍫 ช็อกโกแลต <span class="choc-badge">Chocolate</span></div>
+      <div id="choc-load-status" style="font-size:12px; color:var(--text-light)">กำลังโหลด…</div>
+    </div>
+    <div id="choc-rows"></div>
+    <button class="btn-add choc-add" onclick="addChocRow()">＋ เพิ่มช็อกโกแลต</button>
+  </div>
+
+  <!-- ingredients section -->
+  <div class="form-card">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+      <div style="font-size:15px; font-weight:700; color:var(--brown-dark)">วัตถุดิบอื่นๆ</div>
+      <div id="ing-load-status" style="font-size:12px; color:var(--text-light)">กำลังโหลด…</div>
+    </div>
+    <div id="ing-rows"></div>
+    <button class="btn-add" onclick="addIngRow()">＋ เพิ่มวัตถุดิบ</button>
+  </div>
+
+  <!-- summary -->
+  <div class="cost-summary">
+    <div class="cs-item"><div class="cs-label">ช็อกโกแลต</div><div class="cs-value choc-color" id="sum-choc">฿0</div></div>
+    <div class="cs-item"><div class="cs-label">วัตถุดิบอื่น</div><div class="cs-value" id="sum-ing">฿0</div></div>
+    <div class="cs-item"><div class="cs-label">ต้นทุนรวม</div><div class="cs-value white" id="sum-total">฿0</div></div>
+    <div class="cs-item"><div class="cs-label">/ หน่วย · Margin</div><div class="cs-value" id="sum-per-unit">฿0 · —</div></div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn-reset" onclick="resetForm()">ล้าง</button>
+    <button class="btn-save" id="btn-save" onclick="saveRecipe()">บันทึกสูตร</button>
+  </div>
+</div>
+
+</main>
+
+<!-- ══ DETAIL MODAL ══ -->
+<div class="overlay" id="detail-overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <div class="modal-title" id="modal-recipe-name"></div>
+        <div class="modal-cat-badge" id="modal-cat-badge"></div>
+      </div>
+      <button class="btn-close" onclick="closeDetailModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-stats" id="modal-stats"></div>
+      <div id="modal-choc-section"></div>
+      <div id="modal-ing-section"></div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="editRecipe()">✎ แก้ไข</button>
+        <button class="btn-danger"    onclick="deleteRecipe()">🗑 ลบสูตร</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbynbMcd7lP2FSGmQl1F8L6ghRVdTAtGutW_NX-V-AoxyfthMfl-RaplPA6yXJYjBofB/exec';
+
+let ingredients   = [];
+let chocolates    = [];
+let recipes       = [];
+let allCategories = [];   // unique categories from saved recipes
+let activeFilter  = null; // null = all
+let editingId     = null;
+let currentRecipe = null;
+let rowCount      = 0;
+
+// ── INIT ──────────────────────────────────────
+(async function init() {
+  await Promise.all([loadAllData(), loadRecipes()]);
+})();
+
+// ── PANELS ────────────────────────────────────
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.querySelectorAll('.nav-tab')[name === 'library' ? 0 : 1].classList.add('active');
+  if (name === 'new' && !editingId &&
+      !document.getElementById('choc-rows').children.length &&
+      !document.getElementById('ing-rows').children.length) {
+    addChocRow(); addIngRow();
+  }
+}
+
+// ── LOAD DATA ─────────────────────────────────
+async function loadAllData() {
+  try {
+    const res  = await fetch(GAS_URL + '?mode=all');
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    ingredients = data.ingredients;
+    chocolates  = data.chocolates;
+    document.getElementById('ing-load-status').textContent  = ingredients.length + ' รายการ';
+    document.getElementById('choc-load-status').textContent = chocolates.length  + ' ชนิด';
+    refreshChocSelects();
+    refreshIngSelects();
+  } catch(e) {
+    document.getElementById('ing-load-status').textContent  = '⚠ โหลดไม่ได้';
+    document.getElementById('choc-load-status').textContent = '⚠ โหลดไม่ได้';
+    showToast('โหลดข้อมูลไม่สำเร็จ: ' + e.message, 'error');
+  }
+}
+
+async function loadRecipes() {
+  const el = document.getElementById('recipe-list');
+  try {
+    const res  = await fetch(GAS_URL + '?mode=recipes');
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    recipes = data.recipes;
+    // derive unique categories (preserve insertion order)
+    const seen = {};
+    allCategories = [];
+    recipes.forEach(r => {
+      const c = (r.category || '').trim();
+      if (c && !seen[c]) { seen[c] = true; allCategories.push(c); }
+    });
+    allCategories.sort();
+    renderCategoryChips();
+    refreshCatSelectOptions();
+    applyFilters();
+  } catch(e) {
+    el.innerHTML = '<div class="loading-wrap" style="color:var(--red)">⚠ โหลดสูตรไม่สำเร็จ: ' + e.message + '</div>';
+  }
+}
+
+// ── CATEGORY CHIPS ────────────────────────────
+function renderCategoryChips() {
+  const el = document.getElementById('category-chips');
+  // count per category
+  const counts = {};
+  recipes.forEach(r => {
+    const c = (r.category || '').trim() || 'ไม่มีหมวดหมู่';
+    counts[c] = (counts[c] || 0) + 1;
+  });
+
+  let html = `<button class="filter-chip ${activeFilter === null ? 'active' : ''}" onclick="setFilter(null)">
+    ทั้งหมด <span class="filter-chip-count">${recipes.length}</span>
+  </button>`;
+
+  allCategories.forEach(cat => {
+    const cnt = counts[cat] || 0;
+    const active = activeFilter === cat ? 'active' : '';
+    html += `<button class="filter-chip ${active}" onclick="setFilter('${esc(cat)}')">
+      ${esc(cat)} <span class="filter-chip-count">${cnt}</span>
+    </button>`;
+  });
+
+  el.innerHTML = html;
+}
+
+function setFilter(cat) {
+  activeFilter = cat;
+  renderCategoryChips();
+  applyFilters();
+}
+
+// ── FILTER ─────────────────────────────────────
+function applyFilters() {
+  const q = document.getElementById('search-input').value.trim().toLowerCase();
+  let list = recipes;
+  if (activeFilter !== null) list = list.filter(r => (r.category || '').trim() === activeFilter);
+  if (q) list = list.filter(r => r.name.toLowerCase().includes(q));
+  renderRecipes(list);
+}
+
+// ── PRICE COMPARISON HELPERS ──────────────────
+// Build lookup maps from current price data
+function buildPriceMaps() {
+  const chocMap = {};
+  chocolates.forEach(c => { chocMap[c.name] = c; });
+  const ingMap = {};
+  ingredients.forEach(i => { ingMap[i.name] = i; });
+  return { chocMap, ingMap };
+}
+
+// Compute current total cost of a recipe using live prices.
+// Returns { currentTotal, savedTotal, items, status }
+// status: 'same' | 'up' | 'down' | 'missing'
+function computeCurrentCost(r) {
+  const { chocMap, ingMap } = buildPriceMaps();
+  let currentTotal = 0;
+  let savedTotal   = 0;
+  let hasMissing   = false;
+  const items = [];
+
+  const processItems = (list, map, type) => {
+    (list || []).forEach(item => {
+      const saved   = item.cost || 0;
+      savedTotal   += saved;
+      const entry   = map[item.name];
+      if (!entry || (!entry.hasPrice && type === 'choc') || (type === 'choc' && entry.costPerGram === null)) {
+        hasMissing = true;
+        items.push({ name: item.name, grams: item.grams, savedCpg: item.costPerGram, currentCpg: null, savedCost: saved, currentCost: null, type, missing: true });
+      } else {
+        const cpg     = type === 'choc' ? entry.costPerGram : entry.costPerGram;
+        const current = cpg !== null ? cpg * item.grams : null;
+        if (current !== null) currentTotal += current;
+        else hasMissing = true;
+        items.push({ name: item.name, grams: item.grams, savedCpg: item.costPerGram, currentCpg: cpg, savedCost: saved, currentCost: current, type, missing: current === null });
+      }
+    });
+  };
+
+  processItems(r.chocolates,  chocMap, 'choc');
+  processItems(r.ingredients, ingMap,  'ing');
+
+  const THRESHOLD = 0.005; // ignore sub-0.5% float noise
+  let status = 'same';
+  if (hasMissing) {
+    status = 'missing';
+  } else {
+    const diff = currentTotal - savedTotal;
+    if (Math.abs(diff) / (savedTotal || 1) > THRESHOLD) {
+      status = diff > 0 ? 'up' : 'down';
+    }
+  }
+
+  return { currentTotal, savedTotal, items, status };
+}
+
+// ── RENDER LIBRARY ────────────────────────────
+function renderRecipes(list) {
+  const el = document.getElementById('recipe-list');
+  if (!list || list.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div>
+      <div class="empty-text">${activeFilter ? 'ไม่มีสูตรในหมวด "' + esc(activeFilter) + '"' : 'ยังไม่มีสูตรในคลัง'}</div>
+      <div class="empty-sub">กด "สร้างสูตรใหม่" เพื่อเริ่มต้น</div></div>`;
+    return;
+  }
+  el.innerHTML = '<div class="recipe-grid">' + list.map(recipeCard).join('') + '</div>';
+}
+
+function recipeCard(r) {
+  const margin    = r.sellingPrice > 0 ? ((r.sellingPrice - r.costPerUnit) / r.sellingPrice * 100) : null;
+  const chocCount = (r.chocolates || []).length;
+  const cat       = (r.category || '').trim();
+  const cp        = computeCurrentCost(r);
+  const yld       = r.yield || 1;
+
+  // cost stat box — show comparison if changed
+  let costBox;
+  if (cp.status === 'same') {
+    costBox = `<div class="stat-box">
+      <div class="stat-label">ต้นทุนรวม</div>
+      <div class="stat-value">฿${cp.currentTotal.toFixed(2)}</div>
+    </div>`;
+  } else if (cp.status === 'missing') {
+    costBox = `<div class="stat-box">
+      <div class="stat-label">ต้นทุนรวม</div>
+      <div class="stat-value">฿${r.totalCost.toFixed(2)}</div>
+      <div style="margin-top:3px"><span class="price-changed-badge price-missing">⚠ ไม่พบราคา</span></div>
+    </div>`;
+  } else {
+    const arrow = cp.status === 'up' ? '▲' : '▼';
+    const diff  = cp.currentTotal - cp.savedTotal;
+    costBox = `<div class="stat-box">
+      <div class="stat-label">ต้นทุนรวม</div>
+      <div class="cost-compare">
+        <div class="cost-old">฿${r.totalCost.toFixed(2)}</div>
+        <div class="cost-new ${cp.status}">฿${cp.currentTotal.toFixed(2)}</div>
+      </div>
+      <div style="margin-top:3px"><span class="price-changed-badge ${cp.status}">${arrow} ${diff > 0 ? '+' : ''}${diff.toFixed(2)}</span></div>
+    </div>`;
+  }
+
+  // per-unit box
+  const currentPerUnit = cp.status !== 'missing' ? cp.currentTotal / yld : r.costPerUnit;
+  let perUnitBox;
+  if (cp.status === 'same') {
+    perUnitBox = `<div class="stat-box"><div class="stat-label">/ หน่วย</div><div class="stat-value">฿${currentPerUnit.toFixed(2)}</div></div>`;
+  } else if (cp.status !== 'missing') {
+    perUnitBox = `<div class="stat-box">
+      <div class="stat-label">/ หน่วย</div>
+      <div class="cost-compare">
+        <div class="cost-old">฿${r.costPerUnit.toFixed(2)}</div>
+        <div class="cost-new ${cp.status}">฿${currentPerUnit.toFixed(2)}</div>
+      </div>
+    </div>`;
+  } else {
+    perUnitBox = `<div class="stat-box"><div class="stat-label">/ หน่วย</div><div class="stat-value">฿${r.costPerUnit.toFixed(2)}</div></div>`;
+  }
+
+  const thirdBox = margin !== null
+    ? `<div class="stat-box"><div class="stat-label">Margin</div><div class="stat-value green">${margin.toFixed(1)}%</div></div>`
+    : `<div class="stat-box"><div class="stat-label">Yield</div><div class="stat-value">${r.yield} ชิ้น</div></div>`;
+
+  return `
+    <div class="recipe-card" onclick="openRecipe('${r.id}')">
+      <div class="recipe-card-top">
+        <div class="recipe-card-name">${esc(r.name)}</div>
+        ${cat ? `<div class="cat-badge">${esc(cat)}</div>` : ''}
+      </div>
+      <div class="recipe-card-date">🍫 ${chocCount} ชนิด · ${r.createdAt}</div>
+      <div class="recipe-card-stats">
+        ${costBox}
+        ${perUnitBox}
+        ${thirdBox}
+      </div>
+    </div>`;
+}
+
+// ── CATEGORY SELECT IN FORM ───────────────────
+function refreshCatSelectOptions() {
+  const sel = document.getElementById('recipe-cat-select');
+  const cur = sel.value;
+  // remove old options except blank + __new__
+  while (sel.options.length > 1) sel.remove(1);
+  // insert categories before __new__
+  const newOpt = document.createElement('option');
+  newOpt.value = '__new__'; newOpt.textContent = '+ เพิ่มหมวดหมู่ใหม่…';
+  allCategories.forEach(cat => {
+    const o = document.createElement('option');
+    o.value = cat; o.textContent = cat;
+    sel.appendChild(o);
+  });
+  sel.appendChild(newOpt);
+  // restore
+  if (cur) for (const o of sel.options) if (o.value === cur) { o.selected = true; break; }
+}
+
+function catSelectChanged() {
+  const sel     = document.getElementById('recipe-cat-select');
+  const newInp  = document.getElementById('recipe-cat-new');
+  const hint    = document.getElementById('cat-new-hint');
+  if (sel.value === '__new__') {
+    newInp.style.display = 'block';
+    hint.style.display   = 'block';
+    newInp.focus();
+  } else {
+    newInp.style.display = 'none';
+    hint.style.display   = 'none';
+    newInp.value = '';
+  }
+  // clear error state
+  sel.classList.remove('error');
+}
+
+function getSelectedCategory() {
+  const sel = document.getElementById('recipe-cat-select');
+  if (sel.value === '__new__') {
+    return document.getElementById('recipe-cat-new').value.trim();
+  }
+  return sel.value;
+}
+
+function setFormCategory(cat) {
+  const sel    = document.getElementById('recipe-cat-select');
+  const newInp = document.getElementById('recipe-cat-new');
+  const hint   = document.getElementById('cat-new-hint');
+  // try to find in existing options
+  let found = false;
+  for (const o of sel.options) {
+    if (o.value === cat) { o.selected = true; found = true; break; }
+  }
+  if (!found && cat) {
+    sel.value = '__new__';
+    newInp.value = cat;
+    newInp.style.display = 'block';
+    hint.style.display   = 'block';
+  } else {
+    newInp.style.display = 'none';
+    hint.style.display   = 'none';
+    newInp.value = '';
+  }
+}
+
+// ── CHOCOLATE ROWS ────────────────────────────
+function chocOptions() {
+  return chocolates.map(c => {
+    const label = c.hasPrice ? c.name : c.name + ' (ยังไม่มีราคา)';
+    return `<option value="${esc(c.name)}" data-cpg="${c.hasPrice ? c.costPerGram : ''}" data-hasprice="${c.hasPrice}">${esc(label)}</option>`;
+  }).join('');
+}
+
+function addChocRow(preset) {
+  rowCount++;
+  const id = 'choc-' + rowCount;
+  const div = document.createElement('div');
+  div.className = 'choc-row'; div.id = id;
+  div.innerHTML = `
+    <div class="form-group" style="margin:0"><label>ช็อกโกแลต</label>
+      <select id="${id}-sel" onchange="chocChanged('${id}')">
+        <option value="">— เลือก —</option>${chocOptions()}
+      </select></div>
+    <div class="form-group" style="margin:0"><label>ปริมาณ (g)</label>
+      <input type="number" id="${id}-grams" value="${preset ? preset.grams : ''}" min="0" step="0.1" placeholder="0" oninput="chocChanged('${id}')"></div>
+    <div class="cost-preview choc-preview" id="${id}-cost">฿—</div>
+    <button class="btn-remove" onclick="removeRow('${id}')" title="ลบ">−</button>`;
+  document.getElementById('choc-rows').appendChild(div);
+  if (preset) {
+    const sel = document.getElementById(id + '-sel');
+    for (const opt of sel.options) if (opt.value === preset.name) { opt.selected = true; break; }
+    chocChanged(id);
+  }
+  recalc();
+}
+
+function chocChanged(id) {
+  const sel = document.getElementById(id + '-sel');
+  const g   = parseFloat(document.getElementById(id + '-grams').value) || 0;
+  const opt = sel.selectedOptions[0];
+  const hasp  = opt ? opt.dataset.hasprice === 'true' : false;
+  const cpg   = hasp ? parseFloat(opt.dataset.cpg) : NaN;
+  const costEl = document.getElementById(id + '-cost');
+  if (hasp && !isNaN(cpg) && g) {
+    costEl.textContent = '฿' + (cpg * g).toFixed(2);
+    costEl.style.color = '';
+  } else if (sel.value && !hasp) {
+    costEl.textContent = 'ไม่มีราคา';
+    costEl.style.color = 'var(--red)';
+  } else {
+    costEl.textContent = '฿—';
+    costEl.style.color = '';
+  }
+  recalc();
+}
+
+function refreshChocSelects() {
+  const opts = '<option value="">— เลือก —</option>' + chocOptions();
+  document.querySelectorAll('.choc-row select').forEach(sel => {
+    const cur = sel.value;
+    sel.innerHTML = opts;
+    for (const opt of sel.options) if (opt.value === cur) { opt.selected = true; break; }
+  });
+}
+
+// ── INGREDIENT ROWS ───────────────────────────
+function ingOptions() {
+  return ingredients.map(i =>
+    `<option value="${esc(i.name)}" data-cpg="${i.costPerGram}">${esc(i.name)} (${esc(i.category)})</option>`
+  ).join('');
+}
+
+function addIngRow(preset) {
+  rowCount++;
+  const id = 'ing-' + rowCount;
+  const div = document.createElement('div');
+  div.className = 'ing-row'; div.id = id;
+  div.innerHTML = `
+    <div class="form-group" style="margin:0"><label>วัตถุดิบ</label>
+      <select id="${id}-sel" onchange="ingChanged('${id}')">
+        <option value="">— เลือก —</option>${ingOptions()}
+      </select></div>
+    <div class="form-group" style="margin:0"><label>ปริมาณ (g)</label>
+      <input type="number" id="${id}-grams" value="${preset ? preset.grams : ''}" min="0" step="0.1" placeholder="0" oninput="ingChanged('${id}')"></div>
+    <div class="cost-preview" id="${id}-cost">฿—</div>
+    <button class="btn-remove" onclick="removeRow('${id}')" title="ลบ">−</button>`;
+  document.getElementById('ing-rows').appendChild(div);
+  if (preset) {
+    const sel = document.getElementById(id + '-sel');
+    for (const opt of sel.options) if (opt.value === preset.name) { opt.selected = true; break; }
+    ingChanged(id);
+  }
+  recalc();
+}
+
+function ingChanged(id) {
+  const sel = document.getElementById(id + '-sel');
+  const g   = parseFloat(document.getElementById(id + '-grams').value) || 0;
+  const opt = sel.selectedOptions[0];
+  const cpg = opt ? parseFloat(opt.dataset.cpg) : NaN;
+  document.getElementById(id + '-cost').textContent = (!isNaN(cpg) && g) ? '฿' + (cpg * g).toFixed(2) : '฿—';
+  recalc();
+}
+
+function refreshIngSelects() {
+  const opts = '<option value="">— เลือก —</option>' + ingOptions();
+  document.querySelectorAll('.ing-row select').forEach(sel => {
+    const cur = sel.value;
+    sel.innerHTML = opts;
+    for (const opt of sel.options) if (opt.value === cur) { opt.selected = true; break; }
+  });
+}
+
+function removeRow(id) { document.getElementById(id).remove(); recalc(); }
+
+// ── RECALC ────────────────────────────────────
+function recalc() {
+  let chocTotal = 0;
+  document.querySelectorAll('.choc-row').forEach(row => {
+    const sel = document.getElementById(row.id + '-sel');
+    const g   = parseFloat(document.getElementById(row.id + '-grams').value) || 0;
+    if (!sel) return;
+    const opt = sel.selectedOptions[0];
+    const hasp = opt ? opt.dataset.hasprice === 'true' : false;
+    const cpg  = hasp ? parseFloat(opt.dataset.cpg) : NaN;
+    if (!isNaN(cpg)) chocTotal += cpg * g;
+  });
+  let ingTotal = 0;
+  document.querySelectorAll('.ing-row').forEach(row => {
+    const sel = document.getElementById(row.id + '-sel');
+    const g   = parseFloat(document.getElementById(row.id + '-grams').value) || 0;
+    if (!sel) return;
+    const opt = sel.selectedOptions[0];
+    const cpg = opt ? parseFloat(opt.dataset.cpg) : NaN;
+    if (!isNaN(cpg)) ingTotal += cpg * g;
+  });
+  const total   = chocTotal + ingTotal;
+  const yld     = parseFloat(document.getElementById('recipe-yield').value) || 1;
+  const perUnit = total / yld;
+  const selling = parseFloat(document.getElementById('recipe-price').value) || 0;
+
+  document.getElementById('sum-choc').textContent  = '฿' + chocTotal.toFixed(2);
+  document.getElementById('sum-ing').textContent   = '฿' + ingTotal.toFixed(2);
+  document.getElementById('sum-total').textContent = '฿' + total.toFixed(2);
+
+  let perUnitText = '฿' + perUnit.toFixed(2);
+  if (selling > 0) {
+    const margin = (selling - perUnit) / selling * 100;
+    perUnitText += ' · ' + margin.toFixed(1) + '%';
+    document.getElementById('sum-per-unit').style.color = margin >= 40 ? '#6FBF73' : margin >= 20 ? '#FFB74D' : '#EF9A9A';
+  } else {
+    document.getElementById('sum-per-unit').style.color = '';
+  }
+  document.getElementById('sum-per-unit').textContent = perUnitText;
+}
+
+// ── SAVE ──────────────────────────────────────
+async function saveRecipe() {
+  const name = document.getElementById('recipe-name').value.trim();
+  const cat  = getSelectedCategory();
+
+  // validation
+  let valid = true;
+  if (!name) {
+    document.getElementById('recipe-name').classList.add('error');
+    valid = false;
+  } else {
+    document.getElementById('recipe-name').classList.remove('error');
+  }
+  if (!cat) {
+    document.getElementById('recipe-cat-select').classList.add('error');
+    showToast('กรุณาเลือกหรือพิมพ์หมวดหมู่', 'error');
+    valid = false;
+  } else {
+    document.getElementById('recipe-cat-select').classList.remove('error');
+  }
+  if (!valid) return;
+
+  const chocs = [];
+  document.querySelectorAll('.choc-row').forEach(row => {
+    const sel = document.getElementById(row.id + '-sel');
+    const g   = parseFloat(document.getElementById(row.id + '-grams').value) || 0;
+    if (!sel || !sel.value || !g) return;
+    const opt = sel.selectedOptions[0];
+    const hasp = opt ? opt.dataset.hasprice === 'true' : false;
+    const cpg  = hasp ? parseFloat(opt.dataset.cpg) : null;
+    chocs.push({ name: sel.value, grams: g, costPerGram: cpg, cost: cpg ? cpg * g : 0, hasPrice: hasp });
+  });
+
+  const ings = [];
+  document.querySelectorAll('.ing-row').forEach(row => {
+    const sel = document.getElementById(row.id + '-sel');
+    const g   = parseFloat(document.getElementById(row.id + '-grams').value) || 0;
+    if (!sel || !sel.value || !g) return;
+    const opt = sel.selectedOptions[0];
+    const cpg = parseFloat(opt.dataset.cpg) || 0;
+    ings.push({ name: sel.value, grams: g, costPerGram: cpg, cost: cpg * g });
+  });
+
+  if (!chocs.length && !ings.length) { showToast('กรุณาเพิ่มวัตถุดิบอย่างน้อย 1 รายการ', 'error'); return; }
+
+  const yld       = parseFloat(document.getElementById('recipe-yield').value) || 1;
+  const selling   = parseFloat(document.getElementById('recipe-price').value) || 0;
+  const chocCost  = chocs.reduce((s, c) => s + c.cost, 0);
+  const ingCost   = ings.reduce((s, i) => s + i.cost, 0);
+  const totalCost = chocCost + ingCost;
+
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+
+  try {
+    const mode    = editingId ? 'updateRecipe' : 'saveRecipe';
+    const payload = { mode, name, category: cat, yield: yld, chocolates: chocs, ingredients: ings, totalCost, costPerUnit: totalCost / yld, sellingPrice: selling };
+    if (editingId) payload.id = editingId;
+
+    const res  = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    // add to allCategories if new
+    if (cat && !allCategories.includes(cat)) {
+      allCategories.push(cat);
+      allCategories.sort();
+      refreshCatSelectOptions();
+    }
+
+    showToast(editingId ? 'อัปเดตสูตรแล้ว ✓' : 'บันทึกสูตรแล้ว ✓', 'success');
+    resetForm();
+    await loadRecipes();
+    showPanel('library');
+  } catch(e) {
+    showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'บันทึกสูตร';
+  }
+}
+
+// ── DETAIL MODAL ──────────────────────────────
+function openRecipe(id) {
+  const r = recipes.find(x => x.id === id);
+  if (!r) return;
+  currentRecipe = r;
+
+  document.getElementById('modal-recipe-name').textContent = r.name;
+  const catBadge = document.getElementById('modal-cat-badge');
+  catBadge.textContent = r.category || '';
+  catBadge.style.display = r.category ? 'inline-block' : 'none';
+
+  // compute current cost
+  const cp  = computeCurrentCost(r);
+  const yld = r.yield || 1;
+  const currentPerUnit = cp.status !== 'missing' ? cp.currentTotal / yld : r.costPerUnit;
+
+  // price change banner
+  let bannerHtml = '';
+  if (cp.status !== 'same') {
+    const diff = cp.currentTotal - r.totalCost;
+    if (cp.status === 'missing') {
+      bannerHtml = `<div class="price-change-banner" style="background:#F3E5F5;border-color:rgba(106,27,154,0.25)">
+        <span class="banner-label">⚠ วัตถุดิบบางรายการไม่พบในราคาปัจจุบัน — ต้นทุนที่แสดงอาจไม่ครบถ้วน</span>
+      </div>`;
+    } else {
+      const arrow = cp.status === 'up' ? '▲' : '▼';
+      const pct   = Math.abs(diff / (r.totalCost || 1) * 100).toFixed(1);
+      bannerHtml = `<div class="price-change-banner ${cp.status}">
+        <span class="banner-label">ราคาวัตถุดิบเปลี่ยนแปลงจากที่บันทึกไว้</span>
+        <span class="banner-diff ${cp.status}">${arrow} ${diff > 0 ? '+' : ''}฿${diff.toFixed(2)} (${pct}%)</span>
+      </div>`;
+    }
+  }
+
+  // stats — use current cost where available
+  const displayTotal   = cp.status !== 'missing' ? cp.currentTotal   : r.totalCost;
+  const displayPerUnit = cp.status !== 'missing' ? currentPerUnit    : r.costPerUnit;
+  const margin = r.sellingPrice > 0 ? ((r.sellingPrice - displayPerUnit) / r.sellingPrice * 100) : null;
+  const mClass = margin === null ? '' : margin >= 40 ? 'margin-good' : margin >= 20 ? 'margin-warn' : 'margin-bad';
+
+  const totalStatHtml = cp.status === 'same'
+    ? `<div class="detail-stat"><div class="label">ต้นทุนรวม</div><div class="value">฿${displayTotal.toFixed(2)}</div></div>`
+    : `<div class="detail-stat"><div class="label">ต้นทุนรวม</div>
+        <div class="value" style="font-size:18px">฿${displayTotal.toFixed(2)}</div>
+        ${cp.status !== 'missing' ? `<div style="font-size:11px;color:var(--text-light);text-decoration:line-through;margin-top:2px">เดิม ฿${r.totalCost.toFixed(2)}</div>` : ''}
+      </div>`;
+
+  const perUnitStatHtml = cp.status === 'same'
+    ? `<div class="detail-stat"><div class="label">ต้นทุน / ชิ้น</div><div class="value green">฿${displayPerUnit.toFixed(2)}</div></div>`
+    : `<div class="detail-stat"><div class="label">ต้นทุน / ชิ้น</div>
+        <div class="value green" style="font-size:18px">฿${displayPerUnit.toFixed(2)}</div>
+        ${cp.status !== 'missing' ? `<div style="font-size:11px;color:var(--text-light);text-decoration:line-through;margin-top:2px">เดิม ฿${r.costPerUnit.toFixed(2)}</div>` : ''}
+      </div>`;
+
+  document.getElementById('modal-stats').innerHTML = `
+    ${totalStatHtml}
+    <div class="detail-stat"><div class="label">Yield</div><div class="value">${r.yield} ชิ้น</div></div>
+    ${perUnitStatHtml}
+    ${r.sellingPrice > 0 ? `
+    <div class="detail-stat"><div class="label">ราคาขาย / ชิ้น</div><div class="value">฿${r.sellingPrice.toFixed(2)}</div></div>
+    <div class="detail-stat"><div class="label">กำไร / ชิ้น</div><div class="value green">฿${(r.sellingPrice - displayPerUnit).toFixed(2)}</div></div>
+    <div class="detail-stat"><div class="label">Margin</div><div class="value"><span class="margin-badge ${mClass}">${margin !== null ? margin.toFixed(1) + '%' : '—'}</span></div></div>` : ''}`;
+
+  // build item lookup for current prices
+  const chocItems = cp.items.filter(x => x.type === 'choc');
+  const ingItems  = cp.items.filter(x => x.type === 'ing');
+
+  function itemRow(item) {
+    const savedCostStr   = item.savedCost !== null ? '฿' + item.savedCost.toFixed(2) : '—';
+    const currentCostStr = item.currentCost !== null ? '฿' + item.currentCost.toFixed(2) : null;
+    const cpgStr         = item.currentCpg !== null ? '฿' + item.currentCpg.toFixed(4) : '—';
+
+    let costCell;
+    if (item.missing) {
+      costCell = `<div class="td-missing">ไม่พบราคาปัจจุบัน</div><div class="td-cost-saved">${savedCostStr}</div>`;
+    } else if (cp.status === 'same' || Math.abs((item.currentCost - item.savedCost) / (item.savedCost || 1)) < 0.005) {
+      costCell = currentCostStr || savedCostStr;
+    } else {
+      const dir = item.currentCost > item.savedCost ? 'up' : 'down';
+      costCell = `<div class="td-cost-wrap">
+        <div class="td-cost-current ${dir}">${currentCostStr}</div>
+        <div class="td-cost-saved">${savedCostStr}</div>
+      </div>`;
+    }
+    return `<tr>
+      <td>${esc(item.name)}</td>
+      <td style="text-align:right">${item.grams.toFixed(1)}</td>
+      <td style="text-align:right">${cpgStr}</td>
+      <td style="text-align:right">${costCell}</td>
+    </tr>`;
+  }
+
+  // chocolate table
+  let chocHtml = '';
+  if (chocItems.length) {
+    const chocCurrentTotal = chocItems.reduce((s,c) => s + (c.currentCost || c.savedCost || 0), 0);
+    chocHtml = `
+      <div class="choc-header-band">🍫 ช็อกโกแลต</div>
+      <div class="choc-table-wrap">
+        <table class="ingredient-table">
+          <thead><tr><th>ชื่อ</th><th>กรัม</th><th>฿/g (ปัจจุบัน)</th><th>ต้นทุน</th></tr></thead>
+          <tbody>${chocItems.map(itemRow).join('')}</tbody>
+          <tfoot><tr><td colspan="3">รวมช็อกโกแลต</td><td>฿${chocCurrentTotal.toFixed(2)}</td></tr></tfoot>
+        </table>
+      </div>`;
+  }
+
+  // ingredient table
+  let ingHtml = '';
+  if (ingItems.length) {
+    const ingCurrentTotal = ingItems.reduce((s,i) => s + (i.currentCost || i.savedCost || 0), 0);
+    ingHtml = `
+      <div class="modal-section-label">วัตถุดิบอื่นๆ</div>
+      <table class="ingredient-table">
+        <thead><tr><th>ชื่อ</th><th>กรัม</th><th>฿/g (ปัจจุบัน)</th><th>ต้นทุน</th></tr></thead>
+        <tbody>${ingItems.map(itemRow).join('')}</tbody>
+        <tfoot><tr><td colspan="3">รวมวัตถุดิบ</td><td>฿${ingCurrentTotal.toFixed(2)}</td></tr></tfoot>
+      </table>`;
+  }
+
+  document.getElementById('modal-choc-section').innerHTML = bannerHtml + chocHtml;
+  document.getElementById('modal-ing-section').innerHTML  = ingHtml;
+
+  document.getElementById('detail-overlay').classList.add('open');
+}
+
+function closeModal(e) { if (e.target === document.getElementById('detail-overlay')) closeDetailModal(); }
+function closeDetailModal() { document.getElementById('detail-overlay').classList.remove('open'); currentRecipe = null; }
+
+function editRecipe() {
+  if (!currentRecipe) return;
+  closeDetailModal();
+  editingId = currentRecipe.id;
+  document.getElementById('form-title').textContent  = 'แก้ไขสูตร';
+  document.getElementById('recipe-name').value       = currentRecipe.name;
+  document.getElementById('recipe-yield').value      = currentRecipe.yield;
+  document.getElementById('recipe-price').value      = currentRecipe.sellingPrice || '';
+  setFormCategory(currentRecipe.category || '');
+  document.getElementById('choc-rows').innerHTML = '';
+  document.getElementById('ing-rows').innerHTML  = '';
+  rowCount = 0;
+  (currentRecipe.chocolates  || []).forEach(c => addChocRow(c));
+  (currentRecipe.ingredients || []).forEach(i => addIngRow(i));
+  recalc();
+  showPanel('new');
+}
+
+async function deleteRecipe() {
+  if (!currentRecipe) return;
+  if (!confirm('ลบสูตร "' + currentRecipe.name + '" จริงๆ ไหม?')) return;
+  try {
+    const res  = await fetch(GAS_URL + '?mode=deleteRecipe&id=' + currentRecipe.id);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    showToast('ลบสูตรแล้ว', 'success');
+    closeDetailModal();
+    await loadRecipes();
+  } catch(e) { showToast('ลบไม่สำเร็จ: ' + e.message, 'error'); }
+}
+
+// ── RESET ─────────────────────────────────────
+function resetForm() {
+  editingId = null;
+  document.getElementById('form-title').textContent  = 'สร้างสูตรใหม่';
+  document.getElementById('recipe-name').value       = '';
+  document.getElementById('recipe-yield').value      = '1';
+  document.getElementById('recipe-price').value      = '';
+  document.getElementById('recipe-note').value       = '';
+  document.getElementById('recipe-cat-select').value = '';
+  document.getElementById('recipe-cat-new').value    = '';
+  document.getElementById('recipe-cat-new').style.display = 'none';
+  document.getElementById('cat-new-hint').style.display   = 'none';
+  document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+  document.getElementById('choc-rows').innerHTML = '';
+  document.getElementById('ing-rows').innerHTML  = '';
+  rowCount = 0;
+  addChocRow(); addIngRow();
+  recalc();
+}
+
+// ── UTILS ─────────────────────────────────────
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
