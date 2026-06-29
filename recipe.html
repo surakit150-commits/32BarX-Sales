@@ -92,6 +92,17 @@ main { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
 .empty-text { font-size: 16px; font-weight: 600; margin-bottom: 0.5rem; }
 .empty-sub  { font-size: 14px; }
 
+/* compact card */
+.recipe-card-meta { font-size: 12px; color: var(--text-light); margin: 3px 0 10px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
+.recipe-card-date-right { color: var(--text-light); }
+.recipe-card-cost-row { display: flex; align-items: center; justify-content: space-between; }
+.card-cost-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.card-cost-value { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.card-cost { font-size: 18px; font-weight: 700; color: var(--brown-mid); }
+.card-cost.up   { color: var(--red); }
+.card-cost.down { color: var(--green); }
+.card-cost-old  { font-size: 12px; color: var(--text-light); text-decoration: line-through; }
+
 /* MODAL */
 .overlay { display: none; position: fixed; inset: 0; background: rgba(44,26,14,0.5); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
 .overlay.open { display: flex; }
@@ -154,12 +165,56 @@ input.error, select.error { border-color: var(--red); }
 .cat-combo input::placeholder { color: var(--text-light); font-style: italic; }
 .cat-new-label { font-size: 11px; color: var(--text-light); margin: 3px 0 0 2px; }
 
-/* ingredient/choc rows */
-.choc-row { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; align-items: end; margin-bottom: 8px; }
-.ing-row  { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; align-items: end; margin-bottom: 8px; }
-.cost-preview { padding: 10px 12px; background: var(--cream); border-radius: 8px; font-size: 14px; font-weight: 700; color: var(--brown-mid); text-align: right; border: 1px solid var(--border); min-width: 90px; }
-.cost-preview.choc-preview { background: rgba(61,31,13,0.07); border-color: rgba(61,31,13,0.2); color: var(--choc-mid); }
-.btn-remove { width: 36px; height: 36px; border: 1px solid rgba(198,40,40,0.25); background: var(--red-bg); color: var(--red); border-radius: 8px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+/* ingredient/choc rows — 2-row layout */
+.choc-row, .ing-row {
+  background: var(--cream); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+}
+/* row 1: full-width name search */
+.item-row-name { position: relative; margin-bottom: 8px; }
+.item-row-name input[type=text] {
+  width: 100%; padding: 9px 12px; border: 1px solid var(--border-mid);
+  border-radius: 7px; font-size: 15px; background: var(--white); outline: none;
+}
+.item-row-name input[type=text]:focus { border-color: var(--cocoa); }
+.choc-row .item-row-name input[type=text]:focus { border-color: var(--choc-mid); }
+/* searchable dropdown */
+.search-dropdown {
+  position: absolute; top: calc(100% + 3px); left: 0; right: 0;
+  background: var(--white); border: 1px solid var(--border-mid);
+  border-radius: 8px; max-height: 220px; overflow-y: auto; z-index: 50;
+  box-shadow: 0 4px 16px rgba(44,26,14,0.12);
+}
+.search-dropdown-item {
+  padding: 10px 12px; font-size: 14px; cursor: pointer;
+  border-bottom: 1px solid var(--border); color: var(--text-main);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.search-dropdown-item:last-child { border-bottom: none; }
+.search-dropdown-item:hover { background: var(--cream); }
+.search-dropdown-item.selected { background: var(--cream-dark); font-weight: 600; }
+.search-dropdown-item .item-cat { font-size: 11px; color: var(--text-light); }
+.search-dropdown-item .item-no-price { font-size: 11px; color: var(--red); }
+.search-dropdown-empty { padding: 12px; font-size: 14px; color: var(--text-light); text-align: center; }
+/* row 2: grams + cost + remove */
+.item-row-bottom { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; }
+.item-row-bottom input[type=number] {
+  padding: 8px 10px; border: 1px solid var(--border-mid); border-radius: 7px;
+  font-size: 14px; background: var(--white); outline: none; width: 100%;
+}
+.item-row-bottom input[type=number]:focus { border-color: var(--cocoa); }
+.cost-preview {
+  padding: 8px 10px; background: var(--white); border-radius: 7px;
+  font-size: 14px; font-weight: 700; color: var(--brown-mid);
+  text-align: right; border: 1px solid var(--border);
+}
+.cost-preview.choc-preview { color: var(--choc-mid); border-color: rgba(61,31,13,0.2); }
+.btn-remove {
+  width: 34px; height: 34px; border: 1px solid rgba(198,40,40,0.25);
+  background: var(--red-bg); color: var(--red); border-radius: 7px;
+  cursor: pointer; font-size: 18px; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0;
+}
 .btn-remove:hover { background: #FFCDD2; }
 .btn-add { display: flex; align-items: center; gap: 6px; padding: 10px 16px; border: 1.5px dashed var(--border-mid); background: transparent; border-radius: 8px; font-size: 14px; color: var(--text-muted); cursor: pointer; width: 100%; justify-content: center; margin-top: 4px; transition: border-color 0.15s, color 0.15s; }
 .btn-add:hover { border-color: var(--cocoa); color: var(--cocoa); }
@@ -250,7 +305,7 @@ input.error, select.error { border-color: var(--red); }
 <body>
 
 <header>
-  <div class="logo">32Bar<span>X</span> &nbsp;Recipe</div>
+  <div class="logo">32Bar<span>X</span> &nbsp;Recipe <span style="font-size:11px;font-weight:400;color:var(--text-light);letter-spacing:0.02em">v1.0</span></div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="showPanel('library')">คลังสูตร</button>
     <button class="nav-tab" onclick="showPanel('new')">+ สูตรใหม่</button>
@@ -559,58 +614,24 @@ function renderRecipes(list) {
 }
 
 function recipeCard(r) {
-  const margin    = r.sellingPrice > 0 ? ((r.sellingPrice - r.costPerUnit) / r.sellingPrice * 100) : null;
   const chocCount = (r.chocolates || []).length;
   const cat       = (r.category || '').trim();
   const cp        = computeCurrentCost(r);
   const yld       = r.yield || 1;
 
-  // cost stat box — show comparison if changed
-  let costBox;
+  // cost display with change indicator
+  let costDisplay;
   if (cp.status === 'same') {
-    costBox = `<div class="stat-box">
-      <div class="stat-label">ต้นทุนรวม</div>
-      <div class="stat-value">฿${cp.currentTotal.toFixed(2)}</div>
-    </div>`;
+    costDisplay = `<span class="card-cost">฿${cp.currentTotal.toFixed(2)}</span>`;
   } else if (cp.status === 'missing') {
-    costBox = `<div class="stat-box">
-      <div class="stat-label">ต้นทุนรวม</div>
-      <div class="stat-value">฿${r.totalCost.toFixed(2)}</div>
-      <div style="margin-top:3px"><span class="price-changed-badge price-missing">⚠ ไม่พบราคา</span></div>
-    </div>`;
+    costDisplay = `<span class="card-cost">฿${r.totalCost.toFixed(2)}</span> <span class="price-changed-badge price-missing" style="font-size:10px;padding:1px 6px">⚠</span>`;
   } else {
     const arrow = cp.status === 'up' ? '▲' : '▼';
-    const diff  = cp.currentTotal - cp.savedTotal;
-    costBox = `<div class="stat-box">
-      <div class="stat-label">ต้นทุนรวม</div>
-      <div class="cost-compare">
-        <div class="cost-old">฿${r.totalCost.toFixed(2)}</div>
-        <div class="cost-new ${cp.status}">฿${cp.currentTotal.toFixed(2)}</div>
-      </div>
-      <div style="margin-top:3px"><span class="price-changed-badge ${cp.status}">${arrow} ${diff > 0 ? '+' : ''}${diff.toFixed(2)}</span></div>
-    </div>`;
+    const diff  = cp.currentTotal - r.totalCost;
+    costDisplay = `<span class="card-cost ${cp.status}">฿${cp.currentTotal.toFixed(2)}</span>
+      <span class="card-cost-old">฿${r.totalCost.toFixed(2)}</span>
+      <span class="price-changed-badge ${cp.status}" style="font-size:10px;padding:1px 6px">${arrow}${Math.abs(diff).toFixed(2)}</span>`;
   }
-
-  // per-unit box
-  const currentPerUnit = cp.status !== 'missing' ? cp.currentTotal / yld : r.costPerUnit;
-  let perUnitBox;
-  if (cp.status === 'same') {
-    perUnitBox = `<div class="stat-box"><div class="stat-label">/ หน่วย</div><div class="stat-value">฿${currentPerUnit.toFixed(2)}</div></div>`;
-  } else if (cp.status !== 'missing') {
-    perUnitBox = `<div class="stat-box">
-      <div class="stat-label">/ หน่วย</div>
-      <div class="cost-compare">
-        <div class="cost-old">฿${r.costPerUnit.toFixed(2)}</div>
-        <div class="cost-new ${cp.status}">฿${currentPerUnit.toFixed(2)}</div>
-      </div>
-    </div>`;
-  } else {
-    perUnitBox = `<div class="stat-box"><div class="stat-label">/ หน่วย</div><div class="stat-value">฿${r.costPerUnit.toFixed(2)}</div></div>`;
-  }
-
-  const thirdBox = margin !== null
-    ? `<div class="stat-box"><div class="stat-label">Margin</div><div class="stat-value green">${margin.toFixed(1)}%</div></div>`
-    : `<div class="stat-box"><div class="stat-label">Yield</div><div class="stat-value">${r.yield} ชิ้น</div></div>`;
 
   return `
     <div class="recipe-card" onclick="openRecipe('${r.id}')">
@@ -618,11 +639,13 @@ function recipeCard(r) {
         <div class="recipe-card-name">${esc(r.name)}</div>
         ${cat ? `<div class="cat-badge">${esc(cat)}</div>` : ''}
       </div>
-      <div class="recipe-card-date">🍫 ${chocCount} ชนิด · ${r.createdAt}</div>
-      <div class="recipe-card-stats">
-        ${costBox}
-        ${perUnitBox}
-        ${thirdBox}
+      <div class="recipe-card-meta">
+        <span>🍫 ${chocCount} ชนิด · yield ${r.yield} ชิ้น</span>
+        <span class="recipe-card-date-right">${r.createdAt}</span>
+      </div>
+      <div class="recipe-card-cost-row">
+        <div class="card-cost-label">ต้นทุนรวม</div>
+        <div class="card-cost-value">${costDisplay}</div>
       </div>
     </div>`;
 }
@@ -692,6 +715,92 @@ function setFormCategory(cat) {
   }
 }
 
+// ── SEARCHABLE ITEM ROW HELPERS ──────────────
+function buildSearchDropdown(rowId, items, type) {
+  // items: [{name, costPerGram/hasPrice, category}]
+  const wrap = document.getElementById(rowId + '-dropdown');
+  const q    = (document.getElementById(rowId + '-search').value || '').toLowerCase().trim();
+  const filtered = q ? items.filter(i => i.name.toLowerCase().includes(q)) : items;
+
+  if (!filtered.length) {
+    wrap.innerHTML = '<div class="search-dropdown-empty">ไม่พบรายการ</div>';
+    return;
+  }
+  const curVal = document.getElementById(rowId + '-val').value;
+  wrap.innerHTML = filtered.map(i => {
+    const isChoc   = type === 'choc';
+    const noPrice  = isChoc ? !i.hasPrice : false;
+    const rightTxt = noPrice
+      ? `<span class="item-no-price">ไม่มีราคา</span>`
+      : `<span class="item-cat">${esc(isChoc ? 'Chocolate' : i.category)}</span>`;
+    const sel = curVal === i.name ? ' selected' : '';
+    return `<div class="search-dropdown-item${sel}" data-name="${esc(i.name)}" data-cpg="${isChoc ? (i.costPerGram || '') : i.costPerGram}" data-hasprice="${isChoc ? i.hasPrice : true}" onclick="selectItem('${rowId}','${type}',this)">
+      <span>${esc(i.name)}</span>${rightTxt}
+    </div>`;
+  }).join('');
+}
+
+function selectItem(rowId, type, el) {
+  const name   = el.dataset.name;
+  const cpg    = el.dataset.cpg;
+  const hasp   = el.dataset.hasprice === 'true';
+  document.getElementById(rowId + '-search').value = name;
+  document.getElementById(rowId + '-val').value    = name;
+  document.getElementById(rowId + '-cpg').value    = cpg;
+  document.getElementById(rowId + '-hasp').value   = hasp ? '1' : '0';
+  closeDropdown(rowId);
+  if (type === 'choc') chocRowChanged(rowId);
+  else                  ingRowChanged(rowId);
+}
+
+function openDropdown(rowId, items, type) {
+  const wrap = document.getElementById(rowId + '-dropdown');
+  wrap.style.display = 'block';
+  buildSearchDropdown(rowId, items, type);
+}
+
+function closeDropdown(rowId) {
+  const wrap = document.getElementById(rowId + '-dropdown');
+  if (wrap) wrap.style.display = 'none';
+}
+
+function closeAllDropdowns() {
+  document.querySelectorAll('.search-dropdown').forEach(d => d.style.display = 'none');
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.item-row-name')) closeAllDropdowns();
+});
+
+function itemRowHtml(rowId, type, preset) {
+  const isChoc = type === 'choc';
+  const label  = isChoc ? 'ช็อกโกแลต' : 'วัตถุดิบ';
+  const presetName = preset ? preset.name  : '';
+  const presetG    = preset ? preset.grams : '';
+  const presetCpg  = preset ? (preset.costPerGram || '') : '';
+  const presetHasp = preset ? (preset.hasPrice !== false ? '1' : '0') : '1';
+  return `
+    <input type="hidden" id="${rowId}-val"  value="${esc(presetName)}">
+    <input type="hidden" id="${rowId}-cpg"  value="${presetCpg}">
+    <input type="hidden" id="${rowId}-hasp" value="${presetHasp}">
+    <div class="item-row-name">
+      <label style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:5px">${label}</label>
+      <input type="text" id="${rowId}-search" value="${esc(presetName)}" placeholder="พิมพ์เพื่อค้นหา…" autocomplete="off"
+        oninput="buildSearchDropdown('${rowId}',${isChoc?'chocolates':'ingredients'},'${type}')"
+        onfocus="openDropdown('${rowId}',${isChoc?'chocolates':'ingredients'},'${type}')"
+        onkeydown="if(event.key==='Escape')closeDropdown('${rowId}')">
+      <div class="search-dropdown" id="${rowId}-dropdown" style="display:none"></div>
+    </div>
+    <div class="item-row-bottom">
+      <div>
+        <label style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:5px">ปริมาณ (g)</label>
+        <input type="number" id="${rowId}-grams" value="${presetG}" min="0" step="0.1" placeholder="0"
+          oninput="${isChoc?'chocRowChanged':'ingRowChanged'}('${rowId}')">
+      </div>
+      <div class="cost-preview ${isChoc?'choc-preview':''}" id="${rowId}-cost">${presetName ? '฿—' : '฿—'}</div>
+      <button class="btn-remove" onclick="removeRow('${rowId}')" title="ลบ">−</button>
+    </div>`;
+}
+
 // ── CHOCOLATE ROWS ────────────────────────────
 function chocOptions() {
   return chocolates.map(c => {
@@ -702,55 +811,32 @@ function chocOptions() {
 
 function addChocRow(preset) {
   rowCount++;
-  const id = 'choc-' + rowCount;
+  const id  = 'choc-' + rowCount;
   const div = document.createElement('div');
   div.className = 'choc-row'; div.id = id;
-  div.innerHTML = `
-    <div class="form-group" style="margin:0"><label>ช็อกโกแลต</label>
-      <select id="${id}-sel" onchange="chocChanged('${id}')">
-        <option value="">— เลือก —</option>${chocOptions()}
-      </select></div>
-    <div class="form-group" style="margin:0"><label>ปริมาณ (g)</label>
-      <input type="number" id="${id}-grams" value="${preset ? preset.grams : ''}" min="0" step="0.1" placeholder="0" oninput="chocChanged('${id}')"></div>
-    <div class="cost-preview choc-preview" id="${id}-cost">฿—</div>
-    <button class="btn-remove" onclick="removeRow('${id}')" title="ลบ">−</button>`;
+  div.innerHTML = itemRowHtml(id, 'choc', preset);
   document.getElementById('choc-rows').appendChild(div);
-  if (preset) {
-    const sel = document.getElementById(id + '-sel');
-    for (const opt of sel.options) if (opt.value === preset.name) { opt.selected = true; break; }
-    chocChanged(id);
-  }
+  if (preset) { chocRowChanged(id); }
   recalc();
 }
 
-function chocChanged(id) {
-  const sel = document.getElementById(id + '-sel');
-  const g   = parseFloat(document.getElementById(id + '-grams').value) || 0;
-  const opt = sel.selectedOptions[0];
-  const hasp  = opt ? opt.dataset.hasprice === 'true' : false;
-  const cpg   = hasp ? parseFloat(opt.dataset.cpg) : NaN;
-  const costEl = document.getElementById(id + '-cost');
+function chocRowChanged(rowId) {
+  const cpg  = parseFloat(document.getElementById(rowId + '-cpg').value);
+  const hasp = document.getElementById(rowId + '-hasp').value === '1';
+  const name = document.getElementById(rowId + '-val').value;
+  const g    = parseFloat(document.getElementById(rowId + '-grams').value) || 0;
+  const el   = document.getElementById(rowId + '-cost');
   if (hasp && !isNaN(cpg) && g) {
-    costEl.textContent = '฿' + (cpg * g).toFixed(2);
-    costEl.style.color = '';
-  } else if (sel.value && !hasp) {
-    costEl.textContent = 'ไม่มีราคา';
-    costEl.style.color = 'var(--red)';
+    el.textContent = '฿' + (cpg * g).toFixed(2); el.style.color = '';
+  } else if (name && !hasp) {
+    el.textContent = 'ไม่มีราคา'; el.style.color = 'var(--red)';
   } else {
-    costEl.textContent = '฿—';
-    costEl.style.color = '';
+    el.textContent = '฿—'; el.style.color = '';
   }
   recalc();
 }
 
-function refreshChocSelects() {
-  const opts = '<option value="">— เลือก —</option>' + chocOptions();
-  document.querySelectorAll('.choc-row select').forEach(sel => {
-    const cur = sel.value;
-    sel.innerHTML = opts;
-    for (const opt of sel.options) if (opt.value === cur) { opt.selected = true; break; }
-  });
-}
+function refreshChocSelects() { /* searchable — no refresh needed */ }
 
 // ── INGREDIENT ROWS ───────────────────────────
 function ingOptions() {
@@ -761,44 +847,24 @@ function ingOptions() {
 
 function addIngRow(preset) {
   rowCount++;
-  const id = 'ing-' + rowCount;
+  const id  = 'ing-' + rowCount;
   const div = document.createElement('div');
   div.className = 'ing-row'; div.id = id;
-  div.innerHTML = `
-    <div class="form-group" style="margin:0"><label>วัตถุดิบ</label>
-      <select id="${id}-sel" onchange="ingChanged('${id}')">
-        <option value="">— เลือก —</option>${ingOptions()}
-      </select></div>
-    <div class="form-group" style="margin:0"><label>ปริมาณ (g)</label>
-      <input type="number" id="${id}-grams" value="${preset ? preset.grams : ''}" min="0" step="0.1" placeholder="0" oninput="ingChanged('${id}')"></div>
-    <div class="cost-preview" id="${id}-cost">฿—</div>
-    <button class="btn-remove" onclick="removeRow('${id}')" title="ลบ">−</button>`;
+  div.innerHTML = itemRowHtml(id, 'ing', preset);
   document.getElementById('ing-rows').appendChild(div);
-  if (preset) {
-    const sel = document.getElementById(id + '-sel');
-    for (const opt of sel.options) if (opt.value === preset.name) { opt.selected = true; break; }
-    ingChanged(id);
-  }
+  if (preset) { ingRowChanged(id); }
   recalc();
 }
 
-function ingChanged(id) {
-  const sel = document.getElementById(id + '-sel');
-  const g   = parseFloat(document.getElementById(id + '-grams').value) || 0;
-  const opt = sel.selectedOptions[0];
-  const cpg = opt ? parseFloat(opt.dataset.cpg) : NaN;
-  document.getElementById(id + '-cost').textContent = (!isNaN(cpg) && g) ? '฿' + (cpg * g).toFixed(2) : '฿—';
+function ingRowChanged(rowId) {
+  const cpg = parseFloat(document.getElementById(rowId + '-cpg').value);
+  const g   = parseFloat(document.getElementById(rowId + '-grams').value) || 0;
+  const el  = document.getElementById(rowId + '-cost');
+  el.textContent = (!isNaN(cpg) && g) ? '฿' + (cpg * g).toFixed(2) : '฿—';
   recalc();
 }
 
-function refreshIngSelects() {
-  const opts = '<option value="">— เลือก —</option>' + ingOptions();
-  document.querySelectorAll('.ing-row select').forEach(sel => {
-    const cur = sel.value;
-    sel.innerHTML = opts;
-    for (const opt of sel.options) if (opt.value === cur) { opt.selected = true; break; }
-  });
-}
+function refreshIngSelects() { /* searchable — no refresh needed */ }
 
 function removeRow(id) { document.getElementById(id).remove(); recalc(); }
 
@@ -806,21 +872,15 @@ function removeRow(id) { document.getElementById(id).remove(); recalc(); }
 function recalc() {
   let chocTotal = 0;
   document.querySelectorAll('.choc-row').forEach(row => {
-    const sel = document.getElementById(row.id + '-sel');
-    const g   = parseFloat(document.getElementById(row.id + '-grams').value) || 0;
-    if (!sel) return;
-    const opt = sel.selectedOptions[0];
-    const hasp = opt ? opt.dataset.hasprice === 'true' : false;
-    const cpg  = hasp ? parseFloat(opt.dataset.cpg) : NaN;
-    if (!isNaN(cpg)) chocTotal += cpg * g;
+    const cpg  = parseFloat(document.getElementById(row.id + '-cpg')?.value);
+    const hasp = document.getElementById(row.id + '-hasp')?.value === '1';
+    const g    = parseFloat(document.getElementById(row.id + '-grams')?.value) || 0;
+    if (hasp && !isNaN(cpg)) chocTotal += cpg * g;
   });
   let ingTotal = 0;
   document.querySelectorAll('.ing-row').forEach(row => {
-    const sel = document.getElementById(row.id + '-sel');
-    const g   = parseFloat(document.getElementById(row.id + '-grams').value) || 0;
-    if (!sel) return;
-    const opt = sel.selectedOptions[0];
-    const cpg = opt ? parseFloat(opt.dataset.cpg) : NaN;
+    const cpg = parseFloat(document.getElementById(row.id + '-cpg')?.value);
+    const g   = parseFloat(document.getElementById(row.id + '-grams')?.value) || 0;
     if (!isNaN(cpg)) ingTotal += cpg * g;
   });
   const total   = chocTotal + ingTotal;
@@ -867,23 +927,21 @@ async function saveRecipe() {
 
   const chocs = [];
   document.querySelectorAll('.choc-row').forEach(row => {
-    const sel = document.getElementById(row.id + '-sel');
-    const g   = parseFloat(document.getElementById(row.id + '-grams').value) || 0;
-    if (!sel || !sel.value || !g) return;
-    const opt = sel.selectedOptions[0];
-    const hasp = opt ? opt.dataset.hasprice === 'true' : false;
-    const cpg  = hasp ? parseFloat(opt.dataset.cpg) : null;
-    chocs.push({ name: sel.value, grams: g, costPerGram: cpg, cost: cpg ? cpg * g : 0, hasPrice: hasp });
+    const name = document.getElementById(row.id + '-val')?.value;
+    const g    = parseFloat(document.getElementById(row.id + '-grams')?.value) || 0;
+    if (!name || !g) return;
+    const cpg  = parseFloat(document.getElementById(row.id + '-cpg')?.value);
+    const hasp = document.getElementById(row.id + '-hasp')?.value === '1';
+    chocs.push({ name, grams: g, costPerGram: hasp ? cpg : null, cost: hasp && !isNaN(cpg) ? cpg * g : 0, hasPrice: hasp });
   });
 
   const ings = [];
   document.querySelectorAll('.ing-row').forEach(row => {
-    const sel = document.getElementById(row.id + '-sel');
-    const g   = parseFloat(document.getElementById(row.id + '-grams').value) || 0;
-    if (!sel || !sel.value || !g) return;
-    const opt = sel.selectedOptions[0];
-    const cpg = parseFloat(opt.dataset.cpg) || 0;
-    ings.push({ name: sel.value, grams: g, costPerGram: cpg, cost: cpg * g });
+    const name = document.getElementById(row.id + '-val')?.value;
+    const g    = parseFloat(document.getElementById(row.id + '-grams')?.value) || 0;
+    if (!name || !g) return;
+    const cpg  = parseFloat(document.getElementById(row.id + '-cpg')?.value) || 0;
+    ings.push({ name, grams: g, costPerGram: cpg, cost: cpg * g });
   });
 
   if (!chocs.length && !ings.length) { showToast('กรุณาเพิ่มวัตถุดิบอย่างน้อย 1 รายการ', 'error'); return; }
