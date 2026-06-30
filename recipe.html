@@ -1136,7 +1136,7 @@ function openRecipe(id) {
     }
     const savedCostStr   = item.savedCost !== null ? '฿' + item.savedCost.toFixed(2) : '—';
     const currentCostStr = item.currentCost !== null ? '฿' + item.currentCost.toFixed(2) : null;
-    const cpgStr         = item.currentCpg !== null ? '฿' + item.currentCpg.toFixed(2) : '—';
+    const cpgStr         = item.currentCpg !== null ? '฿' + item.currentCpg.toFixed(4) : '—';
     let costCell;
     if (item.missing) {
       costCell = `<div class="td-missing">ไม่พบราคาปัจจุบัน</div><div class="td-cost-saved">${savedCostStr}</div>`;
