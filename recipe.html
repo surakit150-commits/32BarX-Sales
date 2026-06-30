@@ -452,7 +452,7 @@ input.error, select.error { border-color: var(--red); }
 <div class="toast" id="toast"></div>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbz3h26ZhFKrsa1Q_1VOta3lel1t-cEUrzx5zxtC9IWQOQTdQnOYo13aK9WfVeMOWVQhhg/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbynbMcd7lP2FSGmQl1F8L6ghRVdTAtGutW_NX-V-AoxyfthMfl-RaplPA6yXJYjBofB/exec';
 const DELETE_PASSWORD  = '150';
 const GUEST_CODE       = '32';
 const FULL_ACCESS_CODE = '831';
@@ -1136,7 +1136,7 @@ function openRecipe(id) {
     }
     const savedCostStr   = item.savedCost !== null ? '฿' + item.savedCost.toFixed(2) : '—';
     const currentCostStr = item.currentCost !== null ? '฿' + item.currentCost.toFixed(2) : null;
-    const cpgStr         = item.currentCpg !== null ? '฿' + item.currentCpg.toFixed(4) : '—';
+    const cpgStr         = item.currentCpg !== null ? '฿' + item.currentCpg.toFixed(2) : '—';
     let costCell;
     if (item.missing) {
       costCell = `<div class="td-missing">ไม่พบราคาปัจจุบัน</div><div class="td-cost-saved">${savedCostStr}</div>`;
@@ -1198,18 +1198,19 @@ function closeDetailModal() { document.getElementById('detail-overlay').classLis
 
 function editRecipe() {
   if (!currentRecipe) return;
+  const r = currentRecipe; // save reference before closeDetailModal() clears it
   closeDetailModal();
-  editingId = currentRecipe.id;
+  editingId = r.id;
   document.getElementById('form-title').textContent  = 'แก้ไขสูตร';
-  document.getElementById('recipe-name').value       = currentRecipe.name;
-  document.getElementById('recipe-yield').value      = currentRecipe.yield;
-  document.getElementById('recipe-price').value      = currentRecipe.sellingPrice || '';
-  setFormCategory(currentRecipe.category || '');
+  document.getElementById('recipe-name').value       = r.name;
+  document.getElementById('recipe-yield').value      = r.yield;
+  document.getElementById('recipe-price').value      = r.sellingPrice || '';
+  setFormCategory(r.category || '');
   document.getElementById('choc-rows').innerHTML = '';
   document.getElementById('ing-rows').innerHTML  = '';
   rowCount = 0;
-  (currentRecipe.chocolates  || []).forEach(c => addChocRow(c));
-  (currentRecipe.ingredients || []).forEach(i => addIngRow(i));
+  (r.chocolates  || []).forEach(c => addChocRow(c));
+  (r.ingredients || []).forEach(i => addIngRow(i));
   recalc();
   showPanel('new');
 }
