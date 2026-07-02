@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ใบนับสต๊อก 32BarX (แนวตั้ง)</title>
+<style>
+  @page { size: A4 portrait; margin: 8mm; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:"Sarabun",system-ui,sans-serif; color:#000; padding:8mm; max-width:210mm; margin:0 auto; }
+  .head { display:flex; justify-content:space-between; align-items:flex-end; border-bottom:2px solid #000; padding-bottom:3px; margin-bottom:4px; }
+  .head h1 { font-size:16px; }
+  .head .meta { font-size:11px; text-align:right; }
+  .head .meta span { display:inline-block; border-bottom:1px dotted #000; min-width:70px; }
+  .status { font-size:10px; color:#666; margin-bottom:6px; }
+  .cols { column-count:2; column-gap:6mm; }
+  .block { break-inside:avoid; -webkit-column-break-inside:avoid; margin-bottom:5px; }
+  table { width:100%; border-collapse:collapse; table-layout:fixed; }
+  col.name { width:40%; } col.b { width:12%; }
+  .grp td { background:#000; color:#fff; font-size:8.5px; font-weight:700; padding:2px 5px; }
+  .subh td { font-size:7px; color:#222; text-align:center; padding:1px 0; border-bottom:1px solid #000; font-weight:700; }
+  .subh td.nm { text-align:left; }
+  td { border-bottom:1px solid #ccc; padding:1px 2px; font-size:8px; vertical-align:middle; }
+  td.nm { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  td.nm.sm { font-size:6.5px; }
+  td.box { border:1px solid #aaa; height:20px; background:#fafafa; }
+  .noprint { text-align:center; margin-bottom:10px; display:flex; gap:8px; justify-content:center; }
+  .noprint button { background:#16a34a; color:#fff; border:none; padding:9px 18px; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; }
+  .noprint button.reload { background:#2563eb; }
+  @media print { body { padding:0; } .noprint { display:none; } .status { display:none; } }
+</style>
+</head>
+<body>
+
+<div class="noprint">
+  <button class="reload" onclick="load()">🔄 โหลดรายการล่าสุด</button>
+  <button onclick="window.print()">🖨️ พิมพ์ / บันทึก PDF</button>
+</div>
+
+<div class="head">
+  <h1>🍫 ใบนับสต๊อก 32BarX</h1>
+  <div class="meta">วันที่ <span></span> &nbsp; ผู้นับ <span></span></div>
+</div>
+<div class="status" id="status">กำลังโหลด...</div>
+
+<div class="cols" id="cols"></div>
+
+<script>
+// ใช้ endpoint เดิม (loyverse.gs) ที่ส่ง catalog มาให้อยู่แล้ว
+const CATALOG_URL = "https://script.google.com/macros/s/AKfycbz_J49MUEP2XjAxjd8-UGi-6YgJeKu7TemduxK9jBi3_NWS1R343R7rQ195XlgK_EzY0g/exec";
+const KEY = "32barx-secret-2026";
+
+const HEAD = ["เปิด","เติม","T","ขาย","ปิด"];
+// ส่วนที่ไม่เกี่ยว stock — เก็บไว้ตายตัว (ไม่ได้อยู่ใน Catalog)
+const CHECK_ONLY = [
+  ["กลุ่มที่ 4 (เช็ค ไม่เกี่ยว stock)", ["Ice ball (ถุง)","ถ้วย (แถว) C|H","นม (Gallon)","นม Oat (กล่อง)","นม Almond (กล่อง)"]]
+];
+const FINANCE = ["เงินสด เปิดร้าน","ซื้อน้ำแข็ง","ซื้อนม","เงินสด","Credit card","Alipay","ปิดรอบ เงินสด"];
+
+function colgroup(){ return '<colgroup><col class="name"><col class="b"><col class="b"><col class="b"><col class="b"><col class="b"></colgroup>'; }
+
+function groupTable(grp, items){
+  let h = '<div class="block"><table>' + colgroup();
+  h += "<tr class='grp'><td colspan='6'>" + grp + "</td></tr>";
+  h += "<tr class='subh'><td class='nm'></td>" + HEAD.map(x=>"<td>"+x+"</td>").join("") + "</tr>";
+  items.forEach(it=>{
+    const sm = (/^(15\.|51\.)/.test(it)) ? " sm" : "";
+    h += "<tr><td class='nm"+sm+"'>"+it+"</td>" + "<td class='box'></td>".repeat(5) + "</tr>";
+  });
+  h += "</table></div>";
+  return h;
+}
+
+async function load(){
+  const wrap = document.getElementById("cols");
+  const st = document.getElementById("status");
+  st.textContent = "กำลังโหลดรายการจาก Catalog... (อาจใช้เวลาสักครู่)";
+  try{
+    const today = new Date().toISOString().slice(0,10);
+    const res = await fetch(CATALOG_URL + "?key=" + encodeURIComponent(KEY) + "&date=" + today);
+    const json = await res.json();
+    if(!json.catalog) throw new Error(json.error || "ไม่พบ catalog");
+
+    // จัดกลุ่มตามชื่อ group (เรียงตามลำดับที่เจอในชีต)
+    const order = [], groups = {};
+    json.catalog.forEach(c=>{
+      const g = c.group || "อื่นๆ";
+      if(!groups[g]){ groups[g]=[]; order.push(g); }
+      groups[g].push(c.form);
+    });
+
+    let html = "";
+    order.forEach(g=>{ html += groupTable(g, groups[g]); });          // จาก Catalog สด
+    CHECK_ONLY.forEach(([g,items])=>{ html += groupTable(g, items); }); // static
+
+    // การเงิน (1 ช่อง)
+    let f = '<div class="block"><table><colgroup><col style="width:58%"><col style="width:42%"></colgroup>';
+    f += "<tr class='grp'><td colspan='2'>การเงิน (เช็ค ไม่เกี่ยว stock)</td></tr>";
+    FINANCE.forEach(it=>{ f += "<tr><td class='nm'>"+it+"</td><td class='box'></td></tr>"; });
+    f += "</table></div>";
+    html += f;
+
+    wrap.innerHTML = html;
+    st.textContent = "โหลดสำเร็จ — " + json.catalog.length + " รายการ (สดจาก Catalog)";
+  }catch(e){
+    st.textContent = "โหลดไม่สำเร็จ: " + e.message + " — ลองกด 'โหลดรายการล่าสุด' อีกครั้ง";
+  }
+}
+load();
+</script>
+</body>
+</html>
