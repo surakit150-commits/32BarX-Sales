@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>จัดการสินค้า 32BarX</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:"Sarabun",system-ui,sans-serif; background:#f4f4f5; color:#18181b; padding:16px; max-width:720px; margin:0 auto; }
+  h1 { font-size:20px; margin-bottom:4px; }
+  .sub { color:#71717a; font-size:13px; margin-bottom:16px; }
+  .bar { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+  button { border:none; border-radius:10px; padding:12px 18px; font-size:15px; font-weight:700; cursor:pointer; }
+  .scan { background:#16a34a; color:#fff; }
+  .add  { background:#2563eb; color:#fff; }
+  button:disabled { opacity:.5; cursor:default; }
+  .msg { padding:10px 14px; border-radius:8px; font-size:14px; margin-bottom:12px; display:none; }
+  .msg.info { background:#dbeafe; color:#1e40af; display:block; }
+  .msg.ok   { background:#dcfce7; color:#166534; display:block; }
+  .msg.err  { background:#fee2e2; color:#991b1b; display:block; }
+  .card { background:#fff; border:1px solid #e4e4e7; border-radius:12px; padding:12px; margin-bottom:10px; }
+  .card .top { display:flex; align-items:center; gap:10px; }
+  .card .top input[type=checkbox] { width:20px; height:20px; flex:0 0 auto; }
+  .card .nm { flex:1; font-weight:700; font-size:15px; }
+  .card .sku { color:#71717a; font-size:12px; margin:6px 0 8px 30px; }
+  .row { display:flex; gap:8px; margin-left:30px; flex-wrap:wrap; }
+  .row label { font-size:12px; color:#52525b; display:flex; flex-direction:column; gap:2px; }
+  .row select, .row input { border:1px solid #d4d4d8; border-radius:6px; padding:6px 8px; font-size:14px; font-family:inherit; }
+  .row input.grp { width:130px; }
+  .row input.base { width:80px; }
+  .empty { text-align:center; color:#a1a1aa; padding:30px; }
+</style>
+</head>
+<body>
+
+<h1>🍫 จัดการสินค้า 32BarX</h1>
+<div class="sub">สแกนสินค้าใหม่จาก Loyverse → เลือก → เพิ่มลงระบบ (Catalog + Stock Dairy)</div>
+
+<div class="bar">
+  <button class="scan" id="btnScan" onclick="scan()">🔍 สแกนหาสินค้าใหม่</button>
+  <button class="add"  id="btnAdd"  onclick="addSelected()" disabled>➕ เพิ่มที่เลือก</button>
+</div>
+
+<div class="msg" id="msg"></div>
+<div id="list"><div class="empty">กดปุ่ม "สแกน" เพื่อเริ่ม</div></div>
+
+<script>
+// ===== URL /exec จากการ Deploy backend =====
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwdl_9SLrHg_-giA7yAQ4okgZOb_RLkepyq1ONUGRyxMjiAns8e1m5E3fe1QyRv1B0O/exec";
+const KEY = "32barx-secret-2026";
+
+let PRODUCTS = [];
+
+function showMsg(text, type) {
+  const m = document.getElementById("msg");
+  m.className = "msg " + type;
+  m.textContent = text;
+}
+
+async function scan() {
+  const btn = document.getElementById("btnScan");
+  btn.disabled = true;
+  showMsg("กำลังสแกน... (อาจใช้เวลาสักครู่)", "info");
+  document.getElementById("btnAdd").disabled = true;
+  try {
+    const res = await fetch(WEBAPP_URL + "?action=scan&key=" + encodeURIComponent(KEY));
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || "scan failed");
+    PRODUCTS = json.products || [];
+    render();
+    if (PRODUCTS.length === 0) showMsg("✓ ไม่มีสินค้าใหม่ — ทุกอย่าง map ครบแล้ว", "ok");
+    else showMsg("เจอสินค้าใหม่ " + PRODUCTS.length + " รายการ — ติ๊กเลือกตัวที่ต้องการ แล้วกดเพิ่ม", "info");
+  } catch (e) {
+    showMsg("❌ ผิดพลาด: " + e.message, "err");
+  }
+  btn.disabled = false;
+}
+
+function render() {
+  const list = document.getElementById("list");
+  if (!PRODUCTS.length) { list.innerHTML = '<div class="empty">ไม่มีสินค้าใหม่</div>'; document.getElementById("btnAdd").disabled = true; return; }
+  document.getElementById("btnAdd").disabled = false;
+  list.innerHTML = PRODUCTS.map((p, i) => `
+    <div class="card">
+      <div class="top">
+        <input type="checkbox" id="chk${i}" checked>
+        <div class="nm">${p.name}</div>
+      </div>
+      <div class="sku">SKU: ${p.sku} &nbsp;|&nbsp; หมวด Loyverse: ${p.cat || "-"} &nbsp;|&nbsp; ${p.colId}</div>
+      <div class="row">
+        <label>กลุ่ม
+          <select id="col${i}">
+            <option value="L" ${p.col==="L"?"selected":""}>L (กลุ่มที่ 1)</option>
+            <option value="M" ${p.col==="M"?"selected":""}>M (Bon Bon)</option>
+            <option value="R" ${p.col==="R"?"selected":""}>R (อื่นๆ 2)</option>
+          </select>
+        </label>
+        <label>ชื่อกลุ่มย่อย
+          <input class="grp" id="grp${i}" value="${p.group}">
+        </label>
+        <label>Stock ตั้งต้น
+          <input class="base" id="base${i}" type="number" value="0">
+        </label>
+      </div>
+    </div>`).join("");
+}
+
+async function addSelected() {
+  const items = [];
+  PRODUCTS.forEach((p, i) => {
+    if (document.getElementById("chk"+i).checked) {
+      items.push({
+        name: p.name, sku: p.sku, colId: p.colId,
+        col: document.getElementById("col"+i).value,
+        group: document.getElementById("grp"+i).value,
+        baseline: document.getElementById("base"+i).value
+      });
+    }
+  });
+  if (!items.length) { showMsg("ยังไม่ได้ติ๊กเลือกสินค้า", "err"); return; }
+
+  const btn = document.getElementById("btnAdd");
+  btn.disabled = true;
+  showMsg("กำลังเพิ่ม " + items.length + " รายการ...", "info");
+  try {
+    const res = await fetch(WEBAPP_URL + "?action=add&key=" + encodeURIComponent(KEY), {
+      method: "POST",
+      body: JSON.stringify({ items: items })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || "add failed");
+    const added = (json.addedCat || []).length;
+    let txt = "✓ เพิ่มสำเร็จ " + added + " รายการ";
+    if (json.skipped && json.skipped.length) txt += " | ข้าม (มีแล้ว): " + json.skipped.join(", ");
+    txt += " — อย่าลืมไปนับ stock จริงใส่แถว 8 ในชีต แล้วกดดึงข้อมูลใน web app ขาย";
+    showMsg(txt, "ok");
+    setTimeout(scan, 1200); // สแกนซ้ำ ตัวที่เพิ่มแล้วจะหายไป
+  } catch (e) {
+    showMsg("❌ ผิดพลาด: " + e.message, "err");
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
