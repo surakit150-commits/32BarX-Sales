@@ -13,6 +13,7 @@
   button { border:none; border-radius:10px; padding:12px 18px; font-size:15px; font-weight:700; cursor:pointer; }
   .scan { background:#16a34a; color:#fff; }
   .add  { background:#2563eb; color:#fff; }
+  .repair { background:#ea580c; color:#fff; }
   button:disabled { opacity:.5; cursor:default; }
   .msg { padding:10px 14px; border-radius:8px; font-size:14px; margin-bottom:12px; display:none; }
   .msg.info { background:#dbeafe; color:#1e40af; display:block; }
@@ -39,13 +40,13 @@
 <div class="bar">
   <button class="scan" id="btnScan" onclick="scan()">🔍 สแกนหาสินค้าใหม่</button>
   <button class="add"  id="btnAdd"  onclick="addSelected()" disabled>➕ เพิ่มที่เลือก</button>
+  <button class="repair" id="btnRepair" onclick="repair()">🔧 ซิงค์ Stock Dairy</button>
 </div>
 
 <div class="msg" id="msg"></div>
 <div id="list"><div class="empty">กดปุ่ม "สแกน" เพื่อเริ่ม</div></div>
 
 <script>
-// ===== URL /exec จากการ Deploy backend =====
 const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwdl_9SLrHg_-giA7yAQ4okgZOb_RLkepyq1ONUGRyxMjiAns8e1m5E3fe1QyRv1B0O/exec";
 const KEY = "32barx-secret-2026";
 
@@ -134,11 +135,28 @@ async function addSelected() {
     if (json.skipped && json.skipped.length) txt += " | ข้าม (มีแล้ว): " + json.skipped.join(", ");
     txt += " — อย่าลืมไปนับ stock จริงใส่แถว 8 ในชีต แล้วกดดึงข้อมูลใน web app ขาย";
     showMsg(txt, "ok");
-    setTimeout(scan, 1200); // สแกนซ้ำ ตัวที่เพิ่มแล้วจะหายไป
+    setTimeout(scan, 1200);
   } catch (e) {
     showMsg("❌ ผิดพลาด: " + e.message, "err");
     btn.disabled = false;
   }
+}
+
+async function repair() {
+  const btn = document.getElementById("btnRepair");
+  btn.disabled = true;
+  showMsg("กำลังตรวจและซิงค์คอลัมน์ที่ขาด...", "info");
+  try {
+    const res = await fetch(WEBAPP_URL + "?action=repair&key=" + encodeURIComponent(KEY));
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || "repair failed");
+    const n = (json.created || []).length;
+    if (n === 0) showMsg("✓ Stock Dairy ครบแล้ว — ไม่มีคอลัมน์ที่ขาด", "ok");
+    else showMsg("✓ สร้างคอลัมน์ที่ขาด " + n + " ตัว: " + json.created.join(", ") + " — อย่าลืมนับ stock จริงใส่แถว 8", "ok");
+  } catch (e) {
+    showMsg("❌ ผิดพลาด: " + e.message, "err");
+  }
+  btn.disabled = false;
 }
 </script>
 </body>
