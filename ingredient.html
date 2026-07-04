@@ -19,7 +19,7 @@ main { max-width: 640px; margin: 0 auto; padding: 14px 12px 60px; }
 
 /* Tabs ใหญ่ */
 .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
-.tab-btn { flex: 1; padding: 11px 4px; border: 1.5px solid #ddd; border-radius: 10px; background: #fff; font-size: 13.5px; font-weight: 800; color: #666; cursor: pointer; }
+.tab-btn { flex: 1; padding: 11px 4px; border: 1.5px solid #ddd; border-radius: 10px; background: #fff; font-size: 12px; font-weight: 800; color: #666; cursor: pointer; }
 .tab-btn.on { background: #1a1a1a; border-color: #1a1a1a; color: #fff; }
 
 /* Filter หมวด */
@@ -49,9 +49,10 @@ main { max-width: 640px; margin: 0 auto; padding: 14px 12px 60px; }
 .mode-bar.c-restock  { background: #1e7e34; }
 .mode-bar.c-withdraw { background: #c2700a; }
 .mode-bar.c-adjust   { background: #1d4ed8; }
+.mode-bar.c-add      { background: #7c3aed; }
 .mode-bar small { display: block; font-weight: 400; font-size: 11.5px; color: rgba(255,255,255,0.85); margin-top: 1px; }
 
-/* ตารางวัตถุดิบ — พื้นหลังเปลี่ยนตามโหมด, 2 คอลัมน์ */
+/* ตารางวัตถุดิบ */
 .item-wrap { background: #e9e8e5; border-radius: 10px; padding: 8px 12px; column-count: 2; column-gap: 18px; }
 .item-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid #dcdbd7; break-inside: avoid; }
 .item-row label { flex: 1; font-size: 12px; color: #3a3a3a; line-height: 1.25; }
@@ -71,15 +72,33 @@ main { max-width: 640px; margin: 0 auto; padding: 14px 12px 60px; }
 .item-row.filled label { font-weight: 700; color: #111; }
 .empty-msg { padding: 14px; text-align: center; color: #999; font-size: 13px; }
 
+/* form เพิ่มวัตถุดิบใหม่ */
+.field-group { margin-bottom: 14px; }
+.field-group label { display: block; font-size: 12px; font-weight: 700; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em; }
+.field-group input, .field-group select {
+  width: 100%; border: 1.5px solid #ddd; border-radius: 8px;
+  padding: 11px 12px; font-size: 15px; font-family: inherit;
+  background: #fff; color: #1a1a1a;
+}
+.field-group input:focus, .field-group select:focus {
+  outline: none; border-color: #7c3aed;
+}
+.field-row { display: flex; gap: 10px; }
+.field-row .field-group { flex: 1; }
+.cost-preview { background: #f5f0ff; border: 1.5px solid #d8b4fe; border-radius: 8px;
+  padding: 12px 14px; margin: 4px 0 14px; font-size: 14px; color: #5b21b6; font-weight: 700; }
+.cost-preview span { font-size: 12px; color: #7c3aed; font-weight: 400; display: block; margin-top: 2px; }
+
 /* note */
 .note-box { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 56px; }
 
 .btn { display: block; width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none; margin-top: 14px; }
-.btn-dark { background: #1a1a1a; color: #fff; }
+.btn-dark    { background: #1a1a1a; color: #fff; }
 .btn-outline { background: #fff; border: 1px solid #ddd; color: #333; }
 .btn.c-restock  { background: #1e7e34; color: #fff; }
 .btn.c-withdraw { background: #c2700a; color: #fff; }
 .btn.c-adjust   { background: #1d4ed8; color: #fff; }
+.btn.c-add      { background: #7c3aed; color: #fff; }
 .btn:hover { opacity: 0.9; }
 
 /* สรุปก่อนส่ง + ผลลัพธ์ */
@@ -111,13 +130,14 @@ main { max-width: 640px; margin: 0 auto; padding: 14px 12px 60px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .error { padding: 12px 16px; background: #fff0f0; border-radius: 8px; color: #c00; font-size: 14px; margin-top: 12px; }
 .ok-banner { padding: 12px 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; color: #166534; font-size: 14.5px; font-weight: 700; margin-bottom: 14px; }
+.ok-banner.purple { background: #faf5ff; border-color: #d8b4fe; color: #5b21b6; }
 .arrow { color: #999; padding: 0 4px; }
 </style>
 </head>
 <body>
 <header>
   <h1>🧂 สต๊อควัตถุดิบ 32BarX</h1>
-  <span>Ingredient Stock Tool · V1.1</span>
+  <span>Ingredient Stock Tool · V1.2</span>
 </header>
 <main id="app"></main>
 
@@ -125,10 +145,14 @@ main { max-width: 640px; margin: 0 auto; padding: 14px 12px 60px; }
 // ═══════════ CONFIG ═══════════
 const STOCK_WEBHOOK = "https://script.google.com/macros/s/AKfycbynbMcd7lP2FSGmQl1F8L6ghRVdTAtGutW_NX-V-AoxyfthMfl-RaplPA6yXJYjBofB/exec";
 
-const MANAGERS = ["Bell", "Kit", "Pae", "Gift"]; // Bell = default
+const MANAGERS = ["Bell", "Kit", "Pae", "Gift"];
 const UNIT = "ชิ้น";
 
-const TABS = { summary: "📊 สรุปยอด", manage: "🧂 เติม / เบิก / นับจริง" };
+const TABS = {
+  summary:  "📊 สรุปยอด",
+  manage:   "🧂 เติม / เบิก / นับจริง",
+  addNew:   "➕ เพิ่มวัตถุดิบใหม่"
+};
 
 const ACTIONS = {
   restock:  { ic: "📦", nm: "เติมสต๊อค",  sb: "ซื้อเข้า / รับของ",     verb: "เติม",   hint: "ใส่จำนวนที่รับเข้า เฉพาะรายการที่เติม" },
@@ -136,24 +160,38 @@ const ACTIONS = {
   adjust:   { ic: "🔢", nm: "นับจริง",    sb: "ปรับยอดตามที่นับได้",   verb: "นับได้", hint: "ใส่เลขที่นับได้จริง เฉพาะรายการที่นับ (ใส่ 0 ได้) — ช่องว่างไม่ถูกแก้ในชีต" }
 };
 
+// หมวดที่ใช้บ่อย (dropdown เพิ่มวัตถุดิบใหม่)
+const CAT_PRESETS = [
+  "Bar","Beans","Butter","Mass","Nibs","Others","Sugar",
+  "กลิ่นแต่ง","ถั่ว","Freeze Dried","ผง","Oil","Packaging",
+  "ไส้ บง บง","Cream","แป้ง","ใช้แล้วหมดไป","Syrup","นมข้น"
+];
+
 // ═══════════ STATE ═══════════
 let state = {
-  // รายการวัตถุดิบโหลดจากชีตสด — เพิ่มคอลัมน์ใหม่ในชีตแล้วโผล่ที่นี่เอง
-  meta: null,            // { items: [{label, cat, current, daily}], updatedAt }
+  meta: null,
   metaLoading: false,
   metaError: "",
-  cats: [],              // หมวดทั้งหมด (ตามลำดับในชีต)
-  catFilter: "ทั้งหมด",   // filter ใช้ร่วมทุกหน้า
+  cats: [],
+  catFilter: "ทั้งหมด",
 
-  tab: "summary",        // summary | manage
-  screen: "main",        // main | confirm | sending | done | error
+  tab: "summary",
+  screen: "main",        // main | confirm | sending | done | error | addConfirm | addSending | addDone | addError
   manager: "Bell",
   action: "restock",
-  qty: {},               // { label: "5", ... }
+  qty: {},
   note: "",
   lastPayload: null,
   result: null,
-  errorMsg: ""
+  errorMsg: "",
+
+  // tab เพิ่มวัตถุดิบใหม่
+  newBrand:    "",
+  newName:     "",
+  newCat:      "",
+  newCatCustom:"",
+  newWeight:   "",
+  newPrice:    ""
 };
 
 const $app = document.getElementById("app");
@@ -186,7 +224,7 @@ function loadMeta() {
   }
 
   window[cbName] = data => finish(null, data);
-  tag.onerror = () => finish("โหลดข้อมูลไม่สำเร็จ — เช็คอินเทอร์เน็ต และเช็คว่า Webhook deploy เวอร์ชันใหม่แล้ว");
+  tag.onerror = () => finish("โหลดข้อมูลไม่สำเร็จ — เช็คอินเทอร์เน็ต");
   setTimeout(() => finish("หมดเวลารอข้อมูล (20 วิ) — ลองกดโหลดใหม่อีกครั้ง"), 20000);
 
   tag.src = STOCK_WEBHOOK + "?mode=ingredients&callback=" + cbName;
@@ -201,17 +239,23 @@ function filteredItems() {
 
 // ═══════════ RENDER ═══════════
 function render() {
-  if (state.screen === "confirm") return renderConfirm();
-  if (state.screen === "sending") return renderSending();
-  if (state.screen === "done")    return renderDone();
-  if (state.screen === "error")   return renderError();
+  // screens ของ manage tab
+  if (state.screen === "confirm")    return renderConfirm();
+  if (state.screen === "sending")    return renderSending();
+  if (state.screen === "done")       return renderDone();
+  if (state.screen === "error")      return renderError();
+  // screens ของ addNew tab
+  if (state.screen === "addConfirm") return renderAddConfirm();
+  if (state.screen === "addSending") return renderAddSending();
+  if (state.screen === "addDone")    return renderAddDone();
+  if (state.screen === "addError")   return renderAddError();
 
-  if (state.metaLoading || (!state.meta && !state.metaError)) {
+  if (state.metaLoading || (!state.meta && !state.metaError && state.tab !== "addNew")) {
     $app.innerHTML = `<div class="card"><div class="loading">
       <span class="spinner">⏳</span>กำลังโหลดรายการวัตถุดิบจากชีต...</div></div>`;
     return;
   }
-  if (state.metaError) {
+  if (state.metaError && state.tab !== "addNew") {
     $app.innerHTML = `<div class="card"><h2>โหลดรายการไม่สำเร็จ ❌</h2>
       <div class="error">${escHtml(state.metaError)}</div>
       <button class="btn btn-dark" id="reloadBtn">🔄 โหลดใหม่</button></div>`;
@@ -219,16 +263,21 @@ function render() {
     return;
   }
 
-  const inner = state.tab === "summary" ? summaryHtml() : formHtml();
+  // แสดง cat-row เฉพาะ tab summary กับ manage
+  const showCatRow = state.tab !== "addNew";
+  const inner = state.tab === "summary" ? summaryHtml()
+              : state.tab === "addNew"  ? addNewHtml()
+              : formHtml();
+
   $app.innerHTML = `
     <div class="tabs">
       ${Object.keys(TABS).map(t =>
         `<button class="tab-btn ${state.tab===t?'on':''}" data-tab="${t}">${TABS[t]}</button>`).join("")}
     </div>
-    <div class="cat-row">
+    ${showCatRow ? `<div class="cat-row">
       ${["ทั้งหมด", ...state.cats].map(c =>
         `<button class="cat-btn ${state.catFilter===c?'on':''}" data-cat="${escHtml(c)}">${escHtml(c)}</button>`).join("")}
-    </div>
+    </div>` : ""}
     ${inner}`;
 
   $app.querySelectorAll(".tab-btn").forEach(b =>
@@ -237,7 +286,268 @@ function render() {
     b.onclick = () => { state.catFilter = b.dataset.cat; render(); });
 
   if (state.tab === "summary") bindSummary();
-  else bindForm();
+  else if (state.tab === "manage") bindForm();
+  else bindAddNew();
+}
+
+// ─────────── Tab เพิ่มวัตถุดิบใหม่ ───────────
+function addNewHtml() {
+  const w = parseFloat(state.newWeight) || 0;
+  const p = parseFloat(state.newPrice)  || 0;
+  const costPerGram = (w > 0 && p > 0) ? (p / w).toFixed(6) : null;
+  const fullName = state.newBrand.trim()
+    ? state.newBrand.trim() + "-" + state.newName.trim()
+    : state.newName.trim();
+
+  const catOptions = CAT_PRESETS.map(c =>
+    `<option value="${escHtml(c)}" ${state.newCat === c ? "selected" : ""}>${escHtml(c)}</option>`
+  ).join("");
+
+  return `
+  <div class="card">
+    <h2>➕ เพิ่มวัตถุดิบใหม่</h2>
+    <p class="desc">ระบบจะบันทึกลงทั้ง Ingredient Stock และ ต้นทุนวัตถุดิบ พร้อมกันอัตโนมัติ</p>
+
+    <div class="sec-title">แบรนด์สินค้า (ไม่บังคับ)</div>
+    <div class="field-group">
+      <input type="text" id="newBrand" placeholder="เช่น Valrhona, Anchor, Kerry" value="${escHtml(state.newBrand)}">
+    </div>
+
+    <div class="sec-title">ชื่อวัตถุดิบ *</div>
+    <div class="field-group">
+      <input type="text" id="newName" placeholder="เช่น ผงมะม่วงน้ำดอกไม้" value="${escHtml(state.newName)}">
+    </div>
+
+    <div id="namePreview" class="cost-preview" style="background:#f0f7ff;border-color:#bfdbfe;color:#1e40af;display:${state.newBrand.trim() && state.newName.trim() ? 'block' : 'none'}">
+      ชื่อที่จะบันทึก: <b>${escHtml(fullName)}</b>
+      <span>= แบรนด์ - ชื่อสินค้า</span>
+    </div>
+
+    <div class="sec-title">หมวด (Category) *</div>
+    <div class="field-group">
+      <select id="newCat">
+        <option value="">— เลือกหมวด —</option>
+        ${catOptions}
+        <option value="__custom__" ${state.newCat === "__custom__" ? "selected" : ""}>อื่นๆ (พิมพ์เอง)</option>
+      </select>
+    </div>
+    ${state.newCat === "__custom__" ? `
+    <div class="field-group">
+      <input type="text" id="newCatCustom" placeholder="พิมพ์ชื่อหมวดใหม่" value="${escHtml(state.newCatCustom)}">
+    </div>` : ""}
+
+    <div class="sec-title">ปริมาณและราคา (ไม่บังคับ)</div>
+    <div class="field-row">
+      <div class="field-group">
+        <label>ปริมาณ (กรัม / มล.)</label>
+        <input type="number" id="newWeight" inputmode="decimal" min="0" placeholder="เช่น 1000" value="${escHtml(state.newWeight)}">
+      </div>
+      <div class="field-group">
+        <label>ราคา (บาท)</label>
+        <input type="number" id="newPrice" inputmode="decimal" min="0" placeholder="เช่น 250" value="${escHtml(state.newPrice)}">
+      </div>
+    </div>
+
+    <div id="costPreview" class="cost-preview" style="display:${costPerGram !== null ? 'block' : 'none'}">
+      ต้นทุนต่อกรัม: <span class="cpg-val">${costPerGram !== null ? costPerGram + ' บาท/กรัม' : ''}</span>
+      <span class="cpg-sub">${costPerGram !== null ? '= ' + p + ' บาท ÷ ' + w + ' กรัม' : ''}</span>
+    </div>
+
+    <button class="btn c-add" id="goAddConfirm">ตรวจสอบก่อนบันทึก →</button>
+  </div>`;
+}
+
+function bindAddNew() {
+  const brandInp  = $app.querySelector("#newBrand");
+  const nameInp   = $app.querySelector("#newName");
+  const catSel    = $app.querySelector("#newCat");
+  const catCustom = $app.querySelector("#newCatCustom");
+  const weightInp = $app.querySelector("#newWeight");
+  const priceInp  = $app.querySelector("#newPrice");
+
+  // brand + name: อัปเดต state เท่านั้น ไม่ render (กัน focus หาย)
+  // แต่อัปเดต preview ชื่อตรงๆ แทน
+  if (brandInp) brandInp.oninput = e => {
+    state.newBrand = e.target.value;
+    updateNamePreview();
+  };
+  if (nameInp) nameInp.oninput = e => {
+    state.newName = e.target.value;
+    updateNamePreview();
+  };
+
+  // cat: ต้อง render เพื่อแสดง/ซ่อน custom input
+  if (catSel) catSel.onchange = e => { state.newCat = e.target.value; render(); };
+
+  // catCustom: แค่เก็บ state ไม่ต้อง render
+  if (catCustom) catCustom.oninput = e => { state.newCatCustom = e.target.value; };
+
+  // weight + price: อัปเดต cost preview ตรงๆ แทน render
+  if (weightInp) weightInp.oninput = e => { state.newWeight = e.target.value; updateCostPreview(); };
+  if (priceInp)  priceInp.oninput  = e => { state.newPrice  = e.target.value; updateCostPreview(); };
+
+  const goBtn = $app.querySelector("#goAddConfirm");
+  if (goBtn) goBtn.onclick = goAddConfirm;
+}
+
+function updateNamePreview() {
+  const brand = state.newBrand.trim();
+  const name  = state.newName.trim();
+  const box   = $app.querySelector("#namePreview");
+  if (!box) return;
+  if (brand && name) {
+    box.style.display = "block";
+    box.querySelector("b").textContent = brand + "-" + name;
+  } else {
+    box.style.display = "none";
+  }
+}
+
+function updateCostPreview() {
+  const w = parseFloat(state.newWeight) || 0;
+  const p = parseFloat(state.newPrice)  || 0;
+  const box = $app.querySelector("#costPreview");
+  if (!box) return;
+  if (w > 0 && p > 0) {
+    box.style.display = "block";
+    box.querySelector(".cpg-val").textContent = (p / w).toFixed(6) + " บาท/กรัม";
+    box.querySelector(".cpg-sub").textContent = "= " + p + " บาท ÷ " + w + " กรัม";
+  } else {
+    box.style.display = "none";
+  }
+}
+
+function goAddConfirm() {
+  const name = state.newName.trim();
+  const cat  = state.newCat === "__custom__" ? state.newCatCustom.trim() : state.newCat.trim();
+
+  if (!name) { alert("กรุณาใส่ชื่อวัตถุดิบ"); return; }
+  if (!cat)  { alert("กรุณาเลือกหมวด"); return; }
+
+  state.screen = "addConfirm";
+  render();
+}
+
+function renderAddConfirm() {
+  const brand    = state.newBrand.trim();
+  const name     = state.newName.trim();
+  const fullName = brand ? brand + "-" + name : name;
+  const cat      = state.newCat === "__custom__" ? state.newCatCustom.trim() : state.newCat.trim();
+  const weight   = parseFloat(state.newWeight) || 0;
+  const price    = parseFloat(state.newPrice)  || 0;
+  const cpg      = (weight > 0 && price > 0) ? (price / weight).toFixed(6) : null;
+
+  $app.innerHTML = `
+  <div class="card">
+    <h2>ตรวจสอบก่อนบันทึก</h2>
+    <div class="mode-bar c-add">➕ เพิ่มวัตถุดิบใหม่</div>
+    <table class="sum-tbl">
+      <tr><th>รายการ</th><th>ข้อมูล</th></tr>
+      ${brand ? `<tr><td>แบรนด์</td><td class="q">${escHtml(brand)}</td></tr>` : ""}
+      <tr><td>ชื่อวัตถุดิบ</td><td class="q">${escHtml(name)}</td></tr>
+      <tr><td>ชื่อที่บันทึก</td><td class="q">${escHtml(fullName)}</td></tr>
+      <tr><td>หมวด</td><td class="q">${escHtml(cat)}</td></tr>
+      <tr><td>ปริมาณ</td><td class="q">${weight > 0 ? weight + " กรัม/มล." : "— (ไม่ระบุ)"}</td></tr>
+      <tr><td>ราคา</td><td class="q">${price > 0 ? price + " บาท" : "— (ไม่ระบุ)"}</td></tr>
+      ${cpg ? `<tr><td>ต้นทุน/กรัม</td><td class="q">${cpg} บาท</td></tr>` : ""}
+    </table>
+    <div class="meta-line" style="color:#888;font-size:12.5px">
+      ระบบจะบันทึกลง Ingredient Stock (เพิ่ม column ใหม่) และ ต้นทุนวัตถุดิบ (เพิ่ม row ใหม่) พร้อมกัน
+    </div>
+    <button class="btn c-add" id="sendAddBtn">✅ ยืนยัน — บันทึกวัตถุดิบใหม่</button>
+    <button class="btn btn-outline" id="backAddBtn">← กลับไปแก้</button>
+  </div>`;
+
+  $app.querySelector("#backAddBtn").onclick = () => { state.screen = "main"; render(); };
+  $app.querySelector("#sendAddBtn").onclick  = sendAdd;
+}
+
+async function sendAdd() {
+  const brand    = state.newBrand.trim();
+  const name     = state.newName.trim();
+  const fullName = brand ? brand + "-" + name : name;
+  const cat      = state.newCat === "__custom__" ? state.newCatCustom.trim() : state.newCat.trim();
+  const weight   = parseFloat(state.newWeight) || 0;
+  const price    = parseFloat(state.newPrice)  || 0;
+
+  state.screen = "addSending";
+  render();
+
+  try {
+    const res = await fetch(STOCK_WEBHOOK, {
+      method: "POST",
+      body: JSON.stringify({
+        action:   "addIngredient",
+        name:     fullName,
+        category: cat,
+        weight:   weight || null,
+        price:    price  || null
+      })
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "ไม่ทราบสาเหตุ");
+    state.result  = data;
+    state.screen  = "addDone";
+    state.meta    = null; // reload meta ใหม่
+  } catch (err) {
+    state.errorMsg = String(err);
+    state.screen   = "addError";
+  }
+  render();
+}
+
+function renderAddSending() {
+  $app.innerHTML = `
+  <div class="card"><div class="loading">
+    <span class="spinner">⏳</span>กำลังบันทึกวัตถุดิบใหม่...
+  </div></div>`;
+}
+
+function renderAddDone() {
+  const r = state.result;
+  $app.innerHTML = `
+  <div class="card">
+    <div class="ok-banner purple">✅ เพิ่มวัตถุดิบใหม่สำเร็จ</div>
+    <table class="sum-tbl">
+      <tr><th>รายการ</th><th>ข้อมูล</th></tr>
+      <tr><td>ชื่อ</td><td class="q">${escHtml(r.name)}</td></tr>
+      <tr><td>หมวด</td><td class="q">${escHtml(r.category)}</td></tr>
+      <tr><td>ปริมาณ</td><td class="q">${r.weight} กรัม/มล.</td></tr>
+      <tr><td>ราคา</td><td class="q">${r.price} บาท</td></tr>
+      <tr><td>ต้นทุน/กรัม</td><td class="q">${r.costPerGram} บาท</td></tr>
+    </table>
+    <div class="meta-line" style="color:#888;font-size:12.5px">
+      บันทึกลง Ingredient Stock (col ${r.ingCol}) และ ต้นทุนวัตถุดิบ (row ${r.costRow}) เรียบร้อยแล้ว
+    </div>
+    <button class="btn c-add" id="addMoreBtn">➕ เพิ่มวัตถุดิบอีกรายการ</button>
+    <button class="btn btn-outline" id="backMainBtn">← กลับหน้าหลัก</button>
+  </div>`;
+
+  $app.querySelector("#addMoreBtn").onclick = () => {
+    state.newBrand = ""; state.newName = ""; state.newCat = ""; state.newCatCustom = "";
+    state.newWeight = ""; state.newPrice = "";
+    state.screen = "main"; state.tab = "addNew";
+    render();
+    loadMeta();
+  };
+  $app.querySelector("#backMainBtn").onclick = () => {
+    state.screen = "main"; state.tab = "summary";
+    render();
+    loadMeta();
+  };
+}
+
+function renderAddError() {
+  $app.innerHTML = `
+  <div class="card">
+    <h2>บันทึกไม่สำเร็จ ❌</h2>
+    <div class="error">${escHtml(state.errorMsg)}</div>
+    <p class="desc" style="margin-top:10px">ข้อมูลยังไม่ถูกบันทึก ลองส่งอีกครั้ง หรือกลับไปแก้ได้ครับ</p>
+    <button class="btn c-add" id="retryAddBtn">🔄 ลองส่งอีกครั้ง</button>
+    <button class="btn btn-outline" id="editAddBtn">← กลับไปแก้</button>
+  </div>`;
+  $app.querySelector("#retryAddBtn").onclick = () => { state.screen = "addSending"; render(); sendAdd(); };
+  $app.querySelector("#editAddBtn").onclick  = () => { state.screen = "main"; render(); };
 }
 
 // ─────────── ฟอร์ม เติม/เบิก/นับจริง ───────────
@@ -290,17 +600,14 @@ function formHtml() {
 function bindForm() {
   $app.querySelectorAll(".mgr-btn").forEach(b =>
     b.onclick = () => { state.manager = b.dataset.mgr; render(); });
-
   $app.querySelectorAll(".act-btn").forEach(b =>
     b.onclick = () => { state.action = b.dataset.act; render(); });
-
   $app.querySelectorAll("#itemList input").forEach(inp => {
     inp.oninput = () => {
       state.qty[inp.dataset.item] = inp.value;
       inp.closest(".item-row").classList.toggle("filled", inp.value !== "");
     };
   });
-
   const noteBox = $app.querySelector("#noteBox");
   if (noteBox) noteBox.oninput = e => state.note = e.target.value;
   const goBtn = $app.querySelector("#goConfirm");
@@ -308,7 +615,6 @@ function bindForm() {
 }
 
 function collectEntries() {
-  // เก็บจาก "ทุกหมวด" ไม่ใช่แค่ที่กรองอยู่ — กันลืมว่ากรอกค้างไว้หมวดอื่น
   if (!state.meta) return [];
   return state.meta.items
     .filter(it => (state.qty[it.label] ?? "").trim() !== "")
@@ -372,7 +678,6 @@ function send() {
 
 async function doSend() {
   try {
-    // ไม่ตั้ง Content-Type เพื่อเลี่ยง CORS preflight (เหมือนแอปอื่นๆ)
     const res = await fetch(STOCK_WEBHOOK, {
       method: "POST",
       body: JSON.stringify(state.lastPayload)
@@ -381,7 +686,7 @@ async function doSend() {
     if (!data.ok) throw new Error(data.error || "ไม่ทราบสาเหตุ");
     state.result = data;
     state.screen = "done";
-    state.meta = null; // ข้อมูลคงเหลือเก่าหมดอายุ → โหลดใหม่หลังจบ
+    state.meta = null;
   } catch (err) {
     state.errorMsg = String(err);
     state.screen = "error";
@@ -433,9 +738,9 @@ function resetApp() {
   state.result = null;
   state.errorMsg = "";
   state.screen = "main";
-  state.tab = "manage"; // คงชื่อคน+โหมด+filter ไว้ เผื่อทำรายการต่อ
+  state.tab = "manage";
   render();
-  loadMeta(); // ดึงคงเหลือล่าสุดมาใหม่
+  loadMeta();
 }
 
 // ─────────── Tab สรุปยอด ───────────
@@ -444,8 +749,6 @@ function summaryHtml() {
   const isAll = state.catFilter === "ทั้งหมด";
   let hiddenCount = 0;
 
-  // tab "ทั้งหมด" = โชว์เฉพาะของขาด/เร่งด่วน (หมดสต๊อค หรือเหลือไม่ถึง 7 วัน)
-  // กันหน้ายาวเกินเมื่อวัตถุดิบเยอะขึ้น — ดูรายการเต็มได้จาก tab หมวด
   if (isAll) {
     const urgent = items.filter(it =>
       it.current <= 0 || (it.daily > 0 && it.current / it.daily < 7));
@@ -461,7 +764,6 @@ function summaryHtml() {
     const dot = days === null ? "" :
       `<span class="dot ${days < 7 ? "r" : days < 14 ? "y" : "g"}"></span>`;
 
-    // หัวหมวด (เฉพาะตอนดู "ทั้งหมด")
     let catHead = "";
     if (state.catFilter === "ทั้งหมด" && it.cat !== lastCat) {
       lastCat = it.cat;
@@ -495,7 +797,7 @@ function summaryHtml() {
       <span><span class="dot y"></span>ไม่ถึง 14 วัน</span>
       <span><span class="dot g"></span>เพียงพอ</span>
     </div>
-    <div class="upd">อัปเดตล่าสุด: ${state.meta.updatedAt}</div>
+    <div class="upd">อัปเดตล่าสุด: ${state.meta ? state.meta.updatedAt : "—"}</div>
     <button class="btn btn-outline" id="reloadBtn">🔄 โหลดข้อมูลใหม่</button>
   </div>`;
 }
@@ -510,7 +812,7 @@ function escId(s)   { return s.replace(/[^a-zA-Z0-9ก-๙]/g, "_"); }
 function escHtml(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
 render();
-loadMeta(); // โหลดรายการวัตถุดิบทันทีที่เปิด
+loadMeta();
 </script>
 </body>
 </html>
