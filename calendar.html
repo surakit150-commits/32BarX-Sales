@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ปฏิทินการเข้างาน — 32Bar</title>
+<style>
+  :root {
+    --bg: #f5f5f3;
+    --surface: #ffffff;
+    --surface-alt: #f9f9f7;
+    --border: #e4e4e0;
+    --border-strong: #d0d0cc;
+    --text: #1a1a18;
+    --text-sec: #5a5a56;
+    --text-muted: #9a9a96;
+    --accent: #185FA5;
+    --accent-bg: #E6F1FB;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .app { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+
+  .header { display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem; }
+  .header h1 { font-size: 18px; font-weight: 600; color: var(--text); }
+  .header .sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+  .logo { width: 36px; height: 36px; border-radius: 8px; background: #1a1a18; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+
+  .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .vtabs { display: flex; border: 1px solid var(--border-strong); border-radius: var(--radius); overflow: hidden; }
+  .vtab { padding: 7px 16px; font-size: 13px; cursor: pointer; background: transparent; border: none; color: var(--text-sec); transition: background 0.12s, color 0.12s; font-family: inherit; }
+  .vtab:hover { background: var(--surface-alt); }
+  .vtab.active { background: var(--text); color: #fff; font-weight: 500; }
+
+  .spacer { flex: 1; }
+  .navg { display: flex; align-items: center; gap: 6px; }
+  .nbtn { width: 32px; height: 32px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); cursor: pointer; color: var(--text-sec); font-size: 18px; display: flex; align-items: center; justify-content: center; line-height: 1; transition: background 0.1s; }
+  .nbtn:hover { background: var(--surface-alt); }
+  .plbl { font-size: 14px; font-weight: 500; color: var(--text); min-width: 170px; text-align: center; }
+  .rbtn { padding: 7px 12px; font-size: 13px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); cursor: pointer; color: var(--text-sec); display: flex; align-items: center; gap: 6px; font-family: inherit; transition: background 0.1s; }
+  .rbtn:hover { background: var(--surface-alt); }
+  .rbtn svg { width: 14px; height: 14px; }
+
+  .sbar { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; min-height: 18px; }
+
+  .errbox { background: #FCEBEB; border: 1px solid #F09595; border-radius: var(--radius); padding: 10px 14px; color: #791F1F; font-size: 13px; margin-bottom: 12px; }
+
+  /* Calendar grid */
+  .cgrid { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
+  .dhdr { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--surface-alt); border-bottom: 1px solid var(--border); }
+  .dh { padding: 8px 6px; text-align: center; font-size: 12px; font-weight: 500; color: var(--text-sec); }
+  .dh.sun { color: #A32D2D; } .dh.sat { color: #185FA5; }
+  .mgrid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cell { min-height: 82px; border-right: 1px solid var(--border); border-top: 1px solid var(--border); padding: 5px; background: var(--surface); }
+  .cell:nth-child(7n) { border-right: none; }
+  .cell.other { background: var(--surface-alt); }
+  .cell.today { background: #EFF6FF; }
+  .cdate { font-size: 11px; color: var(--text-muted); margin-bottom: 3px; line-height: 1; }
+  .cdate.sun { color: #D85A30; } .cdate.sat { color: #378ADD; }
+  .cdate.tnow { font-weight: 700; color: var(--accent); }
+  .stag { font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block; line-height: 1.4; }
+  .more { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+
+  /* Week view */
+  .wrow { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .wcell { min-height: 120px; border-right: 1px solid var(--border); border-top: 1px solid var(--border); padding: 7px 6px; background: var(--surface); }
+  .wrow:first-child .wcell { border-top: none; }
+  .wcell:last-child { border-right: none; }
+  .wcell.today { background: #EFF6FF; }
+  .wdate { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
+  .wdate.sun { color: #D85A30; } .wdate.sat { color: #378ADD; } .wdate.tnow { color: var(--accent); }
+
+  /* Today view */
+  .tview { display: flex; flex-direction: column; gap: 12px; }
+  .thdr { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; }
+  .tbig { font-size: 22px; font-weight: 600; color: var(--text); }
+  .tday { font-size: 14px; color: var(--text-sec); margin-top: 4px; }
+  .tcount { font-size: 13px; color: var(--text-sec); }
+  .sgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  .scard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+  .sav { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+  .sname { font-size: 13px; font-weight: 500; color: var(--text); }
+  .empty { text-align: center; padding: 2.5rem; color: var(--text-muted); font-size: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+
+  .loading-wrap { text-align: center; padding: 3rem; color: var(--text-muted); }
+  .spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-sec); }
+  .leg-dot { width: 10px; height: 10px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="logo">32</div>
+    <div>
+      <h1>ปฏิทินการเข้างาน</h1>
+      <div class="sub">32Bar Staff Calendar</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="vtabs">
+      <button class="vtab active" data-v="month" onclick="setView('month')">รายเดือน</button>
+      <button class="vtab" data-v="week" onclick="setView('week')">รายสัปดาห์</button>
+      <button class="vtab" data-v="today" onclick="setView('today')">วันนี้</button>
+    </div>
+    <button class="rbtn" onclick="loadData()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      โหลดใหม่
+    </button>
+    <div class="spacer"></div>
+    <div class="navg">
+      <button class="nbtn" onclick="nav(-1)" title="ย้อนกลับ">&#8249;</button>
+      <span class="plbl" id="plbl">—</span>
+      <button class="nbtn" onclick="nav(1)" title="ถัดไป">&#8250;</button>
+    </div>
+  </div>
+
+  <div class="sbar" id="sbar">กำลังโหลดข้อมูล...</div>
+  <div id="err"></div>
+  <div id="body">
+    <div class="loading-wrap">
+      <div class="spinner"></div>
+      <div>กำลังดึงข้อมูลจาก Google Sheets...</div>
+    </div>
+  </div>
+  <div class="legend" id="legend"></div>
+</div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzqrsXeGWD5IM5KWr0m1Efv_WcbPb8ALDtEi2HgZuZ5t0UplSgMQgZMrqU-y9AmSGTh/exec';
+
+const COLORS = [
+  {bg:'#E6F1FB',fg:'#0C447C'},{bg:'#E1F5EE',fg:'#085041'},
+  {bg:'#FAEEDA',fg:'#633806'},{bg:'#FBEAF0',fg:'#72243E'},
+  {bg:'#EEEDFE',fg:'#3C3489'},{bg:'#FAECE7',fg:'#712B13'},
+  {bg:'#EAF3DE',fg:'#27500A'},{bg:'#FCEBEB',fg:'#791F1F'},
+  {bg:'#dbeafe',fg:'#1e40af'},{bg:'#fef3c7',fg:'#92400e'},
+];
+
+const TH_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const TH_DAYS_FULL = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const DAY_SHORT = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+
+let calData = {}, colorMap = {}, colorIdx = 0;
+let view = 'month', cur = new Date();
+
+function color(name) {
+  if (!colorMap[name]) colorMap[name] = COLORS[colorIdx++ % COLORS.length];
+  return colorMap[name];
+}
+function dkey(y, m, d) { return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+
+async function loadData() {
+  document.getElementById('sbar').textContent = 'กำลังดึงข้อมูล...';
+  document.getElementById('err').innerHTML = '';
+  document.getElementById('body').innerHTML = '<div class="loading-wrap"><div class="spinner"></div><div>กำลังโหลด...</div></div>';
+  document.getElementById('legend').innerHTML = '';
+  try {
+    const res = await fetch(GAS_URL);
+    const json = await res.json();
+    if (json.status !== 'ok') throw new Error(json.message || 'unknown error');
+    colorMap = {}; colorIdx = 0;
+    parseData(json.data);
+    document.getElementById('sbar').textContent = `อัปเดตล่าสุด: ${new Date().toLocaleString('th-TH')}`;
+    render();
+    renderLegend();
+  } catch(e) {
+    document.getElementById('err').innerHTML = `<div class="errbox">โหลดไม่สำเร็จ: ${e.message}</div>`;
+    document.getElementById('sbar').textContent = '';
+    document.getElementById('body').innerHTML = '';
+  }
+}
+
+function parseData(rows) {
+  calData = {};
+  let curYear = new Date().getFullYear(), curMonth = -1;
+  const mMap = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  const dayPat = /^(sun|mon|tue|wed|thu|fri|sat)$/i;
+
+  for (let r = 0; r < rows.length; r++) {
+    const row = rows[r];
+    for (let c = 0; c < row.length; c++) {
+      const v = String(row[c] || '').trim();
+      const mm = v.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})$/i);
+      if (mm) { curMonth = mMap[mm[1].toLowerCase()]; curYear = parseInt(mm[2]); }
+    }
+    const dayPos = {};
+    let cnt = 0;
+    for (let c = 0; c < row.length; c++) {
+      const v = String(row[c] || '').trim();
+      if (dayPat.test(v)) { dayPos[v.toLowerCase()] = c; cnt++; }
+    }
+    if (cnt >= 5 && curMonth >= 0) {
+      const ord = ['sun','mon','tue','wed','thu','fri','sat'];
+      const ci = ord.map(d => dayPos[d] !== undefined ? dayPos[d] : -1);
+      const dr = rows[r + 1];
+      if (!dr) continue;
+      const dnums = ci.map(x => { if(x<0) return null; const n=parseInt(String(dr[x]||'')); return isNaN(n)?null:n; });
+      for (let sr = r + 2; sr < Math.min(r + 10, rows.length); sr++) {
+        const srow = rows[sr];
+        if (!srow) continue;
+        let has = false;
+        for (let i = 0; i < ci.length; i++) {
+          if (ci[i] < 0) continue;
+          const v = String(srow[ci[i]] || '').trim();
+          if (v && !/^\d+$/.test(v) && v.length > 1 && !dayPat.test(v)) { has = true; break; }
+        }
+        if (!has) continue;
+        for (let i = 0; i < ci.length; i++) {
+          const dn = dnums[i];
+          if (!dn || ci[i] < 0) continue;
+          const v = String(srow[ci[i]] || '').trim();
+          if (!v || /^\d+$/.test(v) || dayPat.test(v) || v.length < 2) continue;
+          let m = curMonth, y = curYear;
+          if (i > 0 && dn < 8 && dnums[i-1] && dnums[i-1] > 20) { m = (curMonth+1)%12; y = m===0?curYear+1:curYear; }
+          const k = dkey(y, m+1, dn);
+          if (!calData[k]) calData[k] = [];
+          if (!calData[k].includes(v)) calData[k].push(v);
+        }
+      }
+    }
+  }
+}
+
+function setView(v) {
+  view = v;
+  document.querySelectorAll('.vtab').forEach(t => t.classList.toggle('active', t.dataset.v === v));
+  render();
+}
+
+function nav(d) {
+  if (view === 'month') cur = new Date(cur.getFullYear(), cur.getMonth() + d, 1);
+  else if (view === 'week') cur = new Date(cur.getTime() + d * 7 * 86400000);
+  else cur = new Date(cur.getTime() + d * 86400000);
+  render();
+}
+
+function render() {
+  if (view === 'month') renderMonth();
+  else if (view === 'week') renderWeek();
+  else renderToday();
+}
+
+function renderMonth() {
+  const y = cur.getFullYear(), m = cur.getMonth();
+  document.getElementById('plbl').textContent = `${TH_MONTHS[m]} ${y + 543}`;
+  const fd = new Date(y, m, 1).getDay();
+  const dim = new Date(y, m+1, 0).getDate();
+  const td = new Date();
+  const prev = new Date(y, m, 0).getDate();
+
+  let h = '<div class="cgrid"><div class="dhdr">';
+  DAY_SHORT.forEach((d,i) => h += `<div class="dh${i===0?' sun':i===6?' sat':''}">${d}</div>`);
+  h += '</div><div class="mgrid">';
+  for (let i = fd-1; i >= 0; i--) h += `<div class="cell other"><div class="cdate">${prev-i}</div></div>`;
+  for (let d = 1; d <= dim; d++) {
+    const isT = td.getFullYear()===y && td.getMonth()===m && td.getDate()===d;
+    const dw = new Date(y,m,d).getDay();
+    const k = dkey(y, m+1, d);
+    const staff = calData[k] || [];
+    const dc = dw===0?' sun':dw===6?' sat':'';
+    h += `<div class="cell${isT?' today':''}">`;
+    h += `<div class="cdate${dc}${isT?' tnow':''}">${d}</div>`;
+    staff.slice(0,3).forEach(s => { const c=color(s); h+=`<span class="stag" style="background:${c.bg};color:${c.fg}">${s}</span>`; });
+    if (staff.length > 3) h += `<div class="more">+${staff.length-3} คน</div>`;
+    h += '</div>';
+  }
+  const rem = (7 - (fd+dim)%7) % 7;
+  for (let d = 1; d <= rem; d++) h += `<div class="cell other"><div class="cdate">${d}</div></div>`;
+  h += '</div></div>';
+  document.getElementById('body').innerHTML = h;
+}
+
+function renderWeek() {
+  const td = new Date();
+  const ws = new Date(cur); ws.setDate(cur.getDate() - cur.getDay());
+  const dates = Array.from({length:7}, (_,i) => { const d=new Date(ws); d.setDate(ws.getDate()+i); return d; });
+  const f=dates[0], l=dates[6];
+  document.getElementById('plbl').textContent = `${f.getDate()} ${TH_MONTHS[f.getMonth()].slice(0,3)} — ${l.getDate()} ${TH_MONTHS[l.getMonth()].slice(0,3)} ${l.getFullYear()+543}`;
+
+  let h = '<div class="cgrid"><div class="dhdr">';
+  dates.forEach((d,i) => h += `<div class="dh${i===0?' sun':i===6?' sat':''}">${DAY_SHORT[i]}<br><span style="font-size:13px;font-weight:500">${d.getDate()}</span></div>`);
+  h += '</div><div class="wrow">';
+  dates.forEach((d,i) => {
+    const isT = d.toDateString()===td.toDateString();
+    const dw = d.getDay();
+    const k = dkey(d.getFullYear(), d.getMonth()+1, d.getDate());
+    const staff = calData[k] || [];
+    const dc = dw===0?' sun':dw===6?' sat':'';
+    h += `<div class="wcell${isT?' today':''}">`;
+    staff.forEach(s => { const c=color(s); h+=`<span class="stag" style="background:${c.bg};color:${c.fg};display:block;margin-bottom:3px">${s}</span>`; });
+    if (!staff.length) h += `<span style="font-size:12px;color:var(--text-muted)">—</span>`;
+    h += '</div>';
+  });
+  h += '</div></div>';
+  document.getElementById('body').innerHTML = h;
+}
+
+function renderToday() {
+  const d = cur;
+  const k = dkey(d.getFullYear(), d.getMonth()+1, d.getDate());
+  const staff = calData[k] || [];
+  const dw = d.getDay();
+  document.getElementById('plbl').textContent = `${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${d.getFullYear()+543}`;
+
+  let h = '<div class="tview">';
+  h += `<div class="thdr"><div class="tbig">${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${d.getFullYear()+543}</div><div class="tday">วัน${TH_DAYS_FULL[dw]}</div></div>`;
+  if (staff.length) {
+    h += `<div class="tcount">พนักงานที่เข้างาน ${staff.length} คน</div><div class="sgrid">`;
+    staff.forEach(s => { const c=color(s); h+=`<div class="scard"><div class="sav" style="background:${c.bg};color:${c.fg}">${s.slice(0,2)}</div><div class="sname">${s}</div></div>`; });
+    h += '</div>';
+  } else {
+    h += `<div class="empty"><div style="font-size:32px;margin-bottom:8px">📅</div>ไม่มีข้อมูลการเข้างานในวันนี้</div>`;
+  }
+  h += '</div>';
+  document.getElementById('body').innerHTML = h;
+}
+
+function renderLegend() {
+  const names = Object.keys(colorMap);
+  if (!names.length) return;
+  let h = '';
+  names.forEach(n => { const c=colorMap[n]; h+=`<div class="leg-item"><div class="leg-dot" style="background:${c.bg};border:1px solid ${c.fg}40"></div>${n}</div>`; });
+  document.getElementById('legend').innerHTML = h;
+}
+
+loadData();
+</script>
+</body>
+</html>
