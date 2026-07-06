@@ -785,7 +785,6 @@ function setFormCategory(cat) {
 
 // ── SEARCHABLE ITEM ROW HELPERS ──────────────
 function buildSearchDropdown(rowId, items, type) {
-  // items: [{name, costPerGram/hasPrice, category}]
   const wrap = document.getElementById(rowId + '-dropdown');
   const q    = (document.getElementById(rowId + '-search').value || '').toLowerCase().trim();
   const filtered = q ? items.filter(i => i.name.toLowerCase().includes(q)) : items;
@@ -796,13 +795,12 @@ function buildSearchDropdown(rowId, items, type) {
   }
   const curVal = document.getElementById(rowId + '-val').value;
   wrap.innerHTML = filtered.map(i => {
-    const isChoc   = type === 'choc';
-    const noPrice  = isChoc ? !i.hasPrice : false;
+    const noPrice  = !i.hasPrice;
     const rightTxt = noPrice
       ? `<span class="item-no-price">ไม่มีราคา</span>`
-      : `<span class="item-cat">${esc(isChoc ? 'Chocolate' : i.category)}</span>`;
+      : `<span class="item-cat">${esc(type === 'choc' ? 'Chocolate' : i.category)}</span>`;
     const sel = curVal === i.name ? ' selected' : '';
-    return `<div class="search-dropdown-item${sel}" data-name="${esc(i.name)}" data-cpg="${isChoc ? (i.costPerGram || '') : i.costPerGram}" data-hasprice="${isChoc ? i.hasPrice : true}" onclick="selectItem('${rowId}','${type}',this)">
+    return `<div class="search-dropdown-item${sel}" data-name="${esc(i.name)}" data-cpg="${i.hasPrice ? (i.costPerGram || '') : ''}" data-hasprice="${i.hasPrice}" onclick="selectItem('${rowId}','${type}',this)">
       <span>${esc(i.name)}</span>${rightTxt}
     </div>`;
   }).join('');
@@ -909,9 +907,10 @@ function refreshChocSelects() { /* searchable — no refresh needed */ }
 
 // ── INGREDIENT ROWS ───────────────────────────
 function ingOptions() {
-  return ingredients.map(i =>
-    `<option value="${esc(i.name)}" data-cpg="${i.costPerGram}">${esc(i.name)} (${esc(i.category)})</option>`
-  ).join('');
+  return ingredients.map(i => {
+    const label = i.hasPrice ? i.name : i.name + ' (ยังไม่มีราคา)';
+    return `<option value="${esc(i.name)}" data-cpg="${i.hasPrice ? i.costPerGram : ''}" data-hasprice="${i.hasPrice}">${esc(label)} (${esc(i.category)})</option>`;
+  }).join('');
 }
 
 function addIngRow(preset) {
@@ -926,11 +925,19 @@ function addIngRow(preset) {
 }
 
 function ingRowChanged(rowId) {
-  const cpg = parseFloat(document.getElementById(rowId + '-cpg').value);
-  const g   = parseFloat(document.getElementById(rowId + '-grams').value) || 0;
-  const el  = document.getElementById(rowId + '-cost');
+  const cpg  = parseFloat(document.getElementById(rowId + '-cpg').value);
+  const hasp = document.getElementById(rowId + '-hasp').value === '1';
+  const name = document.getElementById(rowId + '-val').value;
+  const g    = parseFloat(document.getElementById(rowId + '-grams').value) || 0;
+  const el   = document.getElementById(rowId + '-cost');
   if (!isFullMode) { el.textContent = '—'; el.style.color = 'var(--text-light)'; return; }
-  el.textContent = (!isNaN(cpg) && g) ? '฿' + (cpg * g).toFixed(2) : '฿—';
+  if (hasp && !isNaN(cpg) && g) {
+    el.textContent = '฿' + (cpg * g).toFixed(2); el.style.color = '';
+  } else if (name && !hasp) {
+    el.textContent = 'ไม่มีราคา'; el.style.color = 'var(--red)';
+  } else {
+    el.textContent = '฿—'; el.style.color = '';
+  }
   recalc();
 }
 
@@ -949,9 +956,10 @@ function recalc() {
   });
   let ingTotal = 0;
   document.querySelectorAll('.ing-row').forEach(row => {
-    const cpg = parseFloat(document.getElementById(row.id + '-cpg')?.value);
-    const g   = parseFloat(document.getElementById(row.id + '-grams')?.value) || 0;
-    if (!isNaN(cpg)) ingTotal += cpg * g;
+    const cpg  = parseFloat(document.getElementById(row.id + '-cpg')?.value);
+    const hasp = document.getElementById(row.id + '-hasp')?.value === '1';
+    const g    = parseFloat(document.getElementById(row.id + '-grams')?.value) || 0;
+    if (hasp && !isNaN(cpg)) ingTotal += cpg * g;
   });
   const total   = chocTotal + ingTotal;
   const yld     = parseFloat(document.getElementById('recipe-yield').value) || 1;
@@ -1011,8 +1019,9 @@ async function saveRecipe() {
     const name = document.getElementById(row.id + '-val')?.value;
     const g    = parseFloat(document.getElementById(row.id + '-grams')?.value) || 0;
     if (!name || !g) return;
-    const cpg  = parseFloat(document.getElementById(row.id + '-cpg')?.value) || 0;
-    ings.push({ name, grams: g, costPerGram: cpg, cost: cpg * g });
+    const cpg  = parseFloat(document.getElementById(row.id + '-cpg')?.value);
+    const hasp = document.getElementById(row.id + '-hasp')?.value === '1';
+    ings.push({ name, grams: g, costPerGram: hasp ? cpg : null, cost: hasp && !isNaN(cpg) ? cpg * g : 0, hasPrice: hasp });
   });
 
   if (!chocs.length && !ings.length) { showToast('กรุณาเพิ่มวัตถุดิบอย่างน้อย 1 รายการ', 'error'); return; }
