@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loyverse Sales Dashboard — 32Bar</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --surface-0:#f1efec;--surface-1:#f6f5f2;--surface-2:#ffffff;
+  --text-primary:#0b0b0b;--text-secondary:#52514e;--text-muted:#898781;
+  --border:rgba(11,11,11,0.10);--border-strong:rgba(11,11,11,0.18);
+  --bg-accent:#e6f1fb;--border-accent:#b5d4f4;--text-accent:#185fa5;
+  --fill-accent:#2a78d6;--on-accent:#ffffff;
+  --bg-danger:#fcebeb;--border-danger:#f7c1c1;--text-danger:#a32d2d;
+  --radius:8px;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --surface-0:#111110;--surface-1:#1a1a19;--surface-2:#242422;
+    --text-primary:#ffffff;--text-secondary:#c3c2b7;--text-muted:#898781;
+    --border:rgba(255,255,255,0.10);--border-strong:rgba(255,255,255,0.18);
+    --bg-accent:#0c447c;--border-accent:#185fa5;--text-accent:#85b7eb;
+    --fill-accent:#3987e5;--on-accent:#ffffff;
+    --bg-danger:#501313;--border-danger:#791f1f;--text-danger:#f09595;
+  }
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text-primary);background:var(--surface-0);font-size:14px;min-height:100vh}
+.shell{max-width:1100px;margin:0 auto;padding:1.5rem 1.25rem}
+
+/* Header */
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px}
+.header-left{display:flex;align-items:center;gap:10px}
+.logo{width:36px;height:36px;border-radius:var(--radius);background:var(--bg-accent);display:flex;align-items:center;justify-content:center;color:var(--text-accent);font-size:20px}
+.page-title{font-size:18px;font-weight:600;color:var(--text-primary)}
+.store-badge{font-size:12px;color:var(--text-secondary);background:var(--surface-1);border:0.5px solid var(--border);border-radius:var(--radius);padding:3px 10px;display:inline-block;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* Setup */
+.setup-card{background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:2.5rem;max-width:480px;margin:6rem auto;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.setup-card h3{font-size:18px;font-weight:600;margin-bottom:8px}
+.setup-card p{font-size:13px;color:var(--text-secondary);margin-bottom:1.5rem;line-height:1.6}
+.token-row{display:flex;gap:8px;margin-bottom:8px}
+.token-row input{flex:1;padding:9px 12px;border:0.5px solid var(--border-strong);border-radius:var(--radius);font-size:13px;background:var(--surface-2);color:var(--text-primary);outline:none}
+.token-row input:focus{box-shadow:0 0 0 2px var(--border-accent)}
+.hint{font-size:11px;color:var(--text-muted)}
+
+/* Controls */
+.controls-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1.25rem}
+.ctrl-group{display:flex}
+.ctrl-group button{border:0.5px solid var(--border-strong);background:transparent;color:var(--text-secondary);padding:6px 14px;font-size:12px;cursor:pointer;transition:background .12s}
+.ctrl-group button:first-child{border-radius:var(--radius) 0 0 var(--radius)}
+.ctrl-group button:last-child{border-radius:0 var(--radius) var(--radius) 0}
+.ctrl-group button:not(:first-child){border-left:none}
+.ctrl-group button.active{background:var(--bg-accent);color:var(--text-accent);border-color:var(--border-accent)}
+.ctrl-group button:hover:not(.active){background:var(--surface-1)}
+.date-inputs{display:flex;gap:6px;align-items:center}
+.date-inputs input[type=date]{font-size:12px;padding:6px 10px;border:0.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface-2);color:var(--text-primary);cursor:pointer;outline:none}
+.date-inputs span{font-size:12px;color:var(--text-muted)}
+
+/* Buttons */
+.btn-primary{background:var(--fill-accent);color:var(--on-accent);border:none;border-radius:var(--radius);padding:7px 18px;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary:hover{opacity:.85}
+.btn-primary:disabled{opacity:.45;cursor:default}
+.btn-ghost{background:transparent;border:0.5px solid var(--border-strong);border-radius:var(--radius);padding:6px 12px;font-size:13px;color:var(--text-secondary);cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.btn-ghost:hover{background:var(--surface-1)}
+
+/* KPI Row */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:1.25rem}
+.kpi{background:var(--surface-1);border-radius:var(--radius);padding:1rem 1.1rem;border:0.5px solid var(--border)}
+.kpi-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.kpi-value{font-size:24px;font-weight:600;color:var(--text-primary);line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi-sub{font-size:11px;color:var(--text-muted);margin-top:4px}
+
+/* Section card */
+.section{background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+.section-title{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem}
+.chart-wrap{position:relative;width:100%}
+
+/* Heatmap */
+.heatmap-scroll{overflow-x:auto}
+.heatmap-table{border-collapse:collapse;font-size:10px;min-width:600px}
+.heatmap-table th{color:var(--text-muted);font-weight:400;padding:3px 4px;text-align:center;white-space:nowrap;font-size:10px}
+.heatmap-table td{width:26px;height:22px;text-align:center;border-radius:3px;font-size:9px;font-weight:600;cursor:default;transition:opacity .1s}
+.heatmap-table td:hover{opacity:.7}
+.hm-label{color:var(--text-secondary);font-weight:500;text-align:right;padding-right:8px;white-space:nowrap;font-size:11px;width:28px}
+.hm-legend{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:11px;color:var(--text-muted)}
+.hm-swatch{width:14px;height:14px;border-radius:3px;display:inline-block;flex-shrink:0}
+
+/* Two cols */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:640px){.two-col{grid-template-columns:1fr}}
+
+/* Items table */
+.items-table{width:100%;border-collapse:collapse;font-size:12px}
+.items-table thead tr{border-bottom:0.5px solid var(--border)}
+.items-table tbody tr{border-bottom:0.5px solid var(--border)}
+.items-table tbody tr:last-child{border-bottom:none}
+.items-table th{color:var(--text-muted);font-weight:400;padding:5px 8px;text-align:left;font-size:11px}
+.items-table th:last-child,.items-table td:last-child{text-align:right}
+.items-table td{padding:6px 8px;color:var(--text-primary)}
+.rank{display:inline-flex;width:18px;height:18px;border-radius:50%;background:var(--surface-1);border:0.5px solid var(--border);font-size:10px;align-items:center;justify-content:center;color:var(--text-muted);margin-right:2px;flex-shrink:0;font-variant-numeric:tabular-nums}
+
+/* Tabs */
+.tab-bar{display:flex;border-bottom:0.5px solid var(--border);margin-bottom:1rem}
+.tab-bar button{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--text-muted);font-size:12px;padding:6px 14px;cursor:pointer;margin-bottom:-0.5px}
+.tab-bar button.active{color:var(--text-accent);border-bottom-color:var(--fill-accent);font-weight:500}
+.tab-bar button:hover:not(.active){color:var(--text-primary)}
+
+/* States */
+.state-msg{text-align:center;padding:3rem 1rem;color:var(--text-muted);font-size:13px}
+.spinner{display:inline-block;width:28px;height:28px;border:2.5px solid var(--border-strong);border-top-color:var(--fill-accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-box{background:var(--bg-danger);border:0.5px solid var(--border-danger);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--text-danger);margin-bottom:1rem;display:flex;align-items:center;gap:8px}
+
+/* Payment legend */
+.pm-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.pm-legend span{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary)}
+.pm-swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen" class="setup-card">
+  <div style="font-size:48px;margin-bottom:12px">🍫</div>
+  <h3>Loyverse Sales Dashboard</h3>
+  <p>กรอก API Token จาก Loyverse Back Office<br>
+  <span style="font-size:11px;color:var(--text-muted)">Settings → Access Tokens → Create Token</span></p>
+  <div class="token-row">
+    <input type="password" id="token-input" placeholder="pes_xxxxxxxxxxxxxxxxxxxxxxxx" />
+    <button class="btn-primary" onclick="saveToken()"><i class="ti ti-lock-open"></i> เข้าใช้</button>
+  </div>
+  <p class="hint">Token เก็บใน memory เท่านั้น ไม่มีการส่งออกนอกจาก Loyverse API</p>
+</div>
+
+<!-- MAIN DASHBOARD -->
+<div id="main-dash" style="display:none">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="logo"><i class="ti ti-chart-bar"></i></div>
+      <div>
+        <div class="page-title">Sales Dashboard</div>
+        <span class="store-badge" id="store-name">32Bar</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="ctrl-group" id="quick-range">
+        <button onclick="setRange(7)" id="r7">7 วัน</button>
+        <button onclick="setRange(30)" id="r30">30 วัน</button>
+        <button onclick="setRange('month')" id="rmonth">เดือนนี้</button>
+        <button onclick="setRange('custom')" id="rcustom" class="active">กำหนดเอง</button>
+      </div>
+      <div class="date-inputs">
+        <input type="date" id="date-start">
+        <span>–</span>
+        <input type="date" id="date-end">
+      </div>
+      <button class="btn-primary" id="load-btn" onclick="loadData()"><i class="ti ti-refresh"></i> โหลด</button>
+      <button class="btn-ghost" onclick="resetToken()" title="เปลี่ยน Token"><i class="ti ti-key"></i></button>
+    </div>
+  </div>
+
+  <div id="error-area"></div>
+
+  <div id="loading-area" style="display:none" class="state-msg">
+    <div class="spinner" style="margin-bottom:12px"></div><br>
+    กำลังดึงข้อมูลจาก Loyverse...
+    <div id="loading-progress" style="font-size:11px;margin-top:6px;color:var(--text-muted)"></div>
+  </div>
+
+  <div id="data-area" style="display:none">
+
+    <!-- KPI -->
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-label">ยอดขายรวม</div>
+        <div class="kpi-value" id="kpi-revenue">—</div>
+        <div class="kpi-sub" id="kpi-period">—</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">จำนวนบิล</div>
+        <div class="kpi-value" id="kpi-receipts">—</div>
+        <div class="kpi-sub" id="kpi-receipts-sub">—</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Avg. bill</div>
+        <div class="kpi-value" id="kpi-avg">—</div>
+        <div class="kpi-sub">ต่อบิล</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Items sold</div>
+        <div class="kpi-value" id="kpi-items">—</div>
+        <div class="kpi-sub">ชิ้นรวม</div>
+      </div>
+    </div>
+
+    <!-- Daily chart -->
+    <div class="section">
+      <div class="section-title">ยอดขายรายวัน</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="chart-daily" role="img" aria-label="ยอดขายรายวัน"></canvas></div>
+    </div>
+
+    <!-- Time distribution -->
+    <div class="section">
+      <div class="section-title">การกระจายตามเวลา</div>
+      <div class="tab-bar">
+        <button class="active" id="tab-heatmap" onclick="switchTab('heatmap')">Heatmap วัน × ชั่วโมง</button>
+        <button id="tab-halfhour" onclick="switchTab('halfhour')">รายครึ่งชั่วโมง</button>
+      </div>
+      <div id="panel-heatmap">
+        <div class="heatmap-scroll">
+          <table class="heatmap-table" id="heatmap-table"></table>
+        </div>
+        <div class="hm-legend">
+          <span>น้อย</span>
+          <span class="hm-swatch" id="hm-s0"></span>
+          <span class="hm-swatch" id="hm-s1"></span>
+          <span class="hm-swatch" id="hm-s2"></span>
+          <span class="hm-swatch" id="hm-s3"></span>
+          <span class="hm-swatch" id="hm-s4"></span>
+          <span>มาก</span>
+        </div>
+      </div>
+      <div id="panel-halfhour" style="display:none">
+        <div class="chart-wrap" style="height:260px"><canvas id="chart-halfhour" role="img" aria-label="ยอดขายรายครึ่งชั่วโมง"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Top items + Payment -->
+    <div class="two-col">
+      <div class="section">
+        <div class="section-title">สินค้าขายดี (Top 10)</div>
+        <table class="items-table">
+          <thead><tr><th>#</th><th>สินค้า</th><th>ชิ้น</th><th>ยอด (฿)</th></tr></thead>
+          <tbody id="top-items-body"></tbody>
+        </table>
+      </div>
+      <div class="section">
+        <div class="section-title">Payment breakdown</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-payment" role="img" aria-label="สัดส่วนช่องทางการชำระเงิน"></canvas></div>
+        <div class="pm-legend" id="payment-legend"></div>
+      </div>
+    </div>
+
+  </div><!-- /data-area -->
+</div><!-- /main-dash -->
+</div><!-- /shell -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+let API_TOKEN = '';
+let chartDaily = null, chartHalfhour = null, chartPayment = null;
+
+const COLORS = ['#2a78d6','#1baf7a','#eda100','#4a3aa7','#e34948','#e87ba4','#eb6834','#008300'];
+const DAYS_TH = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+const HM_PALETTE = ['#E6F1FB','#85B7EB','#378ADD','#185FA5','#042C53'];
+const HM_PALETTE_DARK = ['#0c447c','#185fa5','#378add','#85b7eb','#b5d4f4'];
+
+function isDarkMode() {
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+/* ── Token ── */
+function saveToken() {
+  const t = document.getElementById('token-input').value.trim();
+  if (!t) return;
+  API_TOKEN = t;
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('main-dash').style.display = '';
+  setDefaultDates();
+}
+function resetToken() {
+  API_TOKEN = '';
+  document.getElementById('setup-screen').style.display = '';
+  document.getElementById('main-dash').style.display = 'none';
+  document.getElementById('token-input').value = '';
+  document.getElementById('data-area').style.display = 'none';
+}
+document.getElementById('token-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveToken(); });
+
+/* ── Date helpers ── */
+function fmt(d) { return d.toISOString().split('T')[0]; }
+function setDefaultDates() {
+  const now = new Date();
+  document.getElementById('date-end').value = fmt(now);
+  document.getElementById('date-start').value = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+}
+function setRange(r) {
+  document.querySelectorAll('#quick-range button').forEach(b => b.classList.remove('active'));
+  const now = new Date();
+  let start;
+  if (r === 7)       { start = fmt(new Date(now - 6*864e5)); document.getElementById('r7').classList.add('active'); }
+  else if (r === 30) { start = fmt(new Date(now - 29*864e5)); document.getElementById('r30').classList.add('active'); }
+  else if (r === 'month') { start = fmt(new Date(now.getFullYear(), now.getMonth(), 1)); document.getElementById('rmonth').classList.add('active'); }
+  else { document.getElementById('rcustom').classList.add('active'); return; }
+  document.getElementById('date-start').value = start;
+  document.getElementById('date-end').value = fmt(now);
+}
+
+/* ── API ── */
+async function loyverseFetch(path) {
+  const res = await fetch('https://api.loyverse.com/v1.0' + path, {
+    headers: { 'Authorization': 'Bearer ' + API_TOKEN }
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Loyverse API ${res.status}: ${body || res.statusText}`);
+  }
+  return res.json();
+}
+
+async function fetchAllReceipts(dateStart, dateEnd) {
+  let all = [], cursor = null;
+  const startISO = dateStart + 'T00:00:00.000Z';
+  const endISO   = dateEnd   + 'T23:59:59.999Z';
+  let page = 0;
+  do {
+    let url = `/receipts?created_at_min=${startISO}&created_at_max=${endISO}&limit=250`;
+    if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
+    const data = await loyverseFetch(url);
+    all = all.concat(data.receipts || []);
+    cursor = data.cursor || null;
+    page++;
+    document.getElementById('loading-progress').textContent =
+      `ดึงข้อมูลแล้ว ${all.length.toLocaleString()} รายการ...`;
+  } while (cursor);
+  return all;
+}
+
+/* ── Load ── */
+async function loadData() {
+  const ds = document.getElementById('date-start').value;
+  const de = document.getElementById('date-end').value;
+  if (!ds || !de) { showError('กรุณาเลือกวันที่'); return; }
+  clearError();
+  document.getElementById('loading-area').style.display = '';
+  document.getElementById('data-area').style.display = 'none';
+  document.getElementById('load-btn').disabled = true;
+  try {
+    const receipts = await fetchAllReceipts(ds, de);
+    if (!receipts.length) { showError('ไม่พบข้อมูลในช่วงเวลานี้'); return; }
+    renderAll(receipts, ds, de);
+    document.getElementById('data-area').style.display = '';
+  } catch(e) {
+    showError(e.message);
+  } finally {
+    document.getElementById('loading-area').style.display = 'none';
+    document.getElementById('load-btn').disabled = false;
+    document.getElementById('loading-progress').textContent = '';
+  }
+}
+
+function showError(msg) {
+  document.getElementById('error-area').innerHTML =
+    `<div class="error-box"><i class="ti ti-alert-circle"></i> ${msg}</div>`;
+  document.getElementById('loading-area').style.display = 'none';
+}
+function clearError() { document.getElementById('error-area').innerHTML = ''; }
+
+/* ── Render ── */
+function renderAll(receipts, ds, de) {
+  const sales = receipts.filter(r => r.total_money >= 0 && r.cancelled_at === null);
+
+  /* KPI */
+  const totalRev  = sales.reduce((s, r) => s + r.total_money, 0);
+  const totalQty  = sales.reduce((s, r) => s + r.line_items.reduce((a, li) => a + li.quantity, 0), 0);
+  document.getElementById('kpi-revenue').textContent   = '฿' + Math.round(totalRev).toLocaleString('th-TH');
+  document.getElementById('kpi-receipts').textContent  = sales.length.toLocaleString();
+  document.getElementById('kpi-avg').textContent       = sales.length ? '฿' + Math.round(totalRev / sales.length).toLocaleString() : '—';
+  document.getElementById('kpi-items').textContent     = Math.round(totalQty).toLocaleString();
+  document.getElementById('kpi-period').textContent    = ds + ' → ' + de;
+  document.getElementById('kpi-receipts-sub').textContent = `เฉลี่ย ${(sales.length / Math.max(daysBetween(ds, de), 1)).toFixed(1)} บิล/วัน`;
+
+  /* Daily */
+  const dailyMap = {};
+  sales.forEach(r => {
+    const d = r.created_at.slice(0, 10);
+    dailyMap[d] = (dailyMap[d] || 0) + r.total_money;
+  });
+  const days = [], revArr = [];
+  let cur = new Date(ds);
+  const endD = new Date(de);
+  while (cur <= endD) {
+    const k = fmt(cur);
+    days.push(k.slice(5));
+    revArr.push(Math.round(dailyMap[k] || 0));
+    cur = new Date(cur.getTime() + 864e5);
+  }
+  renderDailyChart(days, revArr);
+
+  /* Heatmap */
+  const hmData = {};
+  DAYS_TH.forEach((_, di) => { hmData[di] = {}; for(let h=0;h<24;h++) hmData[di][h] = 0; });
+  sales.forEach(r => {
+    const dt = new Date(r.created_at);
+    const dow = dt.getDay(), h = dt.getHours();
+    hmData[dow][h] = (hmData[dow][h] || 0) + r.total_money;
+  });
+  renderHeatmap(hmData);
+
+  /* Half-hour */
+  const hhMap = {};
+  for(let h=0;h<24;h++) { hhMap[h+'_0']=0; hhMap[h+'_30']=0; }
+  sales.forEach(r => {
+    const dt = new Date(r.created_at);
+    const h = dt.getHours(), slot = dt.getMinutes() < 30 ? '0' : '30';
+    hhMap[h+'_'+slot] = (hhMap[h+'_'+slot] || 0) + r.total_money;
+  });
+  const hhLabels = [], hhVals = [];
+  for(let h=0;h<24;h++) {
+    const p = h < 10 ? '0'+h : ''+h;
+    hhLabels.push(p+':00'); hhVals.push(Math.round(hhMap[h+'_0'] || 0));
+    hhLabels.push(p+':30'); hhVals.push(Math.round(hhMap[h+'_30'] || 0));
+  }
+  renderHalfhourChart(hhLabels, hhVals);
+
+  /* Top items */
+  const itemMap = {};
+  sales.forEach(r => {
+    r.line_items.forEach(li => {
+      const k = li.item_name || 'Unknown';
+      if (!itemMap[k]) itemMap[k] = {qty:0, rev:0};
+      itemMap[k].qty += li.quantity;
+      itemMap[k].rev += li.gross_total_money || 0;
+    });
+  });
+  const topItems = Object.entries(itemMap).sort((a,b) => b[1].rev - a[1].rev).slice(0, 10);
+  document.getElementById('top-items-body').innerHTML = topItems.map(([name, d], i) =>
+    `<tr>
+      <td><span class="rank">${i+1}</span></td>
+      <td>${name}</td>
+      <td style="color:var(--text-secondary)">${Math.round(d.qty).toLocaleString()}</td>
+      <td style="font-variant-numeric:tabular-nums">฿${Math.round(d.rev).toLocaleString()}</td>
+    </tr>`
+  ).join('');
+
+  /* Payment */
+  const pmMap = {};
+  sales.forEach(r => {
+    (r.payments || []).forEach(p => {
+      const name = translatePayment(p.payment_type || 'other');
+      pmMap[name] = (pmMap[name] || 0) + p.money_amount;
+    });
+  });
+  const pmLabels = Object.keys(pmMap);
+  const pmVals   = pmLabels.map(k => Math.round(pmMap[k]));
+  renderPaymentChart(pmLabels, pmVals);
+}
+
+function translatePayment(t) {
+  const m = {cash:'เงินสด',card:'บัตร',other:'อื่นๆ',custom:'Custom',loyalty_points:'แต้มสะสม'};
+  return m[t] || t;
+}
+
+function daysBetween(a, b) {
+  return (new Date(b) - new Date(a)) / 864e5 + 1;
+}
+
+/* ── Charts ── */
+const GRID_COLOR = isDarkMode() ? '#2c2c2a' : '#e1e0d9';
+const TICK_COLOR = isDarkMode() ? '#898781' : '#898781';
+
+function renderDailyChart(labels, data) {
+  if (chartDaily) chartDaily.destroy();
+  const ctx = document.getElementById('chart-daily');
+  chartDaily = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label:'ยอดขาย (฿)', data, backgroundColor:'#2a78d6', borderRadius:4, borderSkipped:false, barThickness: labels.length > 25 ? 'flex' : 16 }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c => '฿'+c.raw.toLocaleString('th-TH') } } },
+      scales:{
+        x:{ ticks:{font:{size:10},color:TICK_COLOR,maxRotation:45,autoSkip:labels.length>20}, grid:{display:false} },
+        y:{ ticks:{font:{size:10},color:TICK_COLOR,callback:v=>'฿'+(v>=1000?(v/1000).toFixed(0)+'k':v)}, grid:{color:GRID_COLOR} }
+      }
+    }
+  });
+}
+
+function renderHalfhourChart(labels, data) {
+  if (chartHalfhour) chartHalfhour.destroy();
+  const ctx = document.getElementById('chart-halfhour');
+  chartHalfhour = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{
+      label:'ยอดขาย (฿)', data,
+      backgroundColor: data.map((_, i) => { const h = Math.floor(i/2); return (h>=10&&h<=20)?'#2a78d6':'#b5d4f4'; }),
+      borderRadius:2, barThickness:7
+    }]},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ title:c=>c[0].label, label:c=>'฿'+c.raw.toLocaleString('th-TH') } } },
+      scales:{
+        x:{ ticks:{ font:{size:9}, color:TICK_COLOR, maxRotation:45, autoSkip:true, maxTicksLimit:24, callback:(_, i)=> labels[i].endsWith(':00')?labels[i]:'' }, grid:{display:false} },
+        y:{ ticks:{ font:{size:10}, color:TICK_COLOR, callback:v=>'฿'+(v>=1000?(v/1000).toFixed(0)+'k':v) }, grid:{color:GRID_COLOR} }
+      }
+    }
+  });
+}
+
+function renderHeatmap(hmData) {
+  const allVals = [];
+  Object.values(hmData).forEach(hm => Object.values(hm).forEach(v => allVals.push(v)));
+  const maxVal = Math.max(...allVals, 1);
+  const pal = isDarkMode() ? HM_PALETTE_DARK : HM_PALETTE;
+  pal.forEach((c,i) => { document.getElementById('hm-s'+i).style.background = c; });
+
+  function getColor(v) {
+    if (!v) return isDarkMode() ? '#2c2c2a' : '#f1efed';
+    const r = v / maxVal;
+    if (r < 0.2) return pal[0];
+    if (r < 0.4) return pal[1];
+    if (r < 0.6) return pal[2];
+    if (r < 0.8) return pal[3];
+    return pal[4];
+  }
+  function getTextColor(v) {
+    const r = v / maxVal;
+    if (isDarkMode()) return r > 0.5 ? '#042C53' : '#85b7eb';
+    return r > 0.5 ? '#fff' : '#3d3d3a';
+  }
+
+  const hours = Array.from({length:24},(_,i)=>i);
+  let html = '<tr><th></th>' + hours.map(h => `<th>${h<10?'0'+h:h}</th>`).join('') + '</tr>';
+  DAYS_TH.forEach((day, di) => {
+    html += `<tr><td class="hm-label">${day}</td>`;
+    hours.forEach(h => {
+      const v = hmData[di][h] || 0;
+      const lbl = v >= 1000 ? Math.round(v/1000)+'k' : '';
+      html += `<td style="background:${getColor(v)};color:${getTextColor(v)}" title="${day} ${h<10?'0'+h:h}:00 — ฿${Math.round(v).toLocaleString()}">${lbl}</td>`;
+    });
+    html += '</tr>';
+  });
+  document.getElementById('heatmap-table').innerHTML = html;
+}
+
+function renderPaymentChart(labels, data) {
+  if (chartPayment) chartPayment.destroy();
+  const ctx = document.getElementById('chart-payment');
+  const colors = COLORS.slice(0, labels.length);
+  chartPayment = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor:colors, borderWidth:2, borderColor: isDarkMode()?'#242422':'#ffffff', hoverOffset:6 }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{
+        label: c => { const total = data.reduce((a,b)=>a+b,0); return `฿${c.raw.toLocaleString()} (${Math.round(c.raw/total*100)}%)`; }
+      }}}
+    }
+  });
+  const total = data.reduce((a,b)=>a+b,0);
+  document.getElementById('payment-legend').innerHTML = labels.map((l,i) =>
+    `<span><span class="pm-swatch" style="background:${colors[i]}"></span>${l} ${Math.round(data[i]/total*100)}%</span>`
+  ).join('');
+}
+
+function switchTab(tab) {
+  document.getElementById('tab-heatmap').classList.toggle('active', tab==='heatmap');
+  document.getElementById('tab-halfhour').classList.toggle('active', tab==='halfhour');
+  document.getElementById('panel-heatmap').style.display = tab==='heatmap' ? '' : 'none';
+  document.getElementById('panel-halfhour').style.display = tab==='halfhour' ? '' : 'none';
+}
+</script>
+</body>
+</html>
