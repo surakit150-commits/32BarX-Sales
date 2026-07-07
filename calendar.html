@@ -113,113 +113,104 @@ function color(name){if(!colorMap[name])colorMap[name]=COLORS[colorIdx++%COLORS.
 function dkey(y,m,d){return`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
 
 // ---- PARSER ----
-// Sheet structure per month:
-//   - Month marker row: col C (index 2) has ISO date "20XX-MM-DDT..." with year>=2020
-//   - Week blocks: header row with Sun/Mon/Tue/Wed/Thu/Fri/Sat at cols 2-8
-//                  date row with day numbers
-//                  1+ staff rows with names at corresponding columns
-// NOTE: col B (index 1) sometimes has "1899-12-30T..." timestamps — IGNORE these (Excel artifact)
+// Strategy:
+//   1. First pass: find month boundary rows (col C = ISO date >= 2020)
+//      Each boundary marks end-of-month; content below = next month
+//   2. Second pass: within each month's row range, scan cols 2-8 ONLY (A-I)
+//      Find week blocks (Sun at col 2), extract staff names from those cols only
+
+const DAY_PAT=/^(sun|mon|tue|wed|thu|fri|sat)$/i;
+const DAY_KEYS=['sun','mon','tue','wed','thu','fri','sat'];
 
 function isRealIsoDate(v){
-  // Must be ISO date AND year >= 2020 (not Excel 1899 artifacts)
-  const m=v.match(/^(\d{4})-(\d{2})-\d{2}T/);
-  if(!m) return false;
-  return parseInt(m[1])>=2020;
+  const m=String(v||'').trim().match(/^(\d{4})-\d{2}-\d{2}T/);
+  return m&&parseInt(m[1])>=2020;
 }
 
 function isName(v){
-  if(!v||v.length<2||v.length>25) return false;
-  if(/^\d+$/.test(v)) return false;
-  if(/^(sun|mon|tue|wed|thu|fri|sat)$/i.test(v)) return false;
+  v=String(v||'').trim();
+  if(!v||v.length<2||v.length>20) return false;
+  if(/^\d/.test(v)) return false;
+  if(DAY_PAT.test(v)) return false;
   if(v.includes('T17:')||v.includes('T00:')||v.includes('1899')) return false;
-  if(v.includes('http')||v.includes('@')) return false;
-  if(/^[\d\.\-\+\%\s]+$/.test(v)) return false;
-  // Skip Thai labels that are not names
-  const skipWords=['หน้าร้าน','หลังบ้าน','ตน.','ครึ่งแรก','ครึ่งหลัง','จ่ายด้วย','รายเดือน','เงินสด','บริษัท','เดือน','วันที่','ราย'];
-  for(const w of skipWords){if(v.includes(w))return false;}
+  if(v.includes('http')||v.includes('@')||v.includes('/')) return false;
+  if(/^[\d\s\.\-\+\%\,\:]+$/.test(v)) return false;
+  const skip=['หน้าร้าน','หลังบ้าน','ตน.','ครึ่ง','จ่าย','เงิน','บริษัท','วันที่',
+              'รายเดือน','เริ่ม','ออก','ลา','กิจ','ป่วย','ทำงาน','หยุด',
+              'Rate','Com','THB','off','Off','SL','FL','PL','BL','Halfday',
+              'เสาร์','อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์'];
+  for(const w of skip){if(v.includes(w))return false;}
   return true;
 }
 
 function parseData(rows){
   calData={};colorMap={};colorIdx=0;
-  const dayPat=/^(sun|mon|tue|wed|thu|fri|sat)$/i;
-  let curYear=new Date().getFullYear(),curMonth=-1;
 
+  // --- Pass 1: find month ranges ---
+  const ranges=[];
   for(let r=0;r<rows.length;r++){
-    const row=rows[r];
-    if(!row) continue;
+    const v=String((rows[r]||[])[2]||'').trim();
+    if(isRealIsoDate(v)){
+      const d=new Date(v);
+      let y=d.getFullYear(), mo=(d.getMonth()+1)%12;
+      if(mo===0) y++;
+      if(ranges.length>0) ranges[ranges.length-1].endRow=r;
+      ranges.push({startRow:r+1,endRow:rows.length,year:y,month:mo});
+    }
+  }
 
-    // --- Detect month marker: ISO date in col 2 (C) with year >= 2020 ---
-    // Pattern: row where cell at index 2 is "20XX-MM-31T..." (end-of-month date)
-    // The month SHOWN below is the NEXT month after this date
-    for(let c=2;c<=3;c++){
-      const v=String(row[c]||'').trim();
-      if(isRealIsoDate(v)){
-        const d=new Date(v);
-        let y=d.getFullYear(),mo=d.getMonth();
-        // This is end-of-month marker, content below is the NEXT month
-        mo=(mo+1)%12;
-        if(mo===0) y++;
-        curYear=y; curMonth=mo;
-        break;
+  // --- Pass 2: parse each month range (cols 2-8 only) ---
+  for(const {startRow,endRow,year,month} of ranges){
+    for(let r=startRow;r<endRow;r++){
+      const row=rows[r]||[];
+
+      // Week header: Sun must be exactly at col 2
+      if(String(row[2]||'').trim().toLowerCase()!=='sun') continue;
+
+      // Map day names to columns (cols 2-8 only)
+      const dayPos={};
+      for(let c=2;c<=8;c++){
+        const v=String(row[c]||'').trim().toLowerCase();
+        if(DAY_PAT.test(v)) dayPos[v]=c;
       }
-    }
+      if(Object.keys(dayPos).length<5) continue;
+      const colIdx=DAY_KEYS.map(d=>dayPos[d]??-1);
 
-    // --- Detect week header row: 5+ day-of-week names ---
-    let dayPos={},cnt=0;
-    for(let c=0;c<Math.min(row.length,12);c++){
-      const v=String(row[c]||'').trim();
-      if(dayPat.test(v)){dayPos[v.toLowerCase()]=c;cnt++;}
-    }
-    if(cnt<5||curMonth<0) continue;
+      // Date number row (cols 2-8)
+      const dateRow=rows[r+1]||[];
+      const dayNums=colIdx.map(ci=>{
+        if(ci<0) return null;
+        const n=parseInt(String(dateRow[ci]||''));
+        return isNaN(n)?null:n;
+      });
+      if(!dayNums.some(n=>n!==null)) continue;
 
-    // Expect day-of-week at cols 2-8
-    const sunCol=dayPos['sun']??2;
-    const colIdx=DAY_EN.map(d=>dayPos[d]??-1);
+      // Staff rows: r+2 until next Sun header or end of range
+      for(let sr=r+2;sr<Math.min(endRow,r+20);sr++){
+        const srow=rows[sr]||[];
+        // Stop at next week block
+        if(String(srow[2]||'').trim().toLowerCase()==='sun') break;
 
-    // Next row = date numbers
-    const dateRow=rows[r+1];
-    if(!dateRow) continue;
-    const dayNums=colIdx.map(ci=>{
-      if(ci<0) return null;
-      const n=parseInt(String(dateRow[ci]||''));
-      return isNaN(n)?null:n;
-    });
-    if(!dayNums.some(n=>n!==null)) continue;
+        for(let i=0;i<7;i++){
+          const ci=colIdx[i];
+          const dn=dayNums[i];
+          if(!dn||ci<0) continue;
+          const v=String(srow[ci]||'').trim();
+          if(!isName(v)) continue;
 
-    // Scan staff rows (r+2 onward, stop at next week header or month marker)
-    for(let sr=r+2;sr<Math.min(r+18,rows.length);sr++){
-      const srow=rows[sr];
-      if(!srow) continue;
+          // Month overflow at week boundaries
+          let m=month,y=year;
+          if(i>0&&dn<8&&dayNums[i-1]&&dayNums[i-1]>20){
+            m=(month+1)%12; y=m===0?year+1:year;
+          }
+          if(i===0&&dn>25&&dayNums[1]!==null&&dayNums[1]<8){
+            m=(month-1+12)%12; y=m===11?year-1:year;
+          }
 
-      // Stop at next week header
-      let dc=0;
-      for(let c=0;c<Math.min(srow.length,12);c++){if(dayPat.test(String(srow[c]||'').trim()))dc++;}
-      if(dc>=5) break;
-
-      // Stop at next month marker
-      let isMonthMark=false;
-      for(let c=2;c<=3;c++){if(isRealIsoDate(String(srow[c]||'').trim())){isMonthMark=true;break;}}
-      if(isMonthMark) break;
-
-      // Extract names at each day column
-      for(let i=0;i<colIdx.length;i++){
-        const dn=dayNums[i];
-        const ci=colIdx[i];
-        if(!dn||ci<0) continue;
-        const v=String(srow[ci]||'').trim();
-        if(!isName(v)) continue;
-
-        let m=curMonth,y=curYear;
-        if(i>0&&dn<8&&dayNums[i-1]&&dayNums[i-1]>20){
-          m=(curMonth+1)%12; y=m===0?curYear+1:curYear;
+          const k=dkey(y,m+1,dn);
+          if(!calData[k]) calData[k]=[];
+          if(!calData[k].includes(v)) calData[k].push(v);
         }
-        if(i===0&&dn>25&&dayNums[1]&&dayNums[1]!==null&&dayNums[1]<8){
-          m=(curMonth-1+12)%12; y=m===11?curYear-1:curYear;
-        }
-        const k=dkey(y,m+1,dn);
-        if(!calData[k])calData[k]=[];
-        if(!calData[k].includes(v))calData[k].push(v);
       }
     }
   }
