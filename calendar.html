@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ปฏิทินการเข้างาน — 32Bar</title>
 <style>
-:root{--bg:#f5f5f3;--surface:#fff;--surface-alt:#f9f9f7;--border:#e4e4e0;--border-strong:#d0d0cc;--text:#1a1a18;--text-sec:#5a5a56;--text-muted:#9a9a96;--accent:#185FA5;--accent-bg:#E6F1FB;--radius:8px}
+:root{--bg:#f5f5f3;--surface:#fff;--surface-alt:#f9f9f7;--border:#e4e4e0;--border-strong:#d0d0cc;--text:#1a1a18;--text-sec:#5a5a56;--text-muted:#9a9a96;--accent:#185FA5;--radius:8px}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 .app{max-width:980px;margin:0 auto;padding:1.5rem 1rem 3rem}
@@ -20,47 +20,57 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .vtab.active{background:var(--text);color:#fff;font-weight:500}
 .spacer{flex:1}
 .navg{display:flex;align-items:center;gap:6px}
-.nbtn{width:32px;height:32px;border:1px solid var(--border-strong);border-radius:var(--radius);background:var(--surface);cursor:pointer;color:var(--text-sec);font-size:20px;display:flex;align-items:center;justify-content:center;line-height:1;transition:background .1s}
+.nbtn{width:32px;height:32px;border:1px solid var(--border-strong);border-radius:var(--radius);background:var(--surface);cursor:pointer;color:var(--text-sec);font-size:20px;display:flex;align-items:center;justify-content:center;transition:background .1s}
 .nbtn:hover{background:var(--surface-alt)}
 .plbl{font-size:14px;font-weight:500;color:var(--text);min-width:180px;text-align:center}
-.rbtn{padding:7px 12px;font-size:13px;border:1px solid var(--border-strong);border-radius:var(--radius);background:var(--surface);cursor:pointer;color:var(--text-sec);display:flex;align-items:center;gap:6px;font-family:inherit;transition:background .1s}
-.rbtn:hover{background:var(--surface-alt)}
-.sbar{font-size:12px;color:var(--text-muted);margin-bottom:12px;min-height:18px}
-.errbox{background:#FCEBEB;border:1px solid #F09595;border-radius:var(--radius);padding:10px 14px;color:#791F1F;font-size:13px;margin-bottom:12px}
+.sbar{font-size:12px;color:var(--text-muted);margin-bottom:12px}
+
+/* Month view */
 .cgrid{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface)}
 .dhdr{display:grid;grid-template-columns:repeat(7,1fr);background:var(--surface-alt);border-bottom:1px solid var(--border)}
 .dh{padding:8px 4px;text-align:center;font-size:12px;font-weight:500;color:var(--text-sec)}
 .dh.sun{color:#A32D2D}.dh.sat{color:#185FA5}
 .mgrid{display:grid;grid-template-columns:repeat(7,1fr)}
-.cell{min-height:80px;border-right:1px solid var(--border);border-top:1px solid var(--border);padding:5px 4px;background:var(--surface)}
+.cell{border-right:1px solid var(--border);border-top:1px solid var(--border);padding:4px;background:var(--surface)}
 .cell:nth-child(7n){border-right:none}
-.cell.other{background:var(--surface-alt);opacity:.6}
+.cell.other{background:var(--surface-alt);opacity:.5}
 .cell.today{background:#EFF6FF}
-.cdate{font-size:11px;color:var(--text-muted);margin-bottom:3px;line-height:1}
-.cdate.sun{color:#D85A30}.cdate.sat{color:#378ADD}.cdate.tnow{font-weight:700;color:var(--accent)}
-.stag{font-size:11px;padding:1px 5px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:block;line-height:1.4}
-.more{font-size:10px;color:var(--text-muted)}
+.cdate{font-size:11px;color:var(--text-muted);margin-bottom:3px;font-weight:500}
+.cdate.sun{color:#D85A30}.cdate.sat{color:#378ADD}.cdate.tnow{color:var(--accent)}
+.stag{font-size:10px;padding:1px 4px;border-radius:3px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:block;line-height:1.4}
+.stag.early{background:#E0F2FE;color:#0369A1}
+.stag.early.hl{background:#0891B2;color:#fff;font-weight:700;box-shadow:0 0 0 1.5px #06B6D4}
+.stag.front{background:#F0FDF4;color:#166534}
+.stag.back{background:#FEF9C3;color:#854D0E}
+.mzone{border-radius:4px;padding:2px 3px;margin-bottom:3px}
+.mzone-early{border:1.5px solid #0891B2}
+.mzone-back{border:1.5px dashed #CA8A04}
+
+/* Week view */
+.wgrid{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface)}
 .wrow{display:grid;grid-template-columns:repeat(7,1fr)}
-.wcell{min-height:110px;border-right:1px solid var(--border);border-top:1px solid var(--border);padding:6px 5px;background:var(--surface)}
-.wrow:first-of-type .wcell{border-top:none}
+.wcell{border-right:1px solid var(--border);border-top:1px solid var(--border);padding:6px 5px;background:var(--surface);display:flex;flex-direction:column}
 .wcell:last-child{border-right:none}
 .wcell.today{background:#EFF6FF}
+.wsection{margin-bottom:0}
+.wsection-label{font-size:10px;font-weight:600;color:var(--text-muted);margin-bottom:3px;padding-bottom:2px;border-bottom:1px solid var(--border)}
+.wsection.s-early{height:76px;overflow:hidden}
+.wsection.s-front{height:90px;overflow:hidden}
+.wsection.s-back{flex:1;border-top:2px solid var(--border-strong);padding-top:6px;margin-top:4px}
+
+/* Today view */
 .tview{display:flex;flex-direction:column;gap:12px}
 .thdr{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem}
 .tbig{font-size:22px;font-weight:600}
 .tday{font-size:14px;color:var(--text-sec);margin-top:4px}
-.tcount{font-size:13px;color:var(--text-sec)}
-.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
-.scard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;display:flex;align-items:center;gap:10px}
-.sav{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+.tsections{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.tsection{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.tsection-title{font-size:12px;font-weight:600;color:var(--text-sec);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.tstaff{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.sav{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
 .sname{font-size:13px;font-weight:500}
-.empty{text-align:center;padding:2.5rem;color:var(--text-muted);font-size:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
-.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-.leg-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-sec)}
-.leg-dot{width:10px;height:10px;border-radius:3px}
-.loading-wrap{text-align:center;padding:3rem;color:var(--text-muted)}
-.spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
-@keyframes spin{to{transform:rotate(360deg)}}
+.stime{font-size:11px;color:var(--text-muted)}
+.nodata-msg{text-align:center;padding:2.5rem;color:var(--text-muted);font-size:14px;border:1px dashed var(--border-strong);border-radius:12px;background:var(--surface-alt)}
 </style>
 </head>
 <body>
@@ -75,10 +85,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <button class="vtab" data-v="week" onclick="setView('week')">รายสัปดาห์</button>
       <button class="vtab" data-v="today" onclick="setView('today')">วันนี้</button>
     </div>
-    <button class="rbtn" onclick="loadData()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-      โหลดใหม่
-    </button>
     <div class="spacer"></div>
     <div class="navg">
       <button class="nbtn" onclick="nav(-1)">&#8249;</button>
@@ -86,156 +92,60 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <button class="nbtn" onclick="nav(1)">&#8250;</button>
     </div>
   </div>
-  <div class="sbar" id="sbar">กำลังโหลดข้อมูล...</div>
-  <div id="err"></div>
-  <div id="body"><div class="loading-wrap"><div class="spinner"></div><div>กำลังดึงข้อมูลจาก Google Sheets...</div></div></div>
-  <div class="legend" id="legend"></div>
+  <div class="sbar" id="sbar"></div>
+  <div id="body"></div>
 </div>
 <script>
-const GAS_URL='https://script.google.com/macros/s/AKfycbxahPuy1h69syrWAwrIHXEcjKhJN3nNCmLQUEKQ8QMcSWBiOQHC22R3feIH4Gzt67c-/exec';
-const COLORS=[
-  {bg:'#E6F1FB',fg:'#0C447C'},{bg:'#E1F5EE',fg:'#085041'},
-  {bg:'#FAEEDA',fg:'#633806'},{bg:'#FBEAF0',fg:'#72243E'},
-  {bg:'#EEEDFE',fg:'#3C3489'},{bg:'#FAECE7',fg:'#712B13'},
-  {bg:'#EAF3DE',fg:'#27500A'},{bg:'#FCEBEB',fg:'#791F1F'},
-  {bg:'#dbeafe',fg:'#1e40af'},{bg:'#fef3c7',fg:'#92400e'},
-  {bg:'#fce7f3',fg:'#9d174d'},{bg:'#d1fae5',fg:'#065f46'},
-];
+const SCHEDULE = {
+  "2026-07-01": {early:[],               front:["Aum","Ong","Peach"],      back:["ตาว","Golf"]},
+  "2026-07-02": {early:[],               front:["Aum","Ong","Bell"],        back:["ตาว"]},
+  "2026-07-03": {early:["Peach🔵","Ong"],front:["Aum","Golf"],             back:["ตาว","Bell"]},
+  "2026-07-04": {early:["Aum🔵","Peach"],front:["Ong","Golf"],             back:[]},
+  "2026-07-05": {early:["Golf🔵","Ong"], front:["Peach","Sam"],            back:[]},
+  "2026-07-06": {early:[],               front:["Aum","Peach","Golf"],      back:["ตาว","Bell"]},
+  "2026-07-07": {early:[],               front:["Aum","Peach","Golf"],      back:["ตาว","Bell"]},
+  "2026-07-08": {early:[],               front:["Aum","Peach","Golf"],      back:["ตาว","Bell"]},
+  "2026-07-09": {early:[],               front:["Aum","Peach","Golf"],      back:["ตาว","Bell"]},
+  "2026-07-10": {early:["Peach🔵","Ong"],front:["Aum","Golf"],             back:["ตาว","Bell"]},
+  "2026-07-11": {early:["Aum🔵","Peach"],front:["Ong","Bell"],             back:[]},
+  "2026-07-12": {early:["Bow🔵","Ong"],  front:["Peach","Golf"],           back:[]},
+  "2026-07-13": {early:[],               front:["Aum","Ong","Peach"],      back:["ตาว","Bell","Golf"]},
+  "2026-07-14": {early:[],               front:["Aum","Ong","Peach"],      back:["ตาว","Bell","Golf"]},
+  "2026-07-15": {early:[],               front:["Aum","Ong","Peach"],      back:["ตาว","Bell","Golf"]},
+  "2026-07-16": {early:[],               front:["Aum","Ong","Peach"],      back:["ตาว","Bell"]},
+  "2026-07-17": {early:["Peach🔵","Ong"],front:["Aum","Golf"],             back:["ตาว","Bell"]},
+  "2026-07-18": {early:["Peach🔵","Ong"],front:["Sam","Golf"],             back:[]},
+  "2026-07-19": {early:["Bow🔵","Ong"],  front:["Peach","Golf"],           back:[]},
+  "2026-07-20": {early:[],               front:["Aum","Ong","Peach"],      back:["ตาว","Bell","Golf"]},
+  "2026-07-21": {early:[],               front:["Aum","Ong","Peach"],      back:["ตาว","Bell","Golf"]},
+  "2026-07-22": {early:[],               front:["Aum","Ong","Peach"],      back:["ตาว","Bell","Golf"]},
+  "2026-07-23": {early:[],               front:["Aum","Ong","Golf"],       back:["ตาว","Bell"]},
+  "2026-07-24": {early:["Peach🔵","Ong"],front:["Aum","Golf"],             back:["ตาว","Bell"]},
+  "2026-07-25": {early:["Aum🔵","Peach"],front:["Ong","Bell"],             back:[]},
+  "2026-07-26": {early:["Bow🔵","Ong"],  front:["Peach","Golf"],           back:[]},
+  "2026-07-27": {early:[],               front:["Aum","Ong","Peach"],      back:["ตาว","Bell","Golf"]},
+  "2026-07-28": {early:[],               front:["Aum","Ong","Peach"],      back:["ตาว","Bell","Golf"]},
+  "2026-07-29": {early:[],               front:["Aum","Ong","Peach"],      back:["ตาว","Bell","Golf"]},
+  "2026-07-30": {early:[],               front:["Aum","Ong","Peach"],      back:["ตาว","Bell"]},
+  "2026-07-31": {early:["Peach🔵","Ong"],front:["Aum","Golf"],             back:["ตาว","Bell"]},
+};
+
 const TH_MONTHS=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const TH_DAYS_FULL=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 const DAY_SHORT=['อา','จ','อ','พ','พฤ','ศ','ส'];
-const DAY_EN=['sun','mon','tue','wed','thu','fri','sat'];
-
-let calData={},colorMap={},colorIdx=0;
-let view='month',cur=new Date();
-
-function color(name){if(!colorMap[name])colorMap[name]=COLORS[colorIdx++%COLORS.length];return colorMap[name]}
+const STAFF_COLORS={
+  'Aum':{bg:'#E6F1FB',fg:'#0C447C'},'Ong':{bg:'#E1F5EE',fg:'#085041'},
+  'Peach':{bg:'#FBEAF0',fg:'#72243E'},'Golf':{bg:'#EEEDFE',fg:'#3C3489'},
+  'Bow':{bg:'#FAECE7',fg:'#712B13'},'Bell':{bg:'#FAEEDA',fg:'#633806'},
+  'ตาว':{bg:'#EAF3DE',fg:'#27500A'},'Sam':{bg:'#FCEBEB',fg:'#791F1F'},
+};
+function sc(n){return STAFF_COLORS[n]||{bg:'#F3F4F6',fg:'#374151'};}
 function dkey(y,m,d){return`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
+function getData(y,m,d){return SCHEDULE[dkey(y,m,d)]||null}
+function cleanName(n){return n.replace('🔵','');}
+function isEarly(n){return n.includes('🔵');}
 
-// ---- PARSER ----
-// Strategy:
-//   1. First pass: find month boundary rows (col C = ISO date >= 2020)
-//      Each boundary marks end-of-month; content below = next month
-//   2. Second pass: within each month's row range, scan cols 2-8 ONLY (A-I)
-//      Find week blocks (Sun at col 2), extract staff names from those cols only
-
-const DAY_PAT=/^(sun|mon|tue|wed|thu|fri|sat)$/i;
-const DAY_KEYS=['sun','mon','tue','wed','thu','fri','sat'];
-
-function isRealIsoDate(v){
-  const m=String(v||'').trim().match(/^(\d{4})-\d{2}-\d{2}T/);
-  return m&&parseInt(m[1])>=2020;
-}
-
-function isName(v){
-  v=String(v||'').trim();
-  if(!v||v.length<2||v.length>20) return false;
-  if(/^\d/.test(v)) return false;
-  if(DAY_PAT.test(v)) return false;
-  if(v.includes('T17:')||v.includes('T00:')||v.includes('1899')) return false;
-  if(v.includes('http')||v.includes('@')||v.includes('/')) return false;
-  if(/^[\d\s\.\-\+\%\,\:]+$/.test(v)) return false;
-  const skip=['หน้าร้าน','หลังบ้าน','ตน.','ครึ่ง','จ่าย','เงิน','บริษัท','วันที่',
-              'รายเดือน','เริ่ม','ออก','ลา','กิจ','ป่วย','ทำงาน','หยุด',
-              'Rate','Com','THB','off','Off','SL','FL','PL','BL','Halfday',
-              'เสาร์','อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์'];
-  for(const w of skip){if(v.includes(w))return false;}
-  return true;
-}
-
-function parseData(rows){
-  calData={};colorMap={};colorIdx=0;
-
-  // --- Pass 1: find month ranges ---
-  const ranges=[];
-  for(let r=0;r<rows.length;r++){
-    const v=String((rows[r]||[])[2]||'').trim();
-    if(isRealIsoDate(v)){
-      const d=new Date(v);
-      let y=d.getFullYear(), mo=(d.getMonth()+1)%12;
-      if(mo===0) y++;
-      if(ranges.length>0) ranges[ranges.length-1].endRow=r;
-      ranges.push({startRow:r+1,endRow:rows.length,year:y,month:mo});
-    }
-  }
-
-  // --- Pass 2: parse each month range (cols 2-8 only) ---
-  for(const {startRow,endRow,year,month} of ranges){
-    for(let r=startRow;r<endRow;r++){
-      const row=rows[r]||[];
-
-      // Week header: Sun must be exactly at col 2
-      if(String(row[2]||'').trim().toLowerCase()!=='sun') continue;
-
-      // Map day names to columns (cols 2-8 only)
-      const dayPos={};
-      for(let c=2;c<=8;c++){
-        const v=String(row[c]||'').trim().toLowerCase();
-        if(DAY_PAT.test(v)) dayPos[v]=c;
-      }
-      if(Object.keys(dayPos).length<5) continue;
-      const colIdx=DAY_KEYS.map(d=>dayPos[d]??-1);
-
-      // Date number row (cols 2-8)
-      const dateRow=rows[r+1]||[];
-      const dayNums=colIdx.map(ci=>{
-        if(ci<0) return null;
-        const n=parseInt(String(dateRow[ci]||''));
-        return isNaN(n)?null:n;
-      });
-      if(!dayNums.some(n=>n!==null)) continue;
-
-      // Staff rows: r+2 until next Sun header or end of range
-      for(let sr=r+2;sr<Math.min(endRow,r+20);sr++){
-        const srow=rows[sr]||[];
-        // Stop at next week block
-        if(String(srow[2]||'').trim().toLowerCase()==='sun') break;
-
-        for(let i=0;i<7;i++){
-          const ci=colIdx[i];
-          const dn=dayNums[i];
-          if(!dn||ci<0) continue;
-          const v=String(srow[ci]||'').trim();
-          if(!isName(v)) continue;
-
-          // Month overflow at week boundaries
-          let m=month,y=year;
-          if(i>0&&dn<8&&dayNums[i-1]&&dayNums[i-1]>20){
-            m=(month+1)%12; y=m===0?year+1:year;
-          }
-          if(i===0&&dn>25&&dayNums[1]!==null&&dayNums[1]<8){
-            m=(month-1+12)%12; y=m===11?year-1:year;
-          }
-
-          const k=dkey(y,m+1,dn);
-          if(!calData[k]) calData[k]=[];
-          if(!calData[k].includes(v)) calData[k].push(v);
-        }
-      }
-    }
-  }
-}
-
-async function loadData(){
-  document.getElementById('sbar').textContent='กำลังดึงข้อมูล...';
-  document.getElementById('err').innerHTML='';
-  document.getElementById('body').innerHTML='<div class="loading-wrap"><div class="spinner"></div><div>กำลังโหลด...</div></div>';
-  document.getElementById('legend').innerHTML='';
-  try{
-    const res=await fetch(GAS_URL);
-    if(!res.ok)throw new Error(`HTTP ${res.status}`);
-    const json=await res.json();
-    if(json.status!=='ok')throw new Error(json.message||'unknown error');
-    parseData(json.data);
-    const total=Object.values(calData).reduce((s,a)=>s+a.length,0);
-    document.getElementById('sbar').textContent=`อัปเดตล่าสุด: ${new Date().toLocaleString('th-TH')} · ${total} รายการ`;
-    render();renderLegend();
-  }catch(e){
-    document.getElementById('err').innerHTML=`<div class="errbox">โหลดไม่สำเร็จ: ${e.message}</div>`;
-    document.getElementById('sbar').textContent='';
-    document.getElementById('body').innerHTML='';
-  }
-}
+let view='month',cur=new Date();
 
 function setView(v){
   view=v;
@@ -248,32 +158,59 @@ function nav(d){
   else cur=new Date(cur.getTime()+d*86400000);
   render();
 }
-function render(){if(view==='month')renderMonth();else if(view==='week')renderWeek();else renderToday();}
+function render(){
+  if(view==='month')renderMonth();
+  else if(view==='week')renderWeek();
+  else renderToday();
+}
 
 function renderMonth(){
-  const y=cur.getFullYear(),m=cur.getMonth();
-  document.getElementById('plbl').textContent=`${TH_MONTHS[m]} ${y+543}`;
-  const fd=new Date(y,m,1).getDay();
-  const dim=new Date(y,m+1,0).getDate();
+  const y=cur.getFullYear(),m=cur.getMonth()+1;
+  document.getElementById('plbl').textContent=`${TH_MONTHS[m-1]} ${y+543}`;
+  document.getElementById('sbar').textContent='';
+  const fd=new Date(y,m-1,1).getDay();
+  const dim=new Date(y,m,0).getDate();
   const td=new Date();
-  const prev=new Date(y,m,0).getDate();
+  const prev=new Date(y,m-1,0).getDate();
+
   let h='<div class="cgrid"><div class="dhdr">';
   DAY_SHORT.forEach((d,i)=>h+=`<div class="dh${i===0?' sun':i===6?' sat':''}">${d}</div>`);
   h+='</div><div class="mgrid">';
-  for(let i=fd-1;i>=0;i--)h+=`<div class="cell other"><div class="cdate">${prev-i}</div></div>`;
+
+  for(let i=fd-1;i>=0;i--)
+    h+=`<div class="cell other"><div class="cdate">${prev-i}</div></div>`;
+
   for(let d=1;d<=dim;d++){
-    const isT=td.getFullYear()===y&&td.getMonth()===m&&td.getDate()===d;
-    const dw=new Date(y,m,d).getDay();
-    const k=dkey(y,m+1,d);
-    const staff=calData[k]||[];
+    const isT=td.getFullYear()===y&&td.getMonth()===m-1&&td.getDate()===d;
+    const dw=new Date(y,m-1,d).getDay();
+    const data=getData(y,m,d);
     const dc=(dw===0?' sun':dw===6?' sat':'')+(isT?' tnow':'');
     h+=`<div class="cell${isT?' today':''}"><div class="cdate${dc}">${d}</div>`;
-    staff.slice(0,3).forEach(s=>{const c=color(s);h+=`<span class="stag" style="background:${c.bg};color:${c.fg}">${s}</span>`;});
-    if(staff.length>3)h+=`<div class="more">+${staff.length-3}</div>`;
+    if(data){
+      // 07:30 zone — with border
+      if(data.early.length){
+        h+=`<div class="mzone mzone-early">`;
+        data.early.forEach(n=>{
+          const nm=cleanName(n);const hl=isEarly(n);const c=sc(nm);
+          h+=`<span class="stag early${hl?' hl':''}" ${hl?'':` style="background:${c.bg};color:${c.fg}"`}>${nm}</span>`;
+        });
+        h+=`</div>`;
+      }
+      // 09:30 — no border
+      data.front.forEach(n=>{const c=sc(n);h+=`<span class="stag front" style="background:${c.bg};color:${c.fg}">${n}</span>`;});
+      // หลังบ้าน — dashed border, weekdays only
+      if(dw>=1&&dw<=5&&data.back.length){
+        h+=`<div class="mzone mzone-back">`;
+        data.back.forEach(n=>{const c=sc(n);h+=`<span class="stag back" style="background:${c.bg};color:${c.fg}">${n}</span>`;});
+        h+=`</div>`;
+      }
+    }
     h+='</div>';
   }
+
   const rem=(7-(fd+dim)%7)%7;
-  for(let d=1;d<=rem;d++)h+=`<div class="cell other"><div class="cdate">${d}</div></div>`;
+  for(let d=1;d<=rem;d++)
+    h+=`<div class="cell other"><div class="cdate">${d}</div></div>`;
   h+='</div></div>';
   document.getElementById('body').innerHTML=h;
 }
@@ -283,17 +220,34 @@ function renderWeek(){
   const ws=new Date(cur);ws.setDate(cur.getDate()-cur.getDay());
   const dates=Array.from({length:7},(_,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);return d;});
   const f=dates[0],l=dates[6];
-  document.getElementById('plbl').textContent=`${f.getDate()} ${TH_MONTHS[f.getMonth()].slice(0,3)} — ${l.getDate()} ${TH_MONTHS[l.getMonth()].slice(0,3)} ${l.getFullYear()+543}`;
-  let h='<div class="cgrid"><div class="dhdr">';
+  document.getElementById('plbl').textContent=
+    `${f.getDate()} ${TH_MONTHS[f.getMonth()].slice(0,3)} — ${l.getDate()} ${TH_MONTHS[l.getMonth()].slice(0,3)} ${l.getFullYear()+543}`;
+  document.getElementById('sbar').textContent='';
+
+  let h='<div class="wgrid"><div class="dhdr">';
   dates.forEach((d,i)=>h+=`<div class="dh${i===0?' sun':i===6?' sat':''}">${DAY_SHORT[i]}<br><span style="font-size:13px;font-weight:500">${d.getDate()}</span></div>`);
   h+='</div><div class="wrow">';
-  dates.forEach((d,i)=>{
+  dates.forEach(d=>{
     const isT=d.toDateString()===td.toDateString();
-    const k=dkey(d.getFullYear(),d.getMonth()+1,d.getDate());
-    const staff=calData[k]||[];
+    const dw=d.getDay();
+    const data=getData(d.getFullYear(),d.getMonth()+1,d.getDate());
     h+=`<div class="wcell${isT?' today':''}">`;
-    staff.forEach(s=>{const c=color(s);h+=`<span class="stag" style="background:${c.bg};color:${c.fg};display:block;margin-bottom:3px">${s}</span>`;});
-    if(!staff.length)h+=`<span style="font-size:11px;color:var(--text-muted)">—</span>`;
+    if(data){
+      h+=`<div class="wsection s-early"><div class="wsection-label">🌅 07:30</div>`;
+      data.early.forEach(n=>{const nm=cleanName(n);const c=sc(nm);const hl=isEarly(n);
+        h+=`<span class="stag early${hl?' hl':''}" ${hl?'':` style="background:${c.bg};color:${c.fg}"`}>${nm}${hl?' →19:30':' →17:00'}</span>`;});
+      h+=`</div>`;
+      h+=`<div class="wsection s-front"><div class="wsection-label">🏪 09:30</div>`;
+      data.front.forEach(n=>{const c=sc(n);h+=`<span class="stag front" style="background:${c.bg};color:${c.fg}">${n}</span>`;});
+      h+=`</div>`;
+      if(dw>=1&&dw<=5){
+        h+=`<div class="wsection s-back"><div class="wsection-label">🏠 หลังบ้าน</div>`;
+        data.back.forEach(n=>{const c=sc(n);h+=`<span class="stag back" style="background:${c.bg};color:${c.fg}">${n}</span>`;});
+        h+=`</div>`;
+      }
+    } else {
+      h+=`<span style="font-size:11px;color:var(--text-muted)">ไม่มีข้อมูล</span>`;
+    }
     h+='</div>';
   });
   h+='</div></div>';
@@ -302,32 +256,45 @@ function renderWeek(){
 
 function renderToday(){
   const d=cur;
-  const k=dkey(d.getFullYear(),d.getMonth()+1,d.getDate());
-  const staff=calData[k]||[];
+  const data=getData(d.getFullYear(),d.getMonth()+1,d.getDate());
   const dw=d.getDay();
   document.getElementById('plbl').textContent=`${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${d.getFullYear()+543}`;
+  document.getElementById('sbar').textContent='';
+
   let h='<div class="tview">';
   h+=`<div class="thdr"><div class="tbig">${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${d.getFullYear()+543}</div><div class="tday">วัน${TH_DAYS_FULL[dw]}</div></div>`;
-  if(staff.length){
-    h+=`<div class="tcount">พนักงานที่เข้างาน ${staff.length} คน</div><div class="sgrid">`;
-    staff.forEach(s=>{const c=color(s);h+=`<div class="scard"><div class="sav" style="background:${c.bg};color:${c.fg}">${s.slice(0,2)}</div><div class="sname">${s}</div></div>`;});
-    h+='</div>';
-  }else{
-    h+=`<div class="empty"><div style="font-size:32px;margin-bottom:8px">📅</div>ไม่มีข้อมูลการเข้างานในวันนี้</div>`;
+
+  if(data){
+    const total=data.early.length+data.front.length+data.back.length;
+    h+=`<div style="font-size:13px;color:var(--text-sec)">พนักงานวันนี้ ${total} คน</div><div class="tsections">`;
+    if(data.early.length){
+      h+=`<div class="tsection"><div class="tsection-title">🌅 กะเช้า 07:30</div>`;
+      data.early.forEach(n=>{const nm=cleanName(n);const c=sc(nm);const hl=isEarly(n);
+        h+=`<div class="tstaff"><div class="sav" style="background:${hl?'#0891B2':c.bg};color:${hl?'#fff':c.fg};${hl?'box-shadow:0 0 0 2px #06B6D4':''}">
+${nm.slice(0,2)}</div><div><div class="sname" style="${hl?'font-weight:700;color:#0891B2':''}">${nm}</div><div class="stime">${hl?'07:30–19:30':'07:30–17:00'}</div></div></div>`;});
+      h+=`</div>`;
+    }
+    if(data.front.length){
+      h+=`<div class="tsection"><div class="tsection-title">🏪 หน้าร้าน 09:30</div>`;
+      data.front.forEach(n=>{const c=sc(n);
+        h+=`<div class="tstaff"><div class="sav" style="background:${c.bg};color:${c.fg}">${n.slice(0,2)}</div><div><div class="sname">${n}</div><div class="stime">09:30–19:00</div></div></div>`;});
+      h+=`</div>`;
+    }
+    if(dw>=1&&dw<=5&&data.back.length){
+      h+=`<div class="tsection"><div class="tsection-title">🏠 หลังบ้าน</div>`;
+      data.back.forEach(n=>{const c=sc(n);
+        h+=`<div class="tstaff"><div class="sav" style="background:${c.bg};color:${c.fg}">${n.slice(0,2)}</div><div><div class="sname">${n}</div></div></div>`;});
+      h+=`</div>`;
+    }
+    h+=`</div>`;
+  } else {
+    h+=`<div class="nodata-msg"><div style="font-size:32px;margin-bottom:8px">📋</div>ยังไม่มีข้อมูลเดือนนี้</div>`;
   }
   h+='</div>';
   document.getElementById('body').innerHTML=h;
 }
 
-function renderLegend(){
-  const names=Object.keys(colorMap);
-  if(!names.length)return;
-  let h='';
-  names.forEach(n=>{const c=colorMap[n];h+=`<div class="leg-item"><div class="leg-dot" style="background:${c.bg};border:1px solid ${c.fg}40"></div>${n}</div>`;});
-  document.getElementById('legend').innerHTML=h;
-}
-
-loadData();
+render();
 </script>
 </body>
 </html>
