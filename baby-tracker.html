@@ -219,6 +219,9 @@
     padding:16px;margin-bottom:16px;display:flex;flex-direction:column;gap:10px;
   }
   .add-panel-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:4px;}
+  .field-row{display:flex;gap:10px;}
+  .field-row > div{flex:1;min-width:0;}
+  select.field{appearance:auto;-webkit-appearance:menulist;}
 
   /* Activity list */
   .list{display:flex;flex-direction:column;gap:10px;}
@@ -286,6 +289,10 @@
     border:1.5px solid var(--border);background:var(--surface);color:var(--text-muted);cursor:pointer;white-space:nowrap;
   }
   .prep-tab-btn[data-active="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);}
+  .prep-tab-btn.prio-highest[data-active="true"]{border-color:var(--danger);background:color-mix(in srgb, var(--danger) 16%, transparent);color:var(--danger);}
+  .prep-tab-btn.prio-high[data-active="true"]{border-color:var(--warn);background:var(--warn-soft);color:var(--warn);}
+  .prep-tab-btn.prio-normal[data-active="true"]{border-color:var(--text-muted);background:var(--surface-2);color:var(--text);}
+  .prep-filter-label{font-size:11.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;}
   .prep-filter-row{display:flex;justify-content:flex-end;margin-bottom:10px;}
   .prep-filter-btn{
     font-size:12.5px;font-weight:600;color:var(--accent);background:none;border:none;cursor:pointer;
@@ -420,6 +427,7 @@
   var activeTab = 'overview';
   var openAddPanel = null; // which tab's add-panel is open
   var prepActiveCat = 'all'; // which checklist category tab is selected
+  var prepActivePrio = 'all'; // which priority level filter is selected ('all' | 'Highest' | 'High' | 'Normal')
   var prepHideDone = false; // whether to hide already-bought checklist items
 
   try { apiUrl = localStorage.getItem(LS_URL); who = localStorage.getItem(LS_WHO); } catch(e){}
@@ -530,9 +538,20 @@
     Normal:  {th:'ทั่วไป',     cls:'prio-normal'}
   };
 
-  // หาข้อมูล Age/Priority/จำนวนที่ต้องซื้อจริง ของรายการที่นำเข้าไปแล้ว โดยจับคู่จากชื่อของ
-  // (ลองจับคู่ชื่อเต็มก่อน แล้วค่อยตัดข้อความในวงเล็บท้ายชื่อออกแล้วลองใหม่ — เผื่อรายการเก่าที่เคยมีจำนวนต่อท้ายชื่อ)
-  function resolveChecklistItem(rawName){
+  // หาข้อมูล Age/Priority/จำนวนที่ต้องซื้อจริง ของรายการหนึ่งๆ ในเช็คลิสต์
+  // ลำดับการหา: 1) ข้อมูลที่กรอกเองตอนเพิ่มรายการ (เก็บอยู่ในชีทจริงคอลัมน์ Age/Priority/Qty)
+  //            2) ถ้าไม่มี ลองจับคู่ชื่อของกับรายการ preset จาก Lalinlin Essentials
+  //               (ลองจับคู่ชื่อเต็มก่อน แล้วค่อยตัดข้อความในวงเล็บท้ายชื่อออกแล้วลองใหม่ — เผื่อรายการเก่าที่เคยมีจำนวนต่อท้ายชื่อ)
+  function resolveChecklistItem(item){
+    var rawName = (item && item.Item) || '';
+    var hasOwnMeta = !!(item && (item.Age || item.Priority || (item.Qty !== undefined && item.Qty !== null && String(item.Qty).trim() !== '')));
+    if (hasOwnMeta) {
+      var qtyNum = parseFloat(item.Qty);
+      return {
+        meta: { age: item.Age || '', prio: item.Priority || '', toBuy: isFinite(qtyNum) ? qtyNum : null },
+        name: rawName
+      };
+    }
     if (PRESET_META[rawName]) return { meta: PRESET_META[rawName], name: rawName };
     var m = rawName.match(/^(.*)\s\(([^)]+)\)\s*$/);
     if (m && PRESET_META[m[1]]) return { meta: PRESET_META[m[1]], name: m[1] };
@@ -948,6 +967,31 @@
         '<input class="field" id="item-name" placeholder="เช่น เสื้อผ้าเด็กแรกเกิด">'+
         '<span class="field-label">หมวดหมู่ (ไม่บังคับ)</span>'+
         '<input class="field" id="item-cat" placeholder="เช่น ของใช้เด็ก, เอกสาร, ของใช้คุณแม่">'+
+        '<div class="field-row">'+
+          '<div>'+
+            '<span class="field-label">ช่วงวัย (ไม่บังคับ)</span>'+
+            '<input class="field" id="item-age" placeholder="เช่น Newborn+, NB-3M">'+
+          '</div>'+
+          '<div>'+
+            '<span class="field-label">ความสำคัญ (ไม่บังคับ)</span>'+
+            '<select class="field" id="item-prio">'+
+              '<option value="">ไม่ระบุ</option>'+
+              '<option value="Highest">จำเป็นมาก</option>'+
+              '<option value="High">สำคัญ</option>'+
+              '<option value="Normal">ทั่วไป</option>'+
+            '</select>'+
+          '</div>'+
+        '</div>'+
+        '<div class="field-row">'+
+          '<div>'+
+            '<span class="field-label">จำนวนที่ต้องซื้อ (ไม่บังคับ)</span>'+
+            '<input class="field" id="item-qty" type="number" min="0" inputmode="numeric" placeholder="เช่น 2">'+
+          '</div>'+
+          '<div>'+
+            '<span class="field-label">ราคา (ไม่บังคับ)</span>'+
+            '<input class="field" id="item-price" type="text" inputmode="decimal" placeholder="เช่น 250">'+
+          '</div>'+
+        '</div>'+
         '<div class="add-panel-actions">'+
           '<button class="btn btn-secondary" id="item-cancel" type="button">ยกเลิก</button>'+
           '<button class="btn btn-primary" id="item-save" type="button">เพิ่ม</button>'+
@@ -957,8 +1001,12 @@
       panel.querySelector('#item-save').onclick = function(){
         var name = document.getElementById('item-name').value.trim();
         var cat = document.getElementById('item-cat').value.trim();
+        var age = document.getElementById('item-age').value.trim();
+        var prio = document.getElementById('item-prio').value;
+        var qty = document.getElementById('item-qty').value.trim();
+        var price = document.getElementById('item-price').value.trim();
         if (!name) return;
-        apiPost('addChecklistItem', {item:name, category:cat, addedBy:who}).then(function(){
+        apiPost('addChecklistItem', {item:name, category:cat, addedBy:who, age:age, priority:prio, qty:qty, price:price}).then(function(){
           openAddPanel = null;
           refresh();
         });
@@ -1018,6 +1066,24 @@
     });
     root.appendChild(tabsBar);
 
+    // ---- Filter ตามระดับความสำคัญ ----
+    root.appendChild(el('div','prep-filter-label','ความสำคัญ'));
+    var prioBar = el('div','prep-tabs');
+    var PRIO_FILTERS = [
+      {key:'all', label:'ทั้งหมด', cls:''},
+      {key:'Highest', label:'จำเป็นมาก', cls:'prio-highest'},
+      {key:'High', label:'สำคัญ', cls:'prio-high'},
+      {key:'Normal', label:'ทั่วไป', cls:'prio-normal'}
+    ];
+    PRIO_FILTERS.forEach(function(opt){
+      var prioBtn = el('button','prep-tab-btn'+(opt.cls?' '+opt.cls:''), opt.label);
+      prioBtn.type = 'button';
+      prioBtn.setAttribute('data-active', String(prepActivePrio===opt.key));
+      prioBtn.onclick = function(){ prepActivePrio=opt.key; renderView(); };
+      prioBar.appendChild(prioBtn);
+    });
+    root.appendChild(prioBar);
+
     // ---- ปุ่มซ่อน/แสดงรายการที่ซื้อแล้ว ----
     var filterRow = el('div','prep-filter-row');
     var filterBtn = el('button','prep-filter-btn', prepHideDone ? 'แสดงรายการที่ซื้อแล้ว' : 'ซ่อนรายการที่ซื้อแล้ว');
@@ -1032,6 +1098,12 @@
     catsToRender.forEach(function(cat){
       var catItems = groups[cat] || [];
       if (prepHideDone) catItems = catItems.filter(function(i){ return !(i.Done===true || i.Done==='TRUE'); });
+      if (prepActivePrio !== 'all') {
+        catItems = catItems.filter(function(i){
+          var r = resolveChecklistItem(i);
+          return r.meta && r.meta.prio === prepActivePrio;
+        });
+      }
       if (!catItems.length) return;
       anyRendered = true;
 
@@ -1043,12 +1115,14 @@
         row.setAttribute('data-checked', checked);
         if (i>0) row.style.borderTop = '1px solid var(--border)';
 
-        var resolved = resolveChecklistItem(item.Item || '');
+        var resolved = resolveChecklistItem(item);
         var prioHtml = '';
         var metaHtml = '';
         if (resolved.meta) {
-          var prio = PRIORITY_LABELS[resolved.meta.prio] || {th: resolved.meta.prio, cls:'prio-normal'};
-          prioHtml = '<span class="meta-badge '+prio.cls+'">'+escapeHtml(prio.th)+'</span>';
+          if (resolved.meta.prio) {
+            var prio = PRIORITY_LABELS[resolved.meta.prio] || {th: resolved.meta.prio, cls:'prio-normal'};
+            prioHtml = '<span class="meta-badge '+prio.cls+'">'+escapeHtml(prio.th)+'</span>';
+          }
           var tobuyLabel = checked ? 'ซื้อครบแล้ว' : ('ต้องซื้อ' + (resolved.meta.toBuy ? ' ' + resolved.meta.toBuy + ' ชิ้น' : ''));
           metaHtml =
             '<div class="item-meta">'+
@@ -1109,9 +1183,12 @@
     });
 
     if (!anyRendered) {
+      var hints = [];
+      if (prepHideDone) hints.push('กดปุ่ม "แสดงรายการที่ซื้อแล้ว"');
+      if (prepActivePrio !== 'all') hints.push('เปลี่ยน filter ความสำคัญเป็น "ทั้งหมด"');
       root.appendChild(emptyState(
-        prepHideDone ? 'ซื้อครบทุกอย่างแล้วในหมวดนี้ 🎉' : 'ยังไม่มีรายการในหมวดนี้',
-        prepHideDone ? 'กดปุ่ม "แสดงรายการที่ซื้อแล้ว" ด้านบนเพื่อดูทั้งหมด' : ''
+        (prepHideDone || prepActivePrio !== 'all') ? 'ไม่พบรายการที่ตรงกับตัวกรอง' : 'ยังไม่มีรายการในหมวดนี้',
+        hints.length ? ('ลอง ' + hints.join(' หรือ ') + ' ดูครับ') : ''
       ));
     }
   }
