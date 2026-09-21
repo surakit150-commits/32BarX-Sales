@@ -413,7 +413,12 @@
     var keys = Object.keys(obj);
     var p = Promise.resolve();
     keys.forEach(function(k){
-      p = p.then(function(){ return apiPost('setSetting', {key:k, value:obj[k]}); });
+      p = p.then(function(){ return apiPost('setSetting', {key:k, value:obj[k]}); })
+           .then(function(res){
+             if (!res || !res.ok) {
+               throw new Error((res && res.error) || ('บันทึก '+k+' ไม่สำเร็จ'));
+             }
+           });
     });
     return p;
   }
@@ -443,9 +448,46 @@
 
   // ---------------- Pregnancy math ----------------
   function pad(n){ return n<10 ? '0'+n : ''+n; }
+
+  // Dates are stored and transmitted as plain "epoch day" integers (days
+  // since 1970-01-01), NEVER as "YYYY-MM-DD" strings. Google Sheets silently
+  // auto-converts date-looking text into real Date cells, which then comes
+  // back corrupted (shifted by the sheet's timezone) and breaks re-parsing.
+  // A plain integer like "20711" doesn't match any date pattern Sheets
+  // auto-detects, so it's stored exactly as sent — immune to that bug.
+  function toEpochDay(y, m, d){ return Math.floor(Date.UTC(y, m, d) / 86400000); }
+  function dateStrToEpochDay(s){ // s = "YYYY-MM-DD" from an <input type="date">
+    var p = s.split('-').map(Number);
+    return toEpochDay(p[0], p[1]-1, p[2]);
+  }
+  function epochDayToDate(n){ return new Date(n * 86400000); } // UTC-midnight instant
+  function epochDayToInputValue(n){
+    var d = epochDayToDate(n);
+    return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate());
+  }
+  function localTodayEpochDay(){
+    var n = new Date();
+    return toEpochDay(n.getFullYear(), n.getMonth(), n.getDate());
+  }
+  // Robustly reads an epoch-day setting: accepts the new plain-integer format,
+  // and also tolerates an already-corrupted date/datetime string left over
+  // from before this fix, so old data doesn't crash the page.
+  function parseEpochDaySetting(v){
+    if (v === undefined || v === null || v === '') return null;
+    var s = String(v);
+    if (s.indexOf('-') === -1 && s.indexOf('T') === -1){
+      var n = Math.round(Number(s));
+      return isNaN(n) ? null : n;
+    }
+    var datePart = s.split('T')[0];
+    var p = datePart.split('-').map(Number);
+    if (p.length === 3 && !p.some(isNaN)) return toEpochDay(p[0], p[1]-1, p[2]);
+    return null;
+  }
+
   function fmtDateTh(d){
     var months=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-    return d.getDate()+' '+months[d.getMonth()]+' '+(d.getFullYear()+543);
+    return d.getUTCDate()+' '+months[d.getUTCMonth()]+' '+(d.getUTCFullYear()+543);
   }
   function fmtDateTimeTh(iso){
     var d = new Date(iso);
@@ -460,35 +502,31 @@
   // shown as its own part of the page, not re-derived from the anchor.
   function pregnancyInfo(){
     var s = state.settings || {};
-    var today = new Date(); today.setHours(0,0,0,0);
-    var msPerDay = 86400000;
+    var todayDay = localTodayEpochDay();
 
     var weeks = null, days = null, gestDaysToday = null;
 
-    if (s.AnchorDate && s.AnchorWeeks !== undefined && s.AnchorWeeks !== ''){
-      var anchor = new Date(s.AnchorDate + 'T00:00:00');
-      var aw = parseInt(s.AnchorWeeks, 10);
-      var ad = parseInt(s.AnchorDays, 10) || 0;
-      if (!isNaN(anchor) && !isNaN(aw)){
-        var elapsed = Math.round((today - anchor)/msPerDay);
-        gestDaysToday = Math.max(0, aw*7 + ad + elapsed);
-        weeks = Math.floor(gestDaysToday/7);
-        days = gestDaysToday % 7;
-      }
+    var anchorDay = parseEpochDaySetting(s.AnchorDate);
+    var aw = (s.AnchorWeeks !== undefined && s.AnchorWeeks !== '') ? parseInt(s.AnchorWeeks, 10) : NaN;
+    var ad = parseInt(s.AnchorDays, 10); if (isNaN(ad)) ad = 0;
+
+    if (anchorDay !== null && !isNaN(aw)){
+      var elapsed = todayDay - anchorDay;
+      gestDaysToday = Math.max(0, aw*7 + ad + elapsed);
+      weeks = Math.floor(gestDaysToday/7);
+      days = gestDaysToday % 7;
     }
 
+    var dueDay = parseEpochDaySetting(s.DueDate);
     var dueDate = null, daysUntilDue = null;
-    if (s.DueDate){
-      var d = new Date(s.DueDate + 'T00:00:00');
-      if (!isNaN(d)){
-        dueDate = d;
-        daysUntilDue = Math.round((d - today)/msPerDay);
-        if (weeks === null){
-          // no anchor set — fall back to deriving current week from due date
-          gestDaysToday = 280 - daysUntilDue;
-          weeks = Math.max(0, Math.floor(gestDaysToday/7));
-          days = Math.max(0, gestDaysToday % 7);
-        }
+    if (dueDay !== null){
+      dueDate = epochDayToDate(dueDay);
+      daysUntilDue = dueDay - todayDay;
+      if (weeks === null){
+        // no anchor set — fall back to deriving current week from due date
+        gestDaysToday = 280 - daysUntilDue;
+        weeks = Math.max(0, Math.floor(gestDaysToday/7));
+        days = Math.max(0, gestDaysToday % 7);
       }
     }
 
@@ -600,18 +638,31 @@
 
   // Setup/edit card for the reference (anchor) week/day + due date.
   // editMode=true prefills with current values and labels itself as an edit form.
+  // ทราบมาแล้วว่า ณ 15 ก.ย. 2569 อายุครรภ์ 27 สัปดาห์ 3 วัน และกำหนดคลอดคาดการณ์คือ 14 ธ.ค. 2569
+  // ใช้ค่านี้เป็นค่าเริ่มต้นในฟอร์ม (ตอนยังไม่เคยบันทึกอะไรเลย) จะได้ไม่ต้องพิมพ์เอง กดบันทึกทีเดียวจบ
+  var KNOWN_DEFAULTS = { anchorDate:'2026-09-15', anchorWeeks:'27', anchorDays:'3', dueDate:'2026-12-14' };
+
   function pregnancySetupCard(editMode){
     var s = state.settings || {};
+    var anchorDayVal = parseEpochDaySetting(s.AnchorDate);
+    var dueDayVal = parseEpochDaySetting(s.DueDate);
+    var hasAnyData = anchorDayVal !== null || dueDayVal !== null;
+
+    var anchorDateInput = anchorDayVal !== null ? epochDayToInputValue(anchorDayVal) : (hasAnyData ? '' : KNOWN_DEFAULTS.anchorDate);
+    var anchorWeeksInput = s.AnchorWeeks !== undefined ? s.AnchorWeeks : (hasAnyData ? '' : KNOWN_DEFAULTS.anchorWeeks);
+    var anchorDaysInput = s.AnchorDays !== undefined ? s.AnchorDays : (hasAnyData ? '' : KNOWN_DEFAULTS.anchorDays);
+    var dueDateInput = dueDayVal !== null ? epochDayToInputValue(dueDayVal) : (hasAnyData ? '' : KNOWN_DEFAULTS.dueDate);
+
     var card = el('div','card add-panel');
     card.innerHTML =
       '<span class="field-label">'+(editMode ? 'แก้ไขอายุครรภ์ปัจจุบัน' : 'อายุครรภ์ ณ วันที่ทราบล่าสุด')+'</span>'+
       '<div style="display:flex;gap:8px;">'+
-        '<input class="field" type="date" id="anchor-date" style="flex:2" value="'+(s.AnchorDate||'')+'">'+
-        '<input class="field" type="number" id="anchor-weeks" min="0" max="45" placeholder="สัปดาห์" style="flex:1" value="'+(s.AnchorWeeks!==undefined?s.AnchorWeeks:'')+'">'+
-        '<input class="field" type="number" id="anchor-days" min="0" max="6" placeholder="วัน" style="flex:1" value="'+(s.AnchorDays!==undefined?s.AnchorDays:'')+'">'+
+        '<input class="field" type="date" id="anchor-date" style="flex:2" value="'+anchorDateInput+'">'+
+        '<input class="field" type="number" id="anchor-weeks" min="0" max="45" placeholder="สัปดาห์" style="flex:1" value="'+anchorWeeksInput+'">'+
+        '<input class="field" type="number" id="anchor-days" min="0" max="6" placeholder="วัน" style="flex:1" value="'+anchorDaysInput+'">'+
       '</div>'+
       '<span class="field-label" style="margin-top:6px;">กำหนดคลอด (คาดการณ์)</span>'+
-      '<input class="field" type="date" id="due-date-field" value="'+(s.DueDate||'')+'">'+
+      '<input class="field" type="date" id="due-date-field" value="'+dueDateInput+'">'+
       '<button class="btn btn-primary" id="save-pregnancy-btn" type="button">บันทึก</button>';
     card.querySelector('#save-pregnancy-btn').onclick = function(){
       var anchorDate = document.getElementById('anchor-date').value;
@@ -620,13 +671,18 @@
       var dueDate = document.getElementById('due-date-field').value;
       var toSave = {};
       if (anchorDate && anchorWeeks !== '') {
-        toSave.AnchorDate = anchorDate;
+        toSave.AnchorDate = String(dateStrToEpochDay(anchorDate));
         toSave.AnchorWeeks = anchorWeeks;
         toSave.AnchorDays = anchorDays || '0';
       }
-      if (dueDate) toSave.DueDate = dueDate;
+      if (dueDate) toSave.DueDate = String(dateStrToEpochDay(dueDate));
       if (!Object.keys(toSave).length) return;
-      saveSettings(toSave).then(refresh);
+      var btn = document.getElementById('save-pregnancy-btn');
+      btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+      saveSettings(toSave).then(refresh).catch(function(err){
+        btn.disabled = false; btn.textContent = 'บันทึก';
+        showBanner('บันทึกไม่สำเร็จ: '+err.message+' — เช็คว่าอัปเดต Code.gs เวอร์ชันใหม่ (มี action "setSetting") และกด Deploy > Manage deployments > New version แล้วหรือยัง');
+      });
     };
     return card;
   }
