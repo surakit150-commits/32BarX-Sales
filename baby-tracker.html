@@ -263,6 +263,14 @@
   .meta-badge.prio-normal{background:var(--surface-2);color:var(--text-muted);}
   .meta-badge.tobuy{background:color-mix(in srgb, var(--accent) 16%, transparent);color:var(--accent);}
   .meta-badge.tobuy.done{background:var(--good-soft);color:var(--good);}
+  .item-price{display:flex;align-items:center;gap:4px;margin-top:1px;}
+  .price-currency{font-size:12.5px;color:var(--text-muted);}
+  .price-input{
+    width:84px;font-size:12.5px;padding:3px 7px;border-radius:7px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text);font-family:inherit;
+  }
+  .price-input:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .price-input::placeholder{color:var(--text-muted);}
   .item-category{font-size:11px;color:var(--text-muted);background:var(--surface-2);padding:2px 8px;border-radius:99px;}
   .category-group{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 8px;}
   .category-group:first-child{margin-top:0;}
@@ -346,7 +354,7 @@
   <div id="main-app" hidden>
 
     <header class="topbar">
-      <span class="version-badge">V1.0</span>
+      <span class="version-badge">V1.1</span>
       <div class="week-hero">
         <span class="week-num" id="week-num">—<span class="unit">สัปดาห์</span></span>
         <span class="week-days" id="week-days"></span>
@@ -875,7 +883,13 @@
     var items = state.checklist || [];
     var doneCount = items.filter(function(i){ return i.Done===true || i.Done==='TRUE'; }).length;
     if (items.length){
-      root.appendChild(el('div','checklist-progress', 'เตรียมแล้ว '+doneCount+' จาก '+items.length+' รายการ'));
+      var totalPrice = items.reduce(function(sum, i){
+        var n = parseFloat(String(i.Price).replace(/,/g,''));
+        return isFinite(n) ? sum + n : sum;
+      }, 0);
+      var progressText = 'เตรียมแล้ว '+doneCount+' จาก '+items.length+' รายการ';
+      if (totalPrice > 0) progressText += ' · ราคารวมที่กรอกไว้ ฿'+totalPrice.toLocaleString('th-TH');
+      root.appendChild(el('div','checklist-progress', progressText));
     }
 
     var toggle = el('button','add-toggle','+ เพิ่มของที่ต้องเตรียม');
@@ -962,6 +976,13 @@
             '</div>';
         }
 
+        var priceVal = (item.Price !== undefined && item.Price !== null && item.Price !== '') ? item.Price : '';
+        var priceHtml =
+          '<div class="item-price">'+
+            '<span class="price-currency">฿</span>'+
+            '<input class="price-input" type="text" inputmode="decimal" placeholder="ใส่ราคา" value="'+escapeHtml(String(priceVal))+'">'+
+          '</div>';
+
         row.innerHTML =
           '<button class="checkbox" data-checked="'+checked+'" type="button" aria-label="ทำเครื่องหมาย">'+
             '<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'+
@@ -969,6 +990,7 @@
           '<div class="item-main">'+
             '<span class="item-name">'+escapeHtml(item.Item)+'</span>'+
             metaHtml+
+            priceHtml+
           '</div>'+
           '<button class="icon-btn del-btn" type="button" aria-label="ลบ" title="ลบ">'+trashIcon()+'</button>';
         row.querySelector('.checkbox').onclick = function(){
@@ -977,6 +999,26 @@
         row.querySelector('.del-btn').onclick = function(){
           apiPost('deleteChecklistItem', {id:item.ID}).then(refresh);
         };
+        var priceInput = row.querySelector('.price-input');
+        priceInput.addEventListener('click', function(e){ e.stopPropagation(); });
+        priceInput.addEventListener('change', function(){
+          var val = priceInput.value.trim();
+          apiPost('setChecklistPrice', {id:item.ID, price: val}).then(function(res){
+            if (!res || !res.ok) { showBanner('บันทึกราคาไม่สำเร็จ ลองใหม่อีกครั้ง'); return; }
+            item.Price = val;
+            var progressEl = root.querySelector('.checklist-progress');
+            if (progressEl) {
+              var totalPrice = items.reduce(function(sum, i){
+                var n = parseFloat(String(i.Price).replace(/,/g,''));
+                return isFinite(n) ? sum + n : sum;
+              }, 0);
+              var doneNow = items.filter(function(i){ return i.Done===true || i.Done==='TRUE'; }).length;
+              var txt = 'เตรียมแล้ว '+doneNow+' จาก '+items.length+' รายการ';
+              if (totalPrice > 0) txt += ' · ราคารวมที่กรอกไว้ ฿'+totalPrice.toLocaleString('th-TH');
+              progressEl.textContent = txt;
+            }
+          }).catch(function(){ showBanner('บันทึกราคาไม่สำเร็จ ลองใหม่อีกครั้ง'); });
+        });
         list.appendChild(row);
       });
       root.appendChild(list);
