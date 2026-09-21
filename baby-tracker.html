@@ -146,18 +146,22 @@
     background:var(--surface);
     border-bottom:1px solid var(--border);
   }
-  .topbar-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
-  .countdown-num{
-    font-family:'Mitr',sans-serif;font-weight:700;font-size:34px;
+  .week-hero{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .week-num{
+    font-family:'Mitr',sans-serif;font-weight:700;font-size:40px;
     line-height:1;color:var(--accent);
     font-variant-numeric:tabular-nums;
   }
-  .countdown-label{font-size:12.5px;color:var(--text-muted);margin-top:4px;}
-  .due-chip{
-    font-size:12px;color:var(--text-muted);
-    background:var(--surface-2);
-    padding:6px 10px;border-radius:99px;white-space:nowrap;
+  .week-num .unit{font-size:16px;font-weight:600;color:var(--text-muted);margin-left:6px;}
+  .week-days{font-size:14px;font-weight:600;color:var(--text-muted);}
+  .week-sub{font-size:12.5px;color:var(--text-muted);margin-top:4px;width:100%;}
+  .due-part{
+    margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);
+    display:flex;justify-content:space-between;align-items:baseline;gap:10px;
   }
+  .due-part-label{font-size:12px;font-weight:600;color:var(--text-muted);}
+  .due-part-value{font-size:14px;font-weight:700;color:var(--text);text-align:right;}
+  .due-part-sub{font-size:12px;font-weight:600;color:var(--accent-2);display:block;margin-top:2px;}
   .progress-track{
     margin-top:14px;height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;
   }
@@ -295,7 +299,7 @@
   <!-- ============ SETUP SCREEN ============ -->
   <div id="setup-screen" hidden>
     <div class="setup-badge">01</div>
-    <h1>เริ่มตั้งค่าแอปติดตามลูกน้อย</h1>
+    <h1>Hello World !!! ลลิลลิล</h1>
     <p>แอปนี้เก็บข้อมูลไว้ใน Google Sheet ของครอบครัวเรา วางลิงก์ Web App
       ที่ deploy จาก Apps Script (Code.gs) ไว้ด้านล่าง แล้วเลือกว่าเครื่องนี้เป็นของ พ่อ หรือ แม่</p>
 
@@ -321,12 +325,16 @@
   <div id="main-app" hidden>
 
     <header class="topbar">
-      <div class="topbar-row">
-        <div>
-          <div class="countdown-num" id="countdown-num">—</div>
-          <div class="countdown-label" id="countdown-label">ยังไม่ได้ตั้งกำหนดคลอด</div>
-        </div>
-        <div class="due-chip" id="due-chip">ตั้งกำหนดคลอด</div>
+      <div class="week-hero">
+        <span class="week-num" id="week-num">—<span class="unit">สัปดาห์</span></span>
+        <span class="week-days" id="week-days"></span>
+        <span class="week-sub" id="week-sub">Hello World !!!</span>
+      </div>
+      <div class="due-part">
+        <span class="due-part-label">กำหนดคลอด</span>
+        <span class="due-part-value" id="due-part-value">ยังไม่ได้ตั้งค่า
+          <span class="due-part-sub" id="due-part-sub"></span>
+        </span>
       </div>
       <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
       <div class="trimester-row"><span>ไตรมาส 1</span><span>ไตรมาส 2</span><span>ไตรมาส 3</span></div>
@@ -401,6 +409,14 @@
       body: JSON.stringify(body)
     }).then(function(r){ return r.json(); });
   }
+  function saveSettings(obj){
+    var keys = Object.keys(obj);
+    var p = Promise.resolve();
+    keys.forEach(function(k){
+      p = p.then(function(){ return apiPost('setSetting', {key:k, value:obj[k]}); });
+    });
+    return p;
+  }
 
   function showBanner(msg){
     var root = document.getElementById('view-root');
@@ -438,47 +454,95 @@
     return d.getDate()+' '+months[d.getMonth()]+' • '+pad(d.getHours())+':'+pad(d.getMinutes());
   }
 
+  // Current week/day comes from a reference "anchor" (a date + the gestational
+  // age confirmed on that date, e.g. by a doctor) and keeps counting forward.
+  // Due-date countdown is independent — it's whatever due date was entered,
+  // shown as its own part of the page, not re-derived from the anchor.
   function pregnancyInfo(){
-    var due = state.settings && state.settings.DueDate;
-    if (!due) return null;
-    var dueDate = new Date(due + 'T00:00:00');
-    if (isNaN(dueDate)) return null;
+    var s = state.settings || {};
     var today = new Date(); today.setHours(0,0,0,0);
     var msPerDay = 86400000;
-    var daysUntilDue = Math.round((dueDate - today)/msPerDay);
-    var gestDays = 280 - daysUntilDue;
-    var weeks = Math.max(0, Math.floor(gestDays/7));
-    var days = Math.max(0, gestDays % 7);
-    var trimester = weeks < 14 ? 1 : (weeks < 28 ? 2 : 3);
-    var percent = Math.min(100, Math.max(0,(gestDays/280)*100));
-    var sizeLabel = SIZE_TABLE[0].label;
-    for (var i=0;i<SIZE_TABLE.length;i++){ if (weeks >= SIZE_TABLE[i].w) sizeLabel = SIZE_TABLE[i].label; }
-    return {dueDate:dueDate, daysUntilDue:daysUntilDue, weeks:weeks, days:days, trimester:trimester, percent:percent, sizeLabel:sizeLabel};
+
+    var weeks = null, days = null, gestDaysToday = null;
+
+    if (s.AnchorDate && s.AnchorWeeks !== undefined && s.AnchorWeeks !== ''){
+      var anchor = new Date(s.AnchorDate + 'T00:00:00');
+      var aw = parseInt(s.AnchorWeeks, 10);
+      var ad = parseInt(s.AnchorDays, 10) || 0;
+      if (!isNaN(anchor) && !isNaN(aw)){
+        var elapsed = Math.round((today - anchor)/msPerDay);
+        gestDaysToday = Math.max(0, aw*7 + ad + elapsed);
+        weeks = Math.floor(gestDaysToday/7);
+        days = gestDaysToday % 7;
+      }
+    }
+
+    var dueDate = null, daysUntilDue = null;
+    if (s.DueDate){
+      var d = new Date(s.DueDate + 'T00:00:00');
+      if (!isNaN(d)){
+        dueDate = d;
+        daysUntilDue = Math.round((d - today)/msPerDay);
+        if (weeks === null){
+          // no anchor set — fall back to deriving current week from due date
+          gestDaysToday = 280 - daysUntilDue;
+          weeks = Math.max(0, Math.floor(gestDaysToday/7));
+          days = Math.max(0, gestDaysToday % 7);
+        }
+      }
+    }
+
+    if (weeks === null && dueDate === null) return null;
+
+    var trimester = weeks !== null ? (weeks < 14 ? 1 : (weeks < 28 ? 2 : 3)) : null;
+    var percent = gestDaysToday !== null ? Math.min(100, Math.max(0, (gestDaysToday/280)*100)) : null;
+    var sizeLabel = null;
+    if (weeks !== null){
+      sizeLabel = SIZE_TABLE[0].label;
+      for (var i=0;i<SIZE_TABLE.length;i++){ if (weeks >= SIZE_TABLE[i].w) sizeLabel = SIZE_TABLE[i].label; }
+    }
+    return {weeks:weeks, days:days, dueDate:dueDate, daysUntilDue:daysUntilDue, trimester:trimester, percent:percent, sizeLabel:sizeLabel};
   }
 
   // ---------------- Topbar ----------------
   function renderTopbar(){
     var info = pregnancyInfo();
-    var numEl = document.getElementById('countdown-num');
-    var lblEl = document.getElementById('countdown-label');
-    var chip = document.getElementById('due-chip');
+    var weekNumEl = document.getElementById('week-num');
+    var weekDaysEl = document.getElementById('week-days');
+    var weekSubEl = document.getElementById('week-sub');
+    var dueValEl = document.getElementById('due-part-value');
+    var dueSubEl = document.getElementById('due-part-sub');
     var fill = document.getElementById('progress-fill');
 
     if (!info){
-      numEl.textContent = '—';
-      lblEl.textContent = 'ยังไม่ได้ตั้งกำหนดคลอด';
-      chip.textContent = 'ตั้งกำหนดคลอด';
+      weekNumEl.innerHTML = '—<span class="unit">สัปดาห์</span>';
+      weekDaysEl.textContent = '';
+      weekSubEl.textContent = 'ยังไม่ได้ตั้งค่าอายุครรภ์';
+      dueValEl.innerHTML = 'ยังไม่ได้ตั้งค่า';
       fill.style.width = '0%';
       return;
     }
-    numEl.textContent = 'สัปดาห์ ' + info.weeks;
-    if (info.daysUntilDue >= 0){
-      lblEl.textContent = 'อีก '+info.days+' วัน • เหลืออีก '+info.daysUntilDue+' วันถึงกำหนดคลอด';
+
+    if (info.weeks !== null){
+      weekNumEl.innerHTML = info.weeks + '<span class="unit">สัปดาห์</span>';
+      weekDaysEl.textContent = info.days + ' วัน';
+      weekSubEl.textContent = 'นับถึงวันนี้';
     } else {
-      lblEl.textContent = 'เลยกำหนดคลอดมาแล้ว '+Math.abs(info.daysUntilDue)+' วัน';
+      weekNumEl.innerHTML = '—<span class="unit">สัปดาห์</span>';
+      weekDaysEl.textContent = '';
+      weekSubEl.textContent = '';
     }
-    chip.textContent = fmtDateTh(info.dueDate);
-    fill.style.width = info.percent + '%';
+
+    if (info.dueDate){
+      var sub = info.daysUntilDue >= 0
+        ? 'อีก '+info.daysUntilDue+' วัน'
+        : 'เลยกำหนดมาแล้ว '+Math.abs(info.daysUntilDue)+' วัน';
+      dueValEl.innerHTML = fmtDateTh(info.dueDate) + '<span class="due-part-sub">'+sub+'</span>';
+    } else {
+      dueValEl.innerHTML = 'ยังไม่ได้ตั้งค่า';
+    }
+
+    fill.style.width = (info.percent || 0) + '%';
   }
 
   // ---------------- View router ----------------
@@ -511,46 +575,60 @@
     root.appendChild(h);
 
     if (!info){
-      var card = el('div','card add-panel');
-      card.innerHTML =
-        '<span class="field-label">กำหนดคลอด (Due date)</span>'+
-        '<input class="field" type="date" id="due-date-input">'+
-        '<button class="btn btn-primary" id="save-due-btn" type="button">บันทึกกำหนดคลอด</button>';
-      root.appendChild(card);
-      card.querySelector('#save-due-btn').onclick = function(){
-        var v = document.getElementById('due-date-input').value;
-        if (!v) return;
-        apiPost('setDueDate', {dueDate:v}).then(refresh);
-      };
+      root.appendChild(pregnancySetupCard());
       return;
     }
 
-    var sizeCard = el('div','card size-card');
-    sizeCard.innerHTML =
-      '<div class="size-visual">W'+info.weeks+'</div>'+
-      '<p>ตอนนี้ลูกน้อยมีขนาดประมาณ<br><strong>'+info.sizeLabel+'</strong></p>';
-    root.appendChild(sizeCard);
+    if (info.weeks !== null){
+      var sizeCard = el('div','card size-card');
+      sizeCard.innerHTML =
+        '<div class="size-visual">W'+info.weeks+'</div>'+
+        '<p>ตอนนี้ลูกน้อยมีขนาดประมาณ<br><strong>'+info.sizeLabel+'</strong></p>';
+      root.appendChild(sizeCard);
+    }
 
-    var stats = el('div','stat-row');
-    stats.innerHTML =
-      '<div class="stat-tile"><div class="num">'+info.trimester+' / 3</div><div class="lbl">ไตรมาสปัจจุบัน</div></div>'+
-      '<div class="stat-tile"><div class="num">'+Math.round(info.percent)+'%</div><div class="lbl">ของการตั้งครรภ์</div></div>';
-    root.appendChild(stats);
+    if (info.trimester !== null){
+      var stats = el('div','stat-row');
+      stats.innerHTML =
+        '<div class="stat-tile"><div class="num">'+info.trimester+' / 3</div><div class="lbl">ไตรมาสปัจจุบัน</div></div>'+
+        '<div class="stat-tile"><div class="num">'+Math.round(info.percent)+'%</div><div class="lbl">ของการตั้งครรภ์</div></div>';
+      root.appendChild(stats);
+    }
 
-    var editCard = el('div','card', '');
-    editCard.style.padding = '14px 16px';
-    editCard.innerHTML =
-      '<span class="field-label">แก้ไขกำหนดคลอด</span>'+
-      '<div style="display:flex;gap:8px;margin-top:6px;">'+
-      '<input class="field" type="date" id="due-date-edit" value="'+ (state.settings.DueDate||'') +'">'+
-      '<button class="btn btn-secondary" id="save-due-edit-btn" type="button">บันทึก</button>'+
-      '</div>';
-    root.appendChild(editCard);
-    editCard.querySelector('#save-due-edit-btn').onclick = function(){
-      var v = document.getElementById('due-date-edit').value;
-      if (!v) return;
-      apiPost('setDueDate', {dueDate:v}).then(refresh);
+    root.appendChild(pregnancySetupCard(true));
+  }
+
+  // Setup/edit card for the reference (anchor) week/day + due date.
+  // editMode=true prefills with current values and labels itself as an edit form.
+  function pregnancySetupCard(editMode){
+    var s = state.settings || {};
+    var card = el('div','card add-panel');
+    card.innerHTML =
+      '<span class="field-label">'+(editMode ? 'แก้ไขอายุครรภ์ปัจจุบัน' : 'อายุครรภ์ ณ วันที่ทราบล่าสุด')+'</span>'+
+      '<div style="display:flex;gap:8px;">'+
+        '<input class="field" type="date" id="anchor-date" style="flex:2" value="'+(s.AnchorDate||'')+'">'+
+        '<input class="field" type="number" id="anchor-weeks" min="0" max="45" placeholder="สัปดาห์" style="flex:1" value="'+(s.AnchorWeeks!==undefined?s.AnchorWeeks:'')+'">'+
+        '<input class="field" type="number" id="anchor-days" min="0" max="6" placeholder="วัน" style="flex:1" value="'+(s.AnchorDays!==undefined?s.AnchorDays:'')+'">'+
+      '</div>'+
+      '<span class="field-label" style="margin-top:6px;">กำหนดคลอด (คาดการณ์)</span>'+
+      '<input class="field" type="date" id="due-date-field" value="'+(s.DueDate||'')+'">'+
+      '<button class="btn btn-primary" id="save-pregnancy-btn" type="button">บันทึก</button>';
+    card.querySelector('#save-pregnancy-btn').onclick = function(){
+      var anchorDate = document.getElementById('anchor-date').value;
+      var anchorWeeks = document.getElementById('anchor-weeks').value;
+      var anchorDays = document.getElementById('anchor-days').value;
+      var dueDate = document.getElementById('due-date-field').value;
+      var toSave = {};
+      if (anchorDate && anchorWeeks !== '') {
+        toSave.AnchorDate = anchorDate;
+        toSave.AnchorWeeks = anchorWeeks;
+        toSave.AnchorDays = anchorDays || '0';
+      }
+      if (dueDate) toSave.DueDate = dueDate;
+      if (!Object.keys(toSave).length) return;
+      saveSettings(toSave).then(refresh);
     };
+    return card;
   }
 
   // ---------------- Log (Activities) ----------------
