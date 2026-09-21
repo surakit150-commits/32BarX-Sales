@@ -282,8 +282,7 @@
   .checklist-progress{font-size:13px;color:var(--text-muted);margin-bottom:14px;}
 
   /* Checklist sub-tabs (by category) + done filter */
-  .prep-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-bottom:12px;scrollbar-width:none;}
-  .prep-tabs::-webkit-scrollbar{display:none;}
+  .prep-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
   .prep-tab-btn{
     flex:none;font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:99px;
     border:1.5px solid var(--border);background:var(--surface);color:var(--text-muted);cursor:pointer;white-space:nowrap;
@@ -556,6 +555,58 @@
     var m = rawName.match(/^(.*)\s\(([^)]+)\)\s*$/);
     if (m && PRESET_META[m[1]]) return { meta: PRESET_META[m[1]], name: m[1] };
     return { meta: null, name: rawName };
+  }
+
+  // รวมรายชื่อหมวดหมู่ที่รู้จักทั้งหมด (จาก preset + จากของที่เพิ่มเองในชีทจริง) ไว้ทำ dropdown
+  // เรียงตามลำดับที่เจอก่อน-หลัง กันของใหม่ที่ Kit สร้างเองก็โผล่ต่อท้ายให้อัตโนมัติ
+  function getKnownCategories(){
+    var cats = [];
+    PRESET_ITEMS.forEach(function(p){ if (cats.indexOf(p.cat) === -1) cats.push(p.cat); });
+    (state.checklist || []).forEach(function(i){
+      var c = (i.Category || '').trim();
+      if (c && cats.indexOf(c) === -1) cats.push(c);
+    });
+    return cats;
+  }
+
+  // รวมรายชื่อช่วงวัยที่รู้จักทั้งหมด (จาก preset + จากของที่เพิ่มเองในชีทจริง) ไว้ทำ dropdown
+  function getKnownAges(){
+    var ages = [];
+    PRESET_ITEMS.forEach(function(p){ if (p.age && ages.indexOf(p.age) === -1) ages.push(p.age); });
+    (state.checklist || []).forEach(function(i){
+      var a = (i.Age || '').trim();
+      if (a && ages.indexOf(a) === -1) ages.push(a);
+    });
+    return ages;
+  }
+
+  // ---- dropdown ที่มีตัวเลือก "+ เพิ่มใหม่..." สำหรับสร้างค่าที่ยังไม่มีในลิสต์เอง ----
+  function dropdownWithAddHtml(id, options, placeholder){
+    var optsHtml = '<option value="">ไม่ระบุ</option>' +
+      options.map(function(o){ return '<option value="'+escapeHtml(o)+'">'+escapeHtml(o)+'</option>'; }).join('') +
+      '<option value="__new__">+ เพิ่มใหม่...</option>';
+    return (
+      '<select class="field" id="'+id+'-select">'+optsHtml+'</select>'+
+      '<input class="field" id="'+id+'-new" placeholder="'+escapeHtml(placeholder)+'" style="display:none;margin-top:8px;">'
+    );
+  }
+  function wireDropdownWithAdd(id){
+    var sel = document.getElementById(id+'-select');
+    var inp = document.getElementById(id+'-new');
+    if (!sel || !inp) return;
+    sel.addEventListener('change', function(){
+      if (sel.value === '__new__') { inp.style.display = 'block'; inp.focus(); }
+      else { inp.style.display = 'none'; inp.value = ''; }
+    });
+  }
+  function readDropdownWithAdd(id){
+    var sel = document.getElementById(id+'-select');
+    if (!sel) return '';
+    if (sel.value === '__new__') {
+      var inp = document.getElementById(id+'-new');
+      return inp ? inp.value.trim() : '';
+    }
+    return sel.value;
   }
 
   var SIZE_TABLE = [
@@ -966,11 +1017,11 @@
         '<span class="field-label">ชื่อของ</span>'+
         '<input class="field" id="item-name" placeholder="เช่น เสื้อผ้าเด็กแรกเกิด">'+
         '<span class="field-label">หมวดหมู่ (ไม่บังคับ)</span>'+
-        '<input class="field" id="item-cat" placeholder="เช่น ของใช้เด็ก, เอกสาร, ของใช้คุณแม่">'+
+        dropdownWithAddHtml('item-cat', getKnownCategories(), 'พิมพ์หมวดหมู่ใหม่')+
         '<div class="field-row">'+
           '<div>'+
             '<span class="field-label">ช่วงวัย (ไม่บังคับ)</span>'+
-            '<input class="field" id="item-age" placeholder="เช่น Newborn+, NB-3M">'+
+            dropdownWithAddHtml('item-age', getKnownAges(), 'พิมพ์ช่วงวัยใหม่ เช่น NB-3M')+
           '</div>'+
           '<div>'+
             '<span class="field-label">ความสำคัญ (ไม่บังคับ)</span>'+
@@ -997,11 +1048,13 @@
           '<button class="btn btn-primary" id="item-save" type="button">เพิ่ม</button>'+
         '</div>';
       root.appendChild(panel);
+      wireDropdownWithAdd('item-cat');
+      wireDropdownWithAdd('item-age');
       panel.querySelector('#item-cancel').onclick = function(){ openAddPanel=null; renderView(); };
       panel.querySelector('#item-save').onclick = function(){
         var name = document.getElementById('item-name').value.trim();
-        var cat = document.getElementById('item-cat').value.trim();
-        var age = document.getElementById('item-age').value.trim();
+        var cat = readDropdownWithAdd('item-cat');
+        var age = readDropdownWithAdd('item-age');
         var prio = document.getElementById('item-prio').value;
         var qty = document.getElementById('item-qty').value.trim();
         var price = document.getElementById('item-price').value.trim();
