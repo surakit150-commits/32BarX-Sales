@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ติดตามลูกน้อย</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;height:100%;}
+  :root{
+    --bg:#F4F6F2;
+    --surface:#FFFFFF;
+    --surface-2:#EBF0E7;
+    --border:#DCE3D8;
+    --text:#22312A;
+    --text-muted:#5E6F65;
+    --accent:#4C7A92;      /* พ่อ */
+    --accent-2:#C97A63;    /* แม่ */
+    --accent-soft:#E3ECE8;
+    --good:#4C8A57;
+    --good-soft:#E1EEE0;
+    --warn:#C98A3D;
+    --warn-soft:#F5E8D3;
+    --danger:#B8574A;
+    --shadow: 0 1px 2px rgba(30,45,35,0.06), 0 4px 14px rgba(30,45,35,0.07);
+    --radius-lg:20px;
+    --radius-md:14px;
+    --radius-sm:10px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#10140F;
+      --surface:#1A2118;
+      --surface-2:#212B1E;
+      --border:#324033;
+      --text:#EAF0E6;
+      --text-muted:#9FB29B;
+      --accent:#84B7CC;
+      --accent-2:#E4A491;
+      --accent-soft:#22302B;
+      --good:#7FC988;
+      --good-soft:#1D2E1F;
+      --warn:#E0AE6C;
+      --warn-soft:#2E2717;
+      --danger:#E28E80;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#10140F;
+    --surface:#1A2118;
+    --surface-2:#212B1E;
+    --border:#324033;
+    --text:#EAF0E6;
+    --text-muted:#9FB29B;
+    --accent:#84B7CC;
+    --accent-2:#E4A491;
+    --accent-soft:#22302B;
+    --good:#7FC988;
+    --good-soft:#1D2E1F;
+    --warn:#E0AE6C;
+    --warn-soft:#2E2717;
+    --danger:#E28E80;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.35);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Sans Thai','IBM Plex Sans',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Mitr','IBM Plex Sans Thai',sans-serif;
+    font-weight:600;
+    text-wrap:balance;
+    margin:0;
+  }
+  #app{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100%;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+  button{font-family:inherit;}
+  input,select,textarea{font-family:inherit;font-size:15px;}
+
+  /* ---------- Setup screen ---------- */
+  #setup-screen{
+    padding:32px 20px calc(32px + env(safe-area-inset-bottom,0px));
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    min-height:100vh;
+    justify-content:center;
+  }
+  .setup-badge{
+    width:52px;height:52px;border-radius:16px;
+    background:var(--accent-soft);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Mitr',sans-serif;font-size:24px;color:var(--accent);
+  }
+  #setup-screen h1{font-size:24px;}
+  #setup-screen p{color:var(--text-muted);font-size:14.5px;line-height:1.6;margin:0;}
+  .field-label{font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:6px;display:block;}
+  .field{
+    width:100%;
+    padding:13px 14px;
+    border-radius:var(--radius-sm);
+    border:1px solid var(--border);
+    background:var(--surface);
+    color:var(--text);
+  }
+  .field:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .btn{
+    padding:13px 18px;
+    border-radius:var(--radius-sm);
+    border:none;
+    font-weight:600;
+    font-size:15px;
+    cursor:pointer;
+  }
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:active{opacity:0.85;}
+  .btn-secondary{background:var(--surface-2);color:var(--text);}
+  .btn-ghost{background:transparent;color:var(--accent);padding:8px 4px;font-size:13.5px;}
+  .who-choice{display:flex;gap:10px;}
+  .who-btn{
+    flex:1;padding:14px 10px;border-radius:var(--radius-sm);
+    border:1.5px solid var(--border);background:var(--surface);
+    color:var(--text);font-weight:600;cursor:pointer;text-align:center;
+  }
+  .who-btn[data-selected="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);}
+  .who-btn[data-role="mom"][data-selected="true"]{border-color:var(--accent-2);background:color-mix(in srgb, var(--accent-2) 16%, transparent);color:var(--accent-2);}
+
+  /* ---------- Main app ---------- */
+  #main-app{display:flex;flex-direction:column;min-height:100vh;}
+  .topbar{
+    padding:calc(16px + env(safe-area-inset-top,0px)) 20px 16px;
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+  }
+  .topbar-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .countdown-num{
+    font-family:'Mitr',sans-serif;font-weight:700;font-size:34px;
+    line-height:1;color:var(--accent);
+    font-variant-numeric:tabular-nums;
+  }
+  .countdown-label{font-size:12.5px;color:var(--text-muted);margin-top:4px;}
+  .due-chip{
+    font-size:12px;color:var(--text-muted);
+    background:var(--surface-2);
+    padding:6px 10px;border-radius:99px;white-space:nowrap;
+  }
+  .progress-track{
+    margin-top:14px;height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;
+  }
+  .progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent-2));}
+  .trimester-row{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:6px;}
+
+  main{flex:1;padding:18px 20px calc(96px + env(safe-area-inset-bottom,0px));}
+  .section-title{font-size:19px;margin-bottom:14px;}
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    box-shadow:var(--shadow);
+  }
+  .empty-state{
+    text-align:center;padding:36px 16px;color:var(--text-muted);font-size:14px;
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+  }
+
+  /* size-compare card */
+  .size-card{padding:20px;display:flex;gap:16px;align-items:center;margin-bottom:14px;}
+  .size-visual{
+    width:56px;height:56px;border-radius:16px;flex:none;
+    background:var(--accent-soft);display:flex;align-items:center;justify-content:center;
+    font-family:'Mitr',sans-serif;font-weight:700;color:var(--accent);font-size:15px;
+  }
+  .size-card p{margin:0;font-size:13.5px;color:var(--text-muted);line-height:1.5;}
+  .size-card strong{color:var(--text);}
+
+  .stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .stat-tile{padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);}
+  .stat-tile .num{font-family:'Mitr',sans-serif;font-weight:700;font-size:22px;font-variant-numeric:tabular-nums;}
+  .stat-tile .lbl{font-size:12px;color:var(--text-muted);margin-top:2px;}
+
+  /* Add form panel */
+  .add-toggle{
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    width:100%;padding:13px;border-radius:var(--radius-md);
+    border:1.5px dashed var(--border);background:transparent;color:var(--accent);
+    font-weight:600;font-size:14.5px;cursor:pointer;margin-bottom:14px;
+  }
+  .add-panel{
+    background:var(--surface-2);border-radius:var(--radius-md);
+    padding:16px;margin-bottom:16px;display:flex;flex-direction:column;gap:10px;
+  }
+  .add-panel-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:4px;}
+
+  /* Activity list */
+  .list{display:flex;flex-direction:column;gap:10px;}
+  .activity-item{
+    display:flex;gap:12px;padding:14px 16px;align-items:flex-start;
+  }
+  .type-dot{width:8px;height:8px;border-radius:99px;margin-top:6px;flex:none;}
+  .activity-body{flex:1;min-width:0;}
+  .activity-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline;}
+  .activity-type{font-weight:600;font-size:14.5px;}
+  .activity-time{font-size:11.5px;color:var(--text-muted);white-space:nowrap;}
+  .activity-note{font-size:13.5px;color:var(--text-muted);margin-top:2px;line-height:1.5;word-break:break-word;}
+  .who-tag{
+    font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;margin-top:6px;display:inline-block;
+  }
+  .who-tag.dad{background:var(--accent-soft);color:var(--accent);}
+  .who-tag.mom{background:color-mix(in srgb, var(--accent-2) 18%, transparent);color:var(--accent-2);}
+  .icon-btn{
+    background:none;border:none;color:var(--text-muted);cursor:pointer;
+    padding:4px;border-radius:8px;flex:none;
+  }
+  .icon-btn:hover{background:var(--surface-2);color:var(--danger);}
+
+  /* Checklist */
+  .check-item{display:flex;align-items:center;gap:12px;padding:13px 16px;}
+  .checkbox{
+    width:22px;height:22px;border-radius:7px;border:1.5px solid var(--border);
+    flex:none;cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--surface);
+  }
+  .checkbox[data-checked="true"]{background:var(--good);border-color:var(--good);}
+  .checkbox svg{display:none;width:14px;height:14px;stroke:#fff;}
+  .checkbox[data-checked="true"] svg{display:block;}
+  .check-item .item-name{flex:1;font-size:14.5px;}
+  .check-item[data-checked="true"] .item-name{color:var(--text-muted);text-decoration:line-through;}
+  .item-category{font-size:11px;color:var(--text-muted);background:var(--surface-2);padding:2px 8px;border-radius:99px;}
+  .category-group{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 8px;}
+  .category-group:first-child{margin-top:0;}
+  .checklist-progress{font-size:13px;color:var(--text-muted);margin-bottom:14px;}
+
+  /* Questions */
+  .q-item{padding:15px 16px;display:flex;flex-direction:column;gap:8px;}
+  .q-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
+  .q-text{font-size:14.5px;font-weight:500;flex:1;}
+  .q-status{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;white-space:nowrap;}
+  .q-status.pending{background:var(--warn-soft);color:var(--warn);}
+  .q-status.answered{background:var(--good-soft);color:var(--good);}
+  .q-answer{
+    background:var(--surface-2);border-radius:var(--radius-sm);padding:10px 12px;
+    font-size:13.5px;color:var(--text-muted);line-height:1.5;
+  }
+  .q-answer strong{color:var(--text);}
+  .q-meta{font-size:11px;color:var(--text-muted);}
+  .answer-form{display:flex;gap:8px;}
+  .answer-form input{flex:1;}
+
+  /* Tab bar */
+  .tabbar{
+    position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+    width:100%;max-width:480px;
+    background:var(--surface);border-top:1px solid var(--border);
+    display:flex;padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));
+    gap:4px;
+  }
+  .tab-btn{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+    background:none;border:none;padding:8px 4px;border-radius:12px;cursor:pointer;
+    color:var(--text-muted);font-size:11px;font-weight:600;
+  }
+  .tab-btn[data-active="true"]{color:var(--accent);background:var(--accent-soft);}
+  .tab-icon{width:20px;height:20px;}
+
+  .banner{
+    margin:0 0 14px;padding:12px 14px;border-radius:var(--radius-sm);
+    background:var(--warn-soft);color:var(--warn);font-size:13px;line-height:1.5;
+    display:flex;justify-content:space-between;gap:10px;align-items:center;
+  }
+  .banner button{background:none;border:none;color:inherit;font-weight:700;cursor:pointer;font-size:12px;}
+  [hidden]{display:none!important;}
+
+  @media (min-width:480px){
+    body{background:var(--surface-2);}
+    #app{background:var(--bg);box-shadow:var(--shadow);min-height:100vh;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ SETUP SCREEN ============ -->
+  <div id="setup-screen" hidden>
+    <div class="setup-badge">01</div>
+    <h1>เริ่มตั้งค่าแอปติดตามลูกน้อย</h1>
+    <p>แอปนี้เก็บข้อมูลไว้ใน Google Sheet ของครอบครัวเรา วางลิงก์ Web App
+      ที่ deploy จาก Apps Script (Code.gs) ไว้ด้านล่าง แล้วเลือกว่าเครื่องนี้เป็นของ พ่อ หรือ แม่</p>
+
+    <div>
+      <label class="field-label" for="api-url-input">Web App URL จาก Google Apps Script</label>
+      <input class="field" id="api-url-input" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+    </div>
+
+    <div>
+      <label class="field-label">เครื่องนี้ใช้โดย</label>
+      <div class="who-choice">
+        <button class="who-btn" data-role="dad" data-selected="false" type="button">พ่อ</button>
+        <button class="who-btn" data-role="mom" data-selected="false" type="button">แม่</button>
+      </div>
+    </div>
+
+    <p id="setup-error" style="color:var(--danger);" hidden></p>
+
+    <button class="btn btn-primary" id="setup-save-btn" type="button">เริ่มใช้งาน</button>
+  </div>
+
+  <!-- ============ MAIN APP ============ -->
+  <div id="main-app" hidden>
+
+    <header class="topbar">
+      <div class="topbar-row">
+        <div>
+          <div class="countdown-num" id="countdown-num">—</div>
+          <div class="countdown-label" id="countdown-label">ยังไม่ได้ตั้งกำหนดคลอด</div>
+        </div>
+        <div class="due-chip" id="due-chip">ตั้งกำหนดคลอด</div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <div class="trimester-row"><span>ไตรมาส 1</span><span>ไตรมาส 2</span><span>ไตรมาส 3</span></div>
+    </header>
+
+    <main id="view-root"></main>
+
+    <nav class="tabbar">
+      <button class="tab-btn" data-tab="overview" data-active="true" type="button">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l8-7 8 7"/><path d="M6 10v9h12v-9"/></svg>
+        ภาพรวม
+      </button>
+      <button class="tab-btn" data-tab="log" data-active="false" type="button">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14v16l-4-3-3 3-3-3-4 3z"/></svg>
+        บันทึก
+      </button>
+      <button class="tab-btn" data-tab="prep" data-active="false" type="button">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        เตรียมของ
+      </button>
+      <button class="tab-btn" data-tab="ask" data-active="false" type="button">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M12 10v.01M12 7.2c.9 0 1.6.6 1.6 1.4 0 1.2-1.6 1.2-1.6 2.4"/></svg>
+        ถามหมอ
+      </button>
+    </nav>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var LS_URL = 'bt_api_url';
+  var LS_WHO = 'bt_who';
+  var state = { settings:{}, activities:[], checklist:[], questions:[] };
+  var apiUrl = null, who = null;
+  var activeTab = 'overview';
+  var openAddPanel = null; // which tab's add-panel is open
+
+  try { apiUrl = localStorage.getItem(LS_URL); who = localStorage.getItem(LS_WHO); } catch(e){}
+
+  var ACTIVITY_TYPES = [
+    {v:'ฝากครรภ์', c:'var(--accent)'},
+    {v:'ลูกดิ้น', c:'var(--accent-2)'},
+    {v:'น้ำหนัก', c:'var(--good)'},
+    {v:'อาการ', c:'var(--warn)'},
+    {v:'อื่นๆ', c:'var(--text-muted)'}
+  ];
+
+  var SIZE_TABLE = [
+    {w:4,  label:'เมล็ดงา'},
+    {w:8,  label:'เมล็ดถั่วแดง (~1.6 ซม.)'},
+    {w:12, label:'ลูกมะนาว (~5.4 ซม.)'},
+    {w:16, label:'ลูกอะโวคาโด (~11.6 ซม.)'},
+    {w:20, label:'กล้วยหอม (~25.6 ซม.)'},
+    {w:24, label:'ข้าวโพดฝักใหญ่ (~30 ซม.)'},
+    {w:28, label:'มะเขือม่วงลูกใหญ่ (~37.6 ซม.)'},
+    {w:32, label:'สับปะรด (~42.4 ซม.)'},
+    {w:36, label:'ผักกาดหอมลูกโต (~47.4 ซม.)'},
+    {w:40, label:'แตงโมลูกเล็ก (~51 ซม.)'}
+  ];
+
+  // ---------------- API ----------------
+  function apiGet(){
+    return fetch(apiUrl + '?action=getAll').then(function(r){ return r.json(); });
+  }
+  function apiPost(action, data){
+    var body = Object.assign({action: action}, data || {});
+    return fetch(apiUrl, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(body)
+    }).then(function(r){ return r.json(); });
+  }
+
+  function showBanner(msg){
+    var root = document.getElementById('view-root');
+    var b = document.createElement('div');
+    b.className = 'banner';
+    b.innerHTML = '<span>'+msg+'</span><button type="button">ปิด</button>';
+    b.querySelector('button').onclick = function(){ b.remove(); };
+    root.prepend(b);
+  }
+
+  function refresh(){
+    return apiGet().then(function(data){
+      if (data && data.ok) {
+        state = data;
+        renderTopbar();
+        renderView();
+      } else {
+        showBanner('โหลดข้อมูลไม่สำเร็จ: ' + (data && data.error ? data.error : 'ไม่ทราบสาเหตุ'));
+      }
+    }).catch(function(err){
+      showBanner('เชื่อมต่อ Google Sheet ไม่ได้ ตรวจสอบ URL หรือการเชื่อมต่ออินเทอร์เน็ต');
+    });
+  }
+
+  // ---------------- Pregnancy math ----------------
+  function pad(n){ return n<10 ? '0'+n : ''+n; }
+  function fmtDateTh(d){
+    var months=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    return d.getDate()+' '+months[d.getMonth()]+' '+(d.getFullYear()+543);
+  }
+  function fmtDateTimeTh(iso){
+    var d = new Date(iso);
+    if (isNaN(d)) return '';
+    var months=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    return d.getDate()+' '+months[d.getMonth()]+' • '+pad(d.getHours())+':'+pad(d.getMinutes());
+  }
+
+  function pregnancyInfo(){
+    var due = state.settings && state.settings.DueDate;
+    if (!due) return null;
+    var dueDate = new Date(due + 'T00:00:00');
+    if (isNaN(dueDate)) return null;
+    var today = new Date(); today.setHours(0,0,0,0);
+    var msPerDay = 86400000;
+    var daysUntilDue = Math.round((dueDate - today)/msPerDay);
+    var gestDays = 280 - daysUntilDue;
+    var weeks = Math.max(0, Math.floor(gestDays/7));
+    var days = Math.max(0, gestDays % 7);
+    var trimester = weeks < 14 ? 1 : (weeks < 28 ? 2 : 3);
+    var percent = Math.min(100, Math.max(0,(gestDays/280)*100));
+    var sizeLabel = SIZE_TABLE[0].label;
+    for (var i=0;i<SIZE_TABLE.length;i++){ if (weeks >= SIZE_TABLE[i].w) sizeLabel = SIZE_TABLE[i].label; }
+    return {dueDate:dueDate, daysUntilDue:daysUntilDue, weeks:weeks, days:days, trimester:trimester, percent:percent, sizeLabel:sizeLabel};
+  }
+
+  // ---------------- Topbar ----------------
+  function renderTopbar(){
+    var info = pregnancyInfo();
+    var numEl = document.getElementById('countdown-num');
+    var lblEl = document.getElementById('countdown-label');
+    var chip = document.getElementById('due-chip');
+    var fill = document.getElementById('progress-fill');
+
+    if (!info){
+      numEl.textContent = '—';
+      lblEl.textContent = 'ยังไม่ได้ตั้งกำหนดคลอด';
+      chip.textContent = 'ตั้งกำหนดคลอด';
+      fill.style.width = '0%';
+      return;
+    }
+    numEl.textContent = 'สัปดาห์ ' + info.weeks;
+    if (info.daysUntilDue >= 0){
+      lblEl.textContent = 'อีก '+info.days+' วัน • เหลืออีก '+info.daysUntilDue+' วันถึงกำหนดคลอด';
+    } else {
+      lblEl.textContent = 'เลยกำหนดคลอดมาแล้ว '+Math.abs(info.daysUntilDue)+' วัน';
+    }
+    chip.textContent = fmtDateTh(info.dueDate);
+    fill.style.width = info.percent + '%';
+  }
+
+  // ---------------- View router ----------------
+  function renderView(){
+    var root = document.getElementById('view-root');
+    root.innerHTML = '';
+    if (activeTab === 'overview') renderOverview(root);
+    else if (activeTab === 'log') renderLog(root);
+    else if (activeTab === 'prep') renderPrep(root);
+    else if (activeTab === 'ask') renderAsk(root);
+  }
+
+  function el(tag, cls, html){
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html !== undefined) e.innerHTML = html;
+    return e;
+  }
+
+  function whoTag(w){
+    if (w === 'dad') return '<span class="who-tag dad">พ่อ</span>';
+    if (w === 'mom') return '<span class="who-tag mom">แม่</span>';
+    return '';
+  }
+
+  // ---------------- Overview ----------------
+  function renderOverview(root){
+    var info = pregnancyInfo();
+    var h = el('h2','section-title','ภาพรวม');
+    root.appendChild(h);
+
+    if (!info){
+      var card = el('div','card add-panel');
+      card.innerHTML =
+        '<span class="field-label">กำหนดคลอด (Due date)</span>'+
+        '<input class="field" type="date" id="due-date-input">'+
+        '<button class="btn btn-primary" id="save-due-btn" type="button">บันทึกกำหนดคลอด</button>';
+      root.appendChild(card);
+      card.querySelector('#save-due-btn').onclick = function(){
+        var v = document.getElementById('due-date-input').value;
+        if (!v) return;
+        apiPost('setDueDate', {dueDate:v}).then(refresh);
+      };
+      return;
+    }
+
+    var sizeCard = el('div','card size-card');
+    sizeCard.innerHTML =
+      '<div class="size-visual">W'+info.weeks+'</div>'+
+      '<p>ตอนนี้ลูกน้อยมีขนาดประมาณ<br><strong>'+info.sizeLabel+'</strong></p>';
+    root.appendChild(sizeCard);
+
+    var stats = el('div','stat-row');
+    stats.innerHTML =
+      '<div class="stat-tile"><div class="num">'+info.trimester+' / 3</div><div class="lbl">ไตรมาสปัจจุบัน</div></div>'+
+      '<div class="stat-tile"><div class="num">'+Math.round(info.percent)+'%</div><div class="lbl">ของการตั้งครรภ์</div></div>';
+    root.appendChild(stats);
+
+    var editCard = el('div','card', '');
+    editCard.style.padding = '14px 16px';
+    editCard.innerHTML =
+      '<span class="field-label">แก้ไขกำหนดคลอด</span>'+
+      '<div style="display:flex;gap:8px;margin-top:6px;">'+
+      '<input class="field" type="date" id="due-date-edit" value="'+ (state.settings.DueDate||'') +'">'+
+      '<button class="btn btn-secondary" id="save-due-edit-btn" type="button">บันทึก</button>'+
+      '</div>';
+    root.appendChild(editCard);
+    editCard.querySelector('#save-due-edit-btn').onclick = function(){
+      var v = document.getElementById('due-date-edit').value;
+      if (!v) return;
+      apiPost('setDueDate', {dueDate:v}).then(refresh);
+    };
+  }
+
+  // ---------------- Log (Activities) ----------------
+  function renderLog(root){
+    root.appendChild(el('h2','section-title','บันทึกกิจกรรม'));
+
+    var toggle = el('button','add-toggle','+ เพิ่มบันทึก');
+    toggle.onclick = function(){ openAddPanel = (openAddPanel==='log') ? null : 'log'; renderView(); };
+    root.appendChild(toggle);
+
+    if (openAddPanel === 'log'){
+      var panel = el('div','add-panel');
+      var typeOpts = ACTIVITY_TYPES.map(function(t){ return '<option value="'+t.v+'">'+t.v+'</option>'; }).join('');
+      panel.innerHTML =
+        '<span class="field-label">ประเภท</span>'+
+        '<select class="field" id="act-type">'+typeOpts+'</select>'+
+        '<span class="field-label">รายละเอียด</span>'+
+        '<textarea class="field" id="act-note" rows="2" placeholder="เช่น น้ำหนัก 58 กก. / ไปฝากครรภ์ตามนัด"></textarea>'+
+        '<div class="add-panel-actions">'+
+          '<button class="btn btn-secondary" id="act-cancel" type="button">ยกเลิก</button>'+
+          '<button class="btn btn-primary" id="act-save" type="button">บันทึก</button>'+
+        '</div>';
+      root.appendChild(panel);
+      panel.querySelector('#act-cancel').onclick = function(){ openAddPanel=null; renderView(); };
+      panel.querySelector('#act-save').onclick = function(){
+        var type = document.getElementById('act-type').value;
+        var note = document.getElementById('act-note').value.trim();
+        apiPost('addActivity', {type:type, note:note, loggedBy:who}).then(function(){
+          openAddPanel = null;
+          refresh();
+        });
+      };
+    }
+
+    var items = (state.activities||[]).slice().sort(function(a,b){ return new Date(b.Timestamp) - new Date(a.Timestamp); });
+    if (!items.length){
+      root.appendChild(emptyState('ยังไม่มีบันทึกกิจกรรม', 'กดปุ่ม "+ เพิ่มบันทึก" ด้านบนเพื่อเริ่มบันทึก'));
+      return;
+    }
+
+    var list = el('div','list card');
+    items.forEach(function(item, i){
+      var typeInfo = ACTIVITY_TYPES.filter(function(t){return t.v===item.Type;})[0] || {c:'var(--text-muted)'};
+      var row = el('div','activity-item');
+      if (i>0) row.style.borderTop = '1px solid var(--border)';
+      row.innerHTML =
+        '<span class="type-dot" style="background:'+typeInfo.c+'"></span>'+
+        '<div class="activity-body">'+
+          '<div class="activity-top"><span class="activity-type">'+(item.Type||'อื่นๆ')+'</span><span class="activity-time">'+fmtDateTimeTh(item.Timestamp)+'</span></div>'+
+          (item.Note ? '<div class="activity-note">'+escapeHtml(item.Note)+'</div>' : '')+
+          whoTag(item.LoggedBy)+
+        '</div>'+
+        '<button class="icon-btn del-btn" type="button" aria-label="ลบ" title="ลบ">'+trashIcon()+'</button>';
+      row.querySelector('.del-btn').onclick = function(){
+        apiPost('deleteActivity', {id:item.ID}).then(refresh);
+      };
+      list.appendChild(row);
+    });
+    root.appendChild(list);
+  }
+
+  // ---------------- Prep (Checklist) ----------------
+  function renderPrep(root){
+    root.appendChild(el('h2','section-title','ของที่ต้องเตรียม'));
+
+    var items = state.checklist || [];
+    var doneCount = items.filter(function(i){ return i.Done===true || i.Done==='TRUE'; }).length;
+    if (items.length){
+      root.appendChild(el('div','checklist-progress', 'เตรียมแล้ว '+doneCount+' จาก '+items.length+' รายการ'));
+    }
+
+    var toggle = el('button','add-toggle','+ เพิ่มของที่ต้องเตรียม');
+    toggle.onclick = function(){ openAddPanel = (openAddPanel==='prep') ? null : 'prep'; renderView(); };
+    root.appendChild(toggle);
+
+    if (openAddPanel === 'prep'){
+      var panel = el('div','add-panel');
+      panel.innerHTML =
+        '<span class="field-label">ชื่อของ</span>'+
+        '<input class="field" id="item-name" placeholder="เช่น เสื้อผ้าเด็กแรกเกิด">'+
+        '<span class="field-label">หมวดหมู่ (ไม่บังคับ)</span>'+
+        '<input class="field" id="item-cat" placeholder="เช่น ของใช้เด็ก, เอกสาร, ของใช้คุณแม่">'+
+        '<div class="add-panel-actions">'+
+          '<button class="btn btn-secondary" id="item-cancel" type="button">ยกเลิก</button>'+
+          '<button class="btn btn-primary" id="item-save" type="button">เพิ่ม</button>'+
+        '</div>';
+      root.appendChild(panel);
+      panel.querySelector('#item-cancel').onclick = function(){ openAddPanel=null; renderView(); };
+      panel.querySelector('#item-save').onclick = function(){
+        var name = document.getElementById('item-name').value.trim();
+        var cat = document.getElementById('item-cat').value.trim();
+        if (!name) return;
+        apiPost('addChecklistItem', {item:name, category:cat, addedBy:who}).then(function(){
+          openAddPanel = null;
+          refresh();
+        });
+      };
+    }
+
+    if (!items.length){
+      root.appendChild(emptyState('ยังไม่มีรายการของที่ต้องเตรียม','เริ่มเพิ่มของที่ต้องเตรียมสำหรับคุณแม่และลูกน้อยได้เลย'));
+      return;
+    }
+
+    var groups = {};
+    var order = [];
+    items.forEach(function(i){
+      var cat = i.Category || 'ทั่วไป';
+      if (!groups[cat]) { groups[cat]=[]; order.push(cat); }
+      groups[cat].push(i);
+    });
+
+    order.forEach(function(cat){
+      root.appendChild(el('div','category-group', escapeHtml(cat)));
+      var list = el('div','list card');
+      groups[cat].forEach(function(item,i){
+        var checked = item.Done===true || item.Done==='TRUE';
+        var row = el('div','check-item');
+        row.setAttribute('data-checked', checked);
+        if (i>0) row.style.borderTop = '1px solid var(--border)';
+        row.innerHTML =
+          '<button class="checkbox" data-checked="'+checked+'" type="button" aria-label="ทำเครื่องหมาย">'+
+            '<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'+
+          '</button>'+
+          '<span class="item-name">'+escapeHtml(item.Item)+'</span>'+
+          '<button class="icon-btn del-btn" type="button" aria-label="ลบ" title="ลบ">'+trashIcon()+'</button>';
+        row.querySelector('.checkbox').onclick = function(){
+          apiPost('toggleChecklist', {id:item.ID, done: !checked}).then(refresh);
+        };
+        row.querySelector('.del-btn').onclick = function(){
+          apiPost('deleteChecklistItem', {id:item.ID}).then(refresh);
+        };
+        list.appendChild(row);
+      });
+      root.appendChild(list);
+    });
+  }
+
+  // ---------------- Ask (Questions) ----------------
+  function renderAsk(root){
+    root.appendChild(el('h2','section-title','คำถามที่จะถามหมอ'));
+
+    var toggle = el('button','add-toggle','+ เพิ่มคำถาม');
+    toggle.onclick = function(){ openAddPanel = (openAddPanel==='ask') ? null : 'ask'; renderView(); };
+    root.appendChild(toggle);
+
+    if (openAddPanel === 'ask'){
+      var panel = el('div','add-panel');
+      panel.innerHTML =
+        '<span class="field-label">คำถาม</span>'+
+        '<textarea class="field" id="q-text" rows="2" placeholder="เช่น ลูกดิ้นน้อยลงต้องกังวลไหม"></textarea>'+
+        '<div class="add-panel-actions">'+
+          '<button class="btn btn-secondary" id="q-cancel" type="button">ยกเลิก</button>'+
+          '<button class="btn btn-primary" id="q-save" type="button">เพิ่มคำถาม</button>'+
+        '</div>';
+      root.appendChild(panel);
+      panel.querySelector('#q-cancel').onclick = function(){ openAddPanel=null; renderView(); };
+      panel.querySelector('#q-save').onclick = function(){
+        var text = document.getElementById('q-text').value.trim();
+        if (!text) return;
+        apiPost('addQuestion', {question:text, askedBy:who}).then(function(){
+          openAddPanel=null;
+          refresh();
+        });
+      };
+    }
+
+    var items = (state.questions||[]).slice().sort(function(a,b){
+      var aAns = a.Answered===true || a.Answered==='TRUE';
+      var bAns = b.Answered===true || b.Answered==='TRUE';
+      if (aAns !== bAns) return aAns ? 1 : -1;
+      return new Date(b.Timestamp) - new Date(a.Timestamp);
+    });
+
+    if (!items.length){
+      root.appendChild(emptyState('ยังไม่มีคำถาม','รวบรวมคำถามที่อยากถามหมอไว้ที่นี่ จะได้ไม่ลืมตอนถึงเวลานัด'));
+      return;
+    }
+
+    items.forEach(function(item){
+      var answered = item.Answered===true || item.Answered==='TRUE';
+      var card = el('div','card q-item');
+      card.innerHTML =
+        '<div class="q-top">'+
+          '<span class="q-text">'+escapeHtml(item.Question)+'</span>'+
+          '<span class="q-status '+(answered?'answered':'pending')+'">'+(answered?'ตอบแล้ว':'รอถาม')+'</span>'+
+        '</div>'+
+        '<div class="q-meta">'+whoTag(item.AskedBy)+' <span>'+fmtDateTimeTh(item.Timestamp)+'</span></div>';
+
+      if (answered && item.Answer){
+        var ans = el('div','q-answer','<strong>คำตอบจากหมอ: </strong>'+escapeHtml(item.Answer));
+        card.appendChild(ans);
+      }
+
+      var actions = el('div','add-panel-actions');
+      if (!answered){
+        var form = el('div','answer-form');
+        form.innerHTML = '<input class="field" placeholder="พิมพ์คำตอบจากหมอ...">';
+        var saveBtn = el('button','btn btn-primary','บันทึก');
+        form.appendChild(saveBtn);
+        saveBtn.onclick = function(){
+          var v = form.querySelector('input').value.trim();
+          if (!v) return;
+          apiPost('answerQuestion', {id:item.ID, answer:v}).then(refresh);
+        };
+        card.appendChild(form);
+      } else {
+        var reopenBtn = el('button','btn-ghost','เปิดใหม่');
+        reopenBtn.onclick = function(){ apiPost('reopenQuestion', {id:item.ID}).then(refresh); };
+        actions.appendChild(reopenBtn);
+      }
+      var delBtn = el('button','btn-ghost','ลบคำถาม');
+      delBtn.style.color = 'var(--danger)';
+      delBtn.onclick = function(){ apiPost('deleteQuestion', {id:item.ID}).then(refresh); };
+      actions.appendChild(delBtn);
+      card.appendChild(actions);
+
+      root.appendChild(card);
+    });
+  }
+
+  function emptyState(title, sub){
+    return el('div','empty-state', '<strong>'+title+'</strong><span>'+sub+'</span>');
+  }
+  function trashIcon(){
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>';
+  }
+  function escapeHtml(s){
+    return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+
+  // ---------------- Boot ----------------
+  function boot(){
+    document.querySelectorAll('.tab-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        activeTab = btn.getAttribute('data-tab');
+        openAddPanel = null;
+        document.querySelectorAll('.tab-btn').forEach(function(b){ b.setAttribute('data-active', b===btn); });
+        renderView();
+      });
+    });
+
+    if (!apiUrl || !who){
+      document.getElementById('setup-screen').hidden = false;
+      var dadBtn = document.querySelector('.who-btn[data-role="dad"]');
+      var momBtn = document.querySelector('.who-btn[data-role="mom"]');
+      var selectedRole = null;
+      dadBtn.onclick = function(){ selectedRole='dad'; dadBtn.setAttribute('data-selected','true'); momBtn.setAttribute('data-selected','false'); };
+      momBtn.onclick = function(){ selectedRole='mom'; momBtn.setAttribute('data-selected','true'); dadBtn.setAttribute('data-selected','false'); };
+      document.getElementById('setup-save-btn').onclick = function(){
+        var url = document.getElementById('api-url-input').value.trim();
+        var errEl = document.getElementById('setup-error');
+        errEl.hidden = true;
+        if (!url || !selectedRole){
+          errEl.textContent = 'กรุณาใส่ URL และเลือกว่าเครื่องนี้เป็นของพ่อหรือแม่';
+          errEl.hidden = false;
+          return;
+        }
+        apiUrl = url; who = selectedRole;
+        fetch(apiUrl + '?action=getAll').then(function(r){ return r.json(); }).then(function(data){
+          if (!data || !data.ok) throw new Error('bad response');
+          try { localStorage.setItem(LS_URL, apiUrl); localStorage.setItem(LS_WHO, who); } catch(e){}
+          document.getElementById('setup-screen').hidden = true;
+          document.getElementById('main-app').hidden = false;
+          refresh();
+        }).catch(function(){
+          errEl.textContent = 'เชื่อมต่อไม่สำเร็จ ตรวจสอบว่า URL ถูกต้องและ deploy เป็น "Anyone with the link" แล้ว';
+          errEl.hidden = false;
+        });
+      };
+      return;
+    }
+
+    document.getElementById('main-app').hidden = false;
+    refresh();
+  }
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+</body>
+</html>
