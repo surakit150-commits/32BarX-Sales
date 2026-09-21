@@ -243,16 +243,26 @@
   .icon-btn:hover{background:var(--surface-2);color:var(--danger);}
 
   /* Checklist */
-  .check-item{display:flex;align-items:center;gap:12px;padding:13px 16px;}
+  .check-item{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;}
   .checkbox{
     width:22px;height:22px;border-radius:7px;border:1.5px solid var(--border);
     flex:none;cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--surface);
+    margin-top:1px;
   }
   .checkbox[data-checked="true"]{background:var(--good);border-color:var(--good);}
   .checkbox svg{display:none;width:14px;height:14px;stroke:#fff;}
   .checkbox[data-checked="true"] svg{display:block;}
-  .check-item .item-name{flex:1;font-size:14.5px;}
+  .item-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;}
+  .check-item .item-name{font-size:14.5px;}
   .check-item[data-checked="true"] .item-name{color:var(--text-muted);text-decoration:line-through;}
+  .item-meta{display:flex;flex-wrap:wrap;gap:6px;}
+  .meta-badge{font-size:10.5px;font-weight:600;padding:2.5px 8px;border-radius:99px;white-space:nowrap;line-height:1.4;}
+  .meta-badge.age{background:var(--surface-2);color:var(--text-muted);}
+  .meta-badge.prio-highest{background:color-mix(in srgb, var(--danger) 18%, transparent);color:var(--danger);}
+  .meta-badge.prio-high{background:var(--warn-soft);color:var(--warn);}
+  .meta-badge.prio-normal{background:var(--surface-2);color:var(--text-muted);}
+  .meta-badge.tobuy{background:color-mix(in srgb, var(--accent) 16%, transparent);color:var(--accent);}
+  .meta-badge.tobuy.done{background:var(--good-soft);color:var(--good);}
   .item-category{font-size:11px;color:var(--text-muted);background:var(--surface-2);padding:2px 8px;border-radius:99px;}
   .category-group{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 8px;}
   .category-group:first-child{margin-top:0;}
@@ -426,6 +436,54 @@
     ['กระเป๋าใส่ของเด็ก','เดินทาง'], ['กระเป๋าเก็บความเย็น','เดินทาง'], ['ผ้าคลุมรถเข็น','เดินทาง','1-2'],
     ['เบาะนอนเล่น','อุปกรณ์เสริม'], ['Gym เด็ก','อุปกรณ์เสริม']
   ];
+
+  // ข้อมูลเสริมจากชีท Lalinlin Essentials คอลัมน์ Age / Priority (คอลัมน์ D, F)
+  // key = ชื่อของ (ตรงกับ item[0] ใน PRESET_CHECKLIST) — ใช้แสดงผลเป็น badge เท่านั้น
+  // หมายเหตุ: คอลัมน์ Price (J) ในไฟล์ต้นฉบับไม่มีราคาต่อชิ้นระบุไว้ (มีแต่ยอดรวมค่าใช้จ่ายตามวันที่ซื้อ)
+  // จึงยังไม่มีราคาต่อชิ้นให้แสดง ณ ตอนนี้
+  var PRESET_META = {
+    'เตียงหลัก':{age:'Newborn+',prio:'Highest'}, 'เตียงรอง':{age:'Newborn+',prio:'Highest'}, 'ที่นอน':{age:'Newborn',prio:'Highest'},
+    'ผ้าปูที่นอน':{age:'Newborn',prio:'Highest'}, 'ผ้ารองกันเปื้อน':{age:'Newborn',prio:'Highest'}, 'ผ้าห่อตัว':{age:'Newborn',prio:'Highest'},
+    'ถุงนอน':{age:'Newborn',prio:'High'}, 'Baby monitor':{age:'Newborn',prio:'High'}, 'ตู้เก็บเสื้อผ้า':{age:'Newborn',prio:'Highest'},
+    'ที่เปลี่ยนผ้าอ้อม':{age:'Newborn',prio:'Highest'}, 'ตะกร้าผ้า':{age:'Newborn',prio:'Highest'}, 'ชั้นเก็บของใช้':{age:'Newborn',prio:'Highest'},
+    'ผ้าห่ม':{age:'Newborn+',prio:'Highest'}, 'Bodysuit แขนสั้น':{age:'NB-3M',prio:'Highest'}, 'Bodysuit long (ชุดนอน)':{age:'NB-3M',prio:'Highest'},
+    'ชุดเสื้อกางเกง':{age:'NB-3M',prio:'Highest'}, 'ชุดออกนอกบ้าน':{age:'0-3M',prio:'High'}, 'กางเกง':{age:'0-3M',prio:'High'},
+    'ถุงเท้า':{age:'NB-3M',prio:'Highest'}, 'ถุงมือ':{age:'NB-3M',prio:'Highest'}, 'หมวกเด็ก':{age:'NB',prio:'Highest'},
+    'ผ้ากันเปื้อน':{age:'Newborn+',prio:'Highest'}, 'ผ้าคลุมให้นม':{age:'NB-6M',prio:'Highest'}, 'เพิร์ส size NB':{age:'NB',prio:'Highest'},
+    'เพิร์ส size S':{age:'0-3M',prio:'Highest'}, 'ผ้าอ้อมผ้า 47x47':{age:'NB+',prio:'Highest'}, 'ผ้าอ้อม 30x30':{age:'NB+',prio:'Highest'},
+    'ทิชชู่เปียก':{age:'NB+',prio:'Highest'}, 'สำลีก้อน':{age:'NB+',prio:'Highest'}, 'สำลีแผ่น':{age:'NB+',prio:'Highest'},
+    'ขวดใส่น้ำสะอาดสำหรับเช็ด':{age:'NB',prio:'High'}, 'ครีมทาผื่นผ้าอ้อม':{age:'NB',prio:'Highest'}, 'แผ่นรองเปลี่ยนผ้าอ้อม':{age:'NB+',prio:'Highest'},
+    'แผ่นรองเปลี่ยนแบบพกพา':{age:'0-3M',prio:'High'}, 'ถังทิ้งแพมเพิร์ส':{age:'NB',prio:'High'}, 'Shelf ใส่ของมีล้อ':{age:'NB+',prio:'Highest'},
+    'ทิชชู่':{age:'NB+',prio:'Highest'}, 'ที่เช็ดฟัน':{age:'NB+',prio:'Highest'}, 'ขวดนม 120-160ml':{age:'NB-3M',prio:'Highest'},
+    'ขวดนม 240ml':{age:'3M+',prio:'Normal'}, 'จุกนม':{age:'NB',prio:'Highest'}, 'แปรงล้างขวดนม':{age:'NB+',prio:'Highest'},
+    'น้ำยาล้างขวดนม':{age:'NB+',prio:'Highest'}, 'เครื่อง UV ฆ่าเชื้อ':{age:'NB+',prio:'Highest'}, 'ตู้เก็บอุปกรณ์ขวดนม':{age:'NB+',prio:'Highest'},
+    'เครื่องอุ่นนม':{age:'NB+',prio:'Highest'}, 'เครื่องปั๊มนม':{age:'หลังคลอด',prio:'High'}, 'กรวยปั๊มนม':{age:'หลังคลอด',prio:'Highest'},
+    'หมอนให้นม':{age:'หลังคลอด',prio:'Highest'}, 'เสื้อในให้นม':{age:'หลังคลอด',prio:'Highest'}, 'แผ่นซับน้ำนม':{age:'หลังคลอด',prio:'High'},
+    'ครีมทาหัวนม':{age:'หลังคลอด',prio:'Highest'}, 'ถุงเก็บน้ำนมแช่แข็ง':{age:'หลังคลอด',prio:'Highest'}, 'อ่างอาบน้ำ':{age:'NB+',prio:'Highest'},
+    'ที่ล้างก้น':{age:'NB+',prio:'Highest'}, 'ผ้าเช็ดตัวมี Hoodie':{age:'NB+',prio:'Highest'}, 'ผ้าเช็ดตัว':{age:'NB+',prio:'Highest'},
+    'สบู่/แชมพู':{age:'NB+',prio:'Highest'}, 'Lotion':{age:'NB+',prio:'High'}, 'ครีมบำรุงผิว':{age:'NB+',prio:'Normal'},
+    'แปรงผม':{age:'NB+',prio:'Highest'}, 'กรรไกรตัดเล็บ/ตะไบ':{age:'NB+',prio:'Highest'}, 'สำลีก้าน':{age:'NB+',prio:'Highest'},
+    'ขัน/ถ้วยล้างผม':{age:'NB+',prio:'Normal'}, 'ฟองอาบน้ำ':{age:'NB+',prio:'Highest'}, 'ปรอทวัดไข้':{age:'NB+',prio:'Highest'},
+    'ที่ดูดน้ำมูก':{age:'NB+',prio:'Highest'}, 'น้ำเกลือล้างจมูก':{age:'NB+',prio:'Highest'}, 'ชุดปฐมพยาบาล (First Aid)':{age:'NB+',prio:'Highest'},
+    'เครื่องวัดอุณหภูมิห้อง':{age:'NB+',prio:'High'}, 'Car seat':{age:'NB+',prio:'Highest'}, 'Stroller':{age:'NB+',prio:'Highest'},
+    'เป้อุ้มเด็ก':{age:'NB+',prio:'High'}, 'กระเป๋าใส่ของเด็ก':{age:'NB+',prio:'High'}, 'กระเป๋าเก็บความเย็น':{age:'NB+',prio:'Highest'},
+    'ผ้าคลุมรถเข็น':{age:'NB+',prio:'Highest'}, 'เบาะนอนเล่น':{age:'NB+',prio:'High'}, 'Gym เด็ก':{age:'NB+',prio:'High'}
+  };
+
+  var PRIORITY_LABELS = {
+    Highest: {th:'จำเป็นมาก', cls:'prio-highest'},
+    High:    {th:'สำคัญ',     cls:'prio-high'},
+    Normal:  {th:'ทั่วไป',     cls:'prio-normal'}
+  };
+
+  // หาข้อมูล Age/Priority ของรายการที่นำเข้าไปแล้ว โดยจับคู่จากชื่อของ
+  // (ลองจับคู่ชื่อเต็มก่อน แล้วค่อยตัดจำนวนในวงเล็บท้ายชื่อออกแล้วลองใหม่)
+  function resolveChecklistItem(rawName){
+    if (PRESET_META[rawName]) return { meta: PRESET_META[rawName], qty: null };
+    var m = rawName.match(/^(.*)\s\(([^)]+)\)\s*$/);
+    if (m && PRESET_META[m[1]]) return { meta: PRESET_META[m[1]], qty: m[2] };
+    return { meta: null, qty: null };
+  }
 
   var SIZE_TABLE = [
     {w:4,  label:'เมล็ดงา'},
@@ -890,11 +948,28 @@
         var row = el('div','check-item');
         row.setAttribute('data-checked', checked);
         if (i>0) row.style.borderTop = '1px solid var(--border)';
+
+        var resolved = resolveChecklistItem(item.Item || '');
+        var metaHtml = '';
+        if (resolved.meta) {
+          var prio = PRIORITY_LABELS[resolved.meta.prio] || {th: resolved.meta.prio, cls:'prio-normal'};
+          var tobuyLabel = checked ? 'ซื้อครบแล้ว' : ('ต้องซื้อ' + (resolved.qty ? ' ' + resolved.qty + ' ชิ้น' : ''));
+          metaHtml =
+            '<div class="item-meta">'+
+              (resolved.meta.age ? '<span class="meta-badge age">อายุ '+escapeHtml(resolved.meta.age)+'</span>' : '')+
+              '<span class="meta-badge '+prio.cls+'">'+escapeHtml(prio.th)+'</span>'+
+              '<span class="meta-badge tobuy'+(checked?' done':'')+'">'+escapeHtml(tobuyLabel)+'</span>'+
+            '</div>';
+        }
+
         row.innerHTML =
           '<button class="checkbox" data-checked="'+checked+'" type="button" aria-label="ทำเครื่องหมาย">'+
             '<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'+
           '</button>'+
-          '<span class="item-name">'+escapeHtml(item.Item)+'</span>'+
+          '<div class="item-main">'+
+            '<span class="item-name">'+escapeHtml(item.Item)+'</span>'+
+            metaHtml+
+          '</div>'+
           '<button class="icon-btn del-btn" type="button" aria-label="ลบ" title="ลบ">'+trashIcon()+'</button>';
         row.querySelector('.checkbox').onclick = function(){
           apiPost('toggleChecklist', {id:item.ID, done: !checked}).then(refresh);
