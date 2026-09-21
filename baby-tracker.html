@@ -432,69 +432,97 @@
     {v:'อื่นๆ', c:'var(--text-muted)'}
   ];
 
-  // นำเข้าจาก "Lalinlin Essentials - Baby Shopping list" — [ชื่อของ, หมวดหมู่, จำนวน (ถ้ามีมากกว่า1), ซื้อแล้วหรือยัง]
-  var PRESET_CHECKLIST = [
-    ['เตียงหลัก','ห้องนอน'], ['เตียงรอง','ห้องนอน'], ['ที่นอน','ห้องนอน'],
-    ['ผ้าปูที่นอน','ห้องนอน','4'], ['ผ้ารองกันเปื้อน','ห้องนอน','3'], ['ผ้าห่อตัว','ห้องนอน','3-4'],
-    ['ถุงนอน','ห้องนอน','3-4'], ['Baby monitor','ห้องนอน'], ['ตู้เก็บเสื้อผ้า','ห้องนอน'],
-    ['ที่เปลี่ยนผ้าอ้อม','ห้องนอน'], ['ตะกร้าผ้า','ห้องนอน'], ['ชั้นเก็บของใช้','ห้องนอน'], ['ผ้าห่ม','ห้องนอน','2'],
-    ['Bodysuit แขนสั้น','เสื้อผ้า','7-8',true], ['Bodysuit long (ชุดนอน)','เสื้อผ้า','4-5'],
-    ['ชุดเสื้อกางเกง','เสื้อผ้า','7-8',true], ['ชุดออกนอกบ้าน','เสื้อผ้า','3-4'], ['กางเกง','เสื้อผ้า','3-4'],
-    ['ถุงเท้า','เสื้อผ้า','4-6'], ['ถุงมือ','เสื้อผ้า','4-6'], ['หมวกเด็ก','เสื้อผ้า','3-4'],
-    ['ผ้ากันเปื้อน','เสื้อผ้า','5-8'], ['ผ้าคลุมให้นม','เสื้อผ้า','1-2'],
-    ['เพิร์ส size NB','ผ้าอ้อม','1-2'], ['เพิร์ส size S','ผ้าอ้อม','2-3'], ['ผ้าอ้อมผ้า 47x47','ผ้าอ้อม','6-10'],
-    ['ผ้าอ้อม 30x30','ผ้าอ้อม','6',true], ['ทิชชู่เปียก','ผ้าอ้อม','4-6'], ['สำลีก้อน','ผ้าอ้อม','1-2'],
-    ['สำลีแผ่น','ผ้าอ้อม','2-3'], ['ขวดใส่น้ำสะอาดสำหรับเช็ด','ผ้าอ้อม'], ['ครีมทาผื่นผ้าอ้อม','ผ้าอ้อม','1-2'],
-    ['แผ่นรองเปลี่ยนผ้าอ้อม','ผ้าอ้อม','2'], ['แผ่นรองเปลี่ยนแบบพกพา','ผ้าอ้อม'], ['ถังทิ้งแพมเพิร์ส','ผ้าอ้อม'],
-    ['Shelf ใส่ของมีล้อ','ผ้าอ้อม'], ['ทิชชู่','ผ้าอ้อม','1-2'], ['ที่เช็ดฟัน','ผ้าอ้อม','2-3'],
-    ['ขวดนม 120-160ml','ให้นม','4-6'], ['ขวดนม 240ml','ให้นม','2-4'], ['จุกนม','ให้นม','4-6'],
-    ['แปรงล้างขวดนม','ให้นม','1-2'], ['น้ำยาล้างขวดนม','ให้นม','1-2'], ['เครื่อง UV ฆ่าเชื้อ','ให้นม'],
-    ['ตู้เก็บอุปกรณ์ขวดนม','ให้นม'], ['เครื่องอุ่นนม','ให้นม',null,true], ['เครื่องปั๊มนม','ให้นม'],
-    ['กรวยปั๊มนม','ให้นม','1-2'], ['หมอนให้นม','ให้นม'], ['เสื้อในให้นม','ให้นม','5-7'],
-    ['แผ่นซับน้ำนม','ให้นม','1-2'], ['ครีมทาหัวนม','ให้นม','1-2'], ['ถุงเก็บน้ำนมแช่แข็ง','ให้นม','1-2'],
-    ['อ่างอาบน้ำ','อาบน้ำ/ดูแลผิว'], ['ที่ล้างก้น','อาบน้ำ/ดูแลผิว'], ['ผ้าเช็ดตัวมี Hoodie','อาบน้ำ/ดูแลผิว','2-3'],
-    ['ผ้าเช็ดตัว','อาบน้ำ/ดูแลผิว','6-8'], ['สบู่/แชมพู','อาบน้ำ/ดูแลผิว','1-2',true], ['Lotion','อาบน้ำ/ดูแลผิว',null,true],
-    ['ครีมบำรุงผิว','อาบน้ำ/ดูแลผิว','1-2'], ['แปรงผม','อาบน้ำ/ดูแลผิว'], ['กรรไกรตัดเล็บ/ตะไบ','อาบน้ำ/ดูแลผิว'],
-    ['สำลีก้าน','อาบน้ำ/ดูแลผิว','1-2'], ['ขัน/ถ้วยล้างผม','อาบน้ำ/ดูแลผิว'], ['ฟองอาบน้ำ','อาบน้ำ/ดูแลผิว','1-2'],
-    ['ปรอทวัดไข้','สุขภาพ/ความปลอดภัย'], ['ที่ดูดน้ำมูก','สุขภาพ/ความปลอดภัย'], ['น้ำเกลือล้างจมูก','สุขภาพ/ความปลอดภัย','1-2'],
-    ['ชุดปฐมพยาบาล (First Aid)','สุขภาพ/ความปลอดภัย'], ['เครื่องวัดอุณหภูมิห้อง','สุขภาพ/ความปลอดภัย'],
-    ['Car seat','เดินทาง',null,true], ['Stroller','เดินทาง',null,true], ['เป้อุ้มเด็ก','เดินทาง'],
-    ['กระเป๋าใส่ของเด็ก','เดินทาง'], ['กระเป๋าเก็บความเย็น','เดินทาง'], ['ผ้าคลุมรถเข็น','เดินทาง','1-2'],
-    ['เบาะนอนเล่น','อุปกรณ์เสริม'], ['Gym เด็ก','อุปกรณ์เสริม']
+  // นำเข้าจาก "Lalinlin Essentials - Baby Shopping list" (ไฟล์เวอร์ชันล่าสุด)
+  // need = จำนวนที่ต้องมีทั้งหมด, bought = จำนวนที่ซื้อแล้วจริงตามชีท, toBuy = need-bought (ไม่ต่ำกว่า 0) คือจำนวนจริงที่ต้องซื้อเพิ่ม
+  // หมายเหตุ: คอลัมน์ Price ในไฟล์ต้นฉบับไม่มีราคาต่อชิ้นระบุไว้ (มีแต่ยอดรวมค่าใช้จ่ายตามวันที่ซื้อ) จึงยังไม่มีราคาต่อชิ้นให้แสดง ณ ตอนนี้
+  var PRESET_ITEMS = [
+    {item:'เตียงหลัก',cat:'ห้องนอน',age:'Newborn+',prio:'Highest',need:1,bought:0},
+    {item:'เตียงรอง',cat:'ห้องนอน',age:'Newborn+',prio:'Highest',need:1,bought:0},
+    {item:'ที่นอน',cat:'ห้องนอน',age:'Newborn',prio:'Highest',need:2,bought:0},
+    {item:'ผ้าปูที่นอน',cat:'ห้องนอน',age:'Newborn',prio:'Highest',need:4,bought:0},
+    {item:'ผ้ารองกันเปื้อน',cat:'ห้องนอน',age:'Newborn',prio:'Highest',need:3,bought:0},
+    {item:'ผ้าห่อตัว',cat:'ห้องนอน',age:'Newborn',prio:'Highest',need:5,bought:0},
+    {item:'ถุงนอน',cat:'ห้องนอน',age:'Newborn',prio:'High',need:4,bought:0},
+    {item:'Baby monitor',cat:'ห้องนอน',age:'Newborn',prio:'High',need:1,bought:0},
+    {item:'ตู้เก็บเสื้อผ้า',cat:'ห้องนอน',age:'Newborn',prio:'Highest',need:1,bought:0},
+    {item:'ที่เปลี่ยนผ้าอ้อม',cat:'ห้องนอน',age:'Newborn',prio:'Highest',need:1,bought:0},
+    {item:'ตะกร้าผ้า',cat:'ห้องนอน',age:'Newborn',prio:'Highest',need:1,bought:0},
+    {item:'ชั้นเก็บของใช้',cat:'ห้องนอน',age:'Newborn',prio:'Highest',need:1,bought:0},
+    {item:'ผ้าห่ม',cat:'ห้องนอน',age:'Newborn+',prio:'Highest',need:2,bought:0},
+    {item:'Bodysuit แขนสั้น',cat:'เสื้อผ้า',age:'NB-3M',prio:'Highest',need:7,bought:7},
+    {item:'Bodysuit long (ชุดนอน)',cat:'เสื้อผ้า',age:'NB-3M',prio:'Highest',need:7,bought:3},
+    {item:'ชุดเสื้อกางเกง',cat:'เสื้อผ้า',age:'NB-3M',prio:'Highest',need:7,bought:7},
+    {item:'ชุดออกนอกบ้าน',cat:'เสื้อผ้า',age:'0-3M',prio:'High',need:5,bought:3},
+    {item:'กางเกง',cat:'เสื้อผ้า',age:'0-3M',prio:'High',need:3,bought:0},
+    {item:'ถุงเท้า',cat:'เสื้อผ้า',age:'NB-3M',prio:'Highest',need:7,bought:2},
+    {item:'ถุงมือ',cat:'เสื้อผ้า',age:'NB-3M',prio:'Highest',need:7,bought:2},
+    {item:'หมวกเด็ก',cat:'เสื้อผ้า',age:'NB',prio:'Highest',need:4,bought:2},
+    {item:'ผ้ากันเปื้อน',cat:'เสื้อผ้า',age:'Newborn+',prio:'Highest',need:8,bought:2},
+    {item:'ผ้าคลุมให้นม',cat:'เสื้อผ้า',age:'NB-6M',prio:'Highest',need:3,bought:0},
+    {item:'เพิร์ส size NB',cat:'ผ้าอ้อม',age:'NB',prio:'Highest',need:2,bought:1},
+    {item:'เพิร์ส size S',cat:'ผ้าอ้อม',age:'0-3M',prio:'Highest',need:3,bought:0},
+    {item:'ผ้าอ้อมผ้า 47x47',cat:'ผ้าอ้อม',age:'NB+',prio:'Highest',need:5,bought:3},
+    {item:'ผ้าอ้อม 30x30',cat:'ผ้าอ้อม',age:'NB+',prio:'Highest',need:5,bought:6},
+    {item:'ทิชชู่เปียก',cat:'ผ้าอ้อม',age:'NB+',prio:'Highest',need:6,bought:0},
+    {item:'สำลีก้อน',cat:'ผ้าอ้อม',age:'NB+',prio:'Highest',need:2,bought:0},
+    {item:'สำลีแผ่น',cat:'ผ้าอ้อม',age:'NB+',prio:'Highest',need:3,bought:0},
+    {item:'ขวดใส่น้ำสะอาดสำหรับเช็ด',cat:'ผ้าอ้อม',age:'NB',prio:'High',need:1,bought:0},
+    {item:'ครีมทาผื่นผ้าอ้อม',cat:'ผ้าอ้อม',age:'NB',prio:'Highest',need:2,bought:0},
+    {item:'แผ่นรองเปลี่ยนผ้าอ้อม',cat:'ผ้าอ้อม',age:'NB+',prio:'Highest',need:2,bought:0},
+    {item:'แผ่นรองเปลี่ยนแบบพกพา',cat:'ผ้าอ้อม',age:'0-3M',prio:'High',need:1,bought:0},
+    {item:'ถังทิ้งแพมเพิร์ส',cat:'ผ้าอ้อม',age:'NB',prio:'High',need:1,bought:0},
+    {item:'Shelf ใส่ของมีล้อ',cat:'ผ้าอ้อม',age:'NB+',prio:'Highest',need:1,bought:1},
+    {item:'ทิชชู่',cat:'ผ้าอ้อม',age:'NB+',prio:'Highest',need:2,bought:0},
+    {item:'ที่เช็ดฟัน',cat:'ผ้าอ้อม',age:'NB+',prio:'Highest',need:2,bought:0},
+    {item:'ขวดนม 120-160ml',cat:'ให้นม',age:'NB-3M',prio:'Highest',need:3,bought:3},
+    {item:'ขวดนม 240ml',cat:'ให้นม',age:'3M+',prio:'Normal',need:4,bought:0},
+    {item:'จุกนม',cat:'ให้นม',age:'NB',prio:'Highest',need:4,bought:0},
+    {item:'แปรงล้างขวดนม',cat:'ให้นม',age:'NB+',prio:'Highest',need:2,bought:0},
+    {item:'น้ำยาล้างขวดนม',cat:'ให้นม',age:'NB+',prio:'Highest',need:2,bought:0},
+    {item:'เครื่อง UV ฆ่าเชื้อ',cat:'ให้นม',age:'NB+',prio:'Highest',need:1,bought:1},
+    {item:'ตู้เก็บอุปกรณ์ขวดนม',cat:'ให้นม',age:'NB+',prio:'Highest',need:1,bought:0},
+    {item:'เครื่องอุ่นนม',cat:'ให้นม',age:'NB+',prio:'Highest',need:1,bought:1},
+    {item:'เครื่องปั๊มนม',cat:'ให้นม',age:'หลังคลอด',prio:'High',need:1,bought:0},
+    {item:'กรวยปั๊มนม',cat:'ให้นม',age:'หลังคลอด',prio:'Highest',need:2,bought:0},
+    {item:'หมอนให้นม',cat:'ให้นม',age:'หลังคลอด',prio:'Highest',need:1,bought:0},
+    {item:'เสื้อในให้นม',cat:'ให้นม',age:'หลังคลอด',prio:'Highest',need:7,bought:0},
+    {item:'แผ่นซับน้ำนม',cat:'ให้นม',age:'หลังคลอด',prio:'High',need:2,bought:0},
+    {item:'ครีมทาหัวนม',cat:'ให้นม',age:'หลังคลอด',prio:'Highest',need:2,bought:0},
+    {item:'ถุงเก็บน้ำนมแช่แข็ง',cat:'ให้นม',age:'หลังคลอด',prio:'Highest',need:2,bought:0},
+    {item:'อ่างอาบน้ำ',cat:'อาบน้ำ/ดูแลผิว',age:'NB+',prio:'Highest',need:1,bought:0},
+    {item:'ที่ล้างก้น',cat:'อาบน้ำ/ดูแลผิว',age:'NB+',prio:'Highest',need:1,bought:0},
+    {item:'ผ้าเช็ดตัวมี Hoodie',cat:'อาบน้ำ/ดูแลผิว',age:'NB+',prio:'Highest',need:2,bought:0},
+    {item:'ผ้าเช็ดตัว',cat:'อาบน้ำ/ดูแลผิว',age:'NB+',prio:'Highest',need:5,bought:0},
+    {item:'สบู่/แชมพู',cat:'อาบน้ำ/ดูแลผิว',age:'NB+',prio:'Highest',need:3,bought:3},
+    {item:'Lotion',cat:'อาบน้ำ/ดูแลผิว',age:'NB+',prio:'High',need:1,bought:1},
+    {item:'ครีมบำรุงผิว',cat:'อาบน้ำ/ดูแลผิว',age:'NB+',prio:'Normal',need:1,bought:1},
+    {item:'แปรงผม',cat:'อาบน้ำ/ดูแลผิว',age:'NB+',prio:'Highest',need:1,bought:0},
+    {item:'กรรไกรตัดเล็บ/ตะไบ',cat:'อาบน้ำ/ดูแลผิว',age:'NB+',prio:'Highest',need:1,bought:0},
+    {item:'สำลีก้าน',cat:'อาบน้ำ/ดูแลผิว',age:'NB+',prio:'Highest',need:2,bought:2},
+    {item:'ขัน/ถ้วยล้างผม',cat:'อาบน้ำ/ดูแลผิว',age:'NB+',prio:'Normal',need:1,bought:0},
+    {item:'ฟองอาบน้ำ',cat:'อาบน้ำ/ดูแลผิว',age:'NB+',prio:'Highest',need:1,bought:0},
+    {item:'ปรอทวัดไข้',cat:'สุขภาพ/ความปลอดภัย',age:'NB+',prio:'Highest',need:1,bought:0},
+    {item:'ที่ดูดน้ำมูก',cat:'สุขภาพ/ความปลอดภัย',age:'NB+',prio:'Highest',need:1,bought:0},
+    {item:'น้ำเกลือล้างจมูก',cat:'สุขภาพ/ความปลอดภัย',age:'NB+',prio:'Highest',need:1,bought:0},
+    {item:'ชุดปฐมพยาบาล (First Aid)',cat:'สุขภาพ/ความปลอดภัย',age:'NB+',prio:'Highest',need:1,bought:0},
+    {item:'เครื่องวัดอุณหภูมิห้อง',cat:'สุขภาพ/ความปลอดภัย',age:'NB+',prio:'High',need:1,bought:0},
+    {item:'Car seat',cat:'เดินทาง',age:'NB+',prio:'Highest',need:1,bought:1},
+    {item:'Stroller',cat:'เดินทาง',age:'NB+',prio:'Highest',need:1,bought:1},
+    {item:'เป้อุ้มเด็ก',cat:'เดินทาง',age:'NB+',prio:'High',need:1,bought:0},
+    {item:'กระเป๋าใส่ของเด็ก',cat:'เดินทาง',age:'NB+',prio:'High',need:1,bought:0},
+    {item:'กระเป๋าเก็บความเย็น',cat:'เดินทาง',age:'NB+',prio:'Highest',need:1,bought:0},
+    {item:'ผ้าคลุมรถเข็น',cat:'เดินทาง',age:'NB+',prio:'Highest',need:2,bought:0},
+    {item:'เบาะนอนเล่น',cat:'อุปกรณ์เสริม',age:'NB+',prio:'High',need:1,bought:0},
+    {item:'Gym เด็ก',cat:'อุปกรณ์เสริม',age:'NB+',prio:'High',need:1,bought:0}
   ];
 
-  // ข้อมูลเสริมจากชีท Lalinlin Essentials คอลัมน์ Age / Priority (คอลัมน์ D, F)
-  // key = ชื่อของ (ตรงกับ item[0] ใน PRESET_CHECKLIST) — ใช้แสดงผลเป็น badge เท่านั้น
-  // หมายเหตุ: คอลัมน์ Price (J) ในไฟล์ต้นฉบับไม่มีราคาต่อชิ้นระบุไว้ (มีแต่ยอดรวมค่าใช้จ่ายตามวันที่ซื้อ)
-  // จึงยังไม่มีราคาต่อชิ้นให้แสดง ณ ตอนนี้
-  var PRESET_META = {
-    'เตียงหลัก':{age:'Newborn+',prio:'Highest'}, 'เตียงรอง':{age:'Newborn+',prio:'Highest'}, 'ที่นอน':{age:'Newborn',prio:'Highest'},
-    'ผ้าปูที่นอน':{age:'Newborn',prio:'Highest'}, 'ผ้ารองกันเปื้อน':{age:'Newborn',prio:'Highest'}, 'ผ้าห่อตัว':{age:'Newborn',prio:'Highest'},
-    'ถุงนอน':{age:'Newborn',prio:'High'}, 'Baby monitor':{age:'Newborn',prio:'High'}, 'ตู้เก็บเสื้อผ้า':{age:'Newborn',prio:'Highest'},
-    'ที่เปลี่ยนผ้าอ้อม':{age:'Newborn',prio:'Highest'}, 'ตะกร้าผ้า':{age:'Newborn',prio:'Highest'}, 'ชั้นเก็บของใช้':{age:'Newborn',prio:'Highest'},
-    'ผ้าห่ม':{age:'Newborn+',prio:'Highest'}, 'Bodysuit แขนสั้น':{age:'NB-3M',prio:'Highest'}, 'Bodysuit long (ชุดนอน)':{age:'NB-3M',prio:'Highest'},
-    'ชุดเสื้อกางเกง':{age:'NB-3M',prio:'Highest'}, 'ชุดออกนอกบ้าน':{age:'0-3M',prio:'High'}, 'กางเกง':{age:'0-3M',prio:'High'},
-    'ถุงเท้า':{age:'NB-3M',prio:'Highest'}, 'ถุงมือ':{age:'NB-3M',prio:'Highest'}, 'หมวกเด็ก':{age:'NB',prio:'Highest'},
-    'ผ้ากันเปื้อน':{age:'Newborn+',prio:'Highest'}, 'ผ้าคลุมให้นม':{age:'NB-6M',prio:'Highest'}, 'เพิร์ส size NB':{age:'NB',prio:'Highest'},
-    'เพิร์ส size S':{age:'0-3M',prio:'Highest'}, 'ผ้าอ้อมผ้า 47x47':{age:'NB+',prio:'Highest'}, 'ผ้าอ้อม 30x30':{age:'NB+',prio:'Highest'},
-    'ทิชชู่เปียก':{age:'NB+',prio:'Highest'}, 'สำลีก้อน':{age:'NB+',prio:'Highest'}, 'สำลีแผ่น':{age:'NB+',prio:'Highest'},
-    'ขวดใส่น้ำสะอาดสำหรับเช็ด':{age:'NB',prio:'High'}, 'ครีมทาผื่นผ้าอ้อม':{age:'NB',prio:'Highest'}, 'แผ่นรองเปลี่ยนผ้าอ้อม':{age:'NB+',prio:'Highest'},
-    'แผ่นรองเปลี่ยนแบบพกพา':{age:'0-3M',prio:'High'}, 'ถังทิ้งแพมเพิร์ส':{age:'NB',prio:'High'}, 'Shelf ใส่ของมีล้อ':{age:'NB+',prio:'Highest'},
-    'ทิชชู่':{age:'NB+',prio:'Highest'}, 'ที่เช็ดฟัน':{age:'NB+',prio:'Highest'}, 'ขวดนม 120-160ml':{age:'NB-3M',prio:'Highest'},
-    'ขวดนม 240ml':{age:'3M+',prio:'Normal'}, 'จุกนม':{age:'NB',prio:'Highest'}, 'แปรงล้างขวดนม':{age:'NB+',prio:'Highest'},
-    'น้ำยาล้างขวดนม':{age:'NB+',prio:'Highest'}, 'เครื่อง UV ฆ่าเชื้อ':{age:'NB+',prio:'Highest'}, 'ตู้เก็บอุปกรณ์ขวดนม':{age:'NB+',prio:'Highest'},
-    'เครื่องอุ่นนม':{age:'NB+',prio:'Highest'}, 'เครื่องปั๊มนม':{age:'หลังคลอด',prio:'High'}, 'กรวยปั๊มนม':{age:'หลังคลอด',prio:'Highest'},
-    'หมอนให้นม':{age:'หลังคลอด',prio:'Highest'}, 'เสื้อในให้นม':{age:'หลังคลอด',prio:'Highest'}, 'แผ่นซับน้ำนม':{age:'หลังคลอด',prio:'High'},
-    'ครีมทาหัวนม':{age:'หลังคลอด',prio:'Highest'}, 'ถุงเก็บน้ำนมแช่แข็ง':{age:'หลังคลอด',prio:'Highest'}, 'อ่างอาบน้ำ':{age:'NB+',prio:'Highest'},
-    'ที่ล้างก้น':{age:'NB+',prio:'Highest'}, 'ผ้าเช็ดตัวมี Hoodie':{age:'NB+',prio:'Highest'}, 'ผ้าเช็ดตัว':{age:'NB+',prio:'Highest'},
-    'สบู่/แชมพู':{age:'NB+',prio:'Highest'}, 'Lotion':{age:'NB+',prio:'High'}, 'ครีมบำรุงผิว':{age:'NB+',prio:'Normal'},
-    'แปรงผม':{age:'NB+',prio:'Highest'}, 'กรรไกรตัดเล็บ/ตะไบ':{age:'NB+',prio:'Highest'}, 'สำลีก้าน':{age:'NB+',prio:'Highest'},
-    'ขัน/ถ้วยล้างผม':{age:'NB+',prio:'Normal'}, 'ฟองอาบน้ำ':{age:'NB+',prio:'Highest'}, 'ปรอทวัดไข้':{age:'NB+',prio:'Highest'},
-    'ที่ดูดน้ำมูก':{age:'NB+',prio:'Highest'}, 'น้ำเกลือล้างจมูก':{age:'NB+',prio:'Highest'}, 'ชุดปฐมพยาบาล (First Aid)':{age:'NB+',prio:'Highest'},
-    'เครื่องวัดอุณหภูมิห้อง':{age:'NB+',prio:'High'}, 'Car seat':{age:'NB+',prio:'Highest'}, 'Stroller':{age:'NB+',prio:'Highest'},
-    'เป้อุ้มเด็ก':{age:'NB+',prio:'High'}, 'กระเป๋าใส่ของเด็ก':{age:'NB+',prio:'High'}, 'กระเป๋าเก็บความเย็น':{age:'NB+',prio:'Highest'},
-    'ผ้าคลุมรถเข็น':{age:'NB+',prio:'Highest'}, 'เบาะนอนเล่น':{age:'NB+',prio:'High'}, 'Gym เด็ก':{age:'NB+',prio:'High'}
-  };
+  var PRESET_CHECKLIST = PRESET_ITEMS; // ใช้ตอนนำเข้า (bulkImportChecklist) และนับจำนวนรวม
+
+  // สร้าง lookup: key = ชื่อของ (ตรงกับ item[0] ที่โพสต์ตอนนำเข้า) — ใช้แสดงผลเป็น badge เท่านั้น
+  var PRESET_META = {};
+  PRESET_ITEMS.forEach(function(p){
+    PRESET_META[p.item] = { age:p.age, prio:p.prio, need:p.need, bought:p.bought, toBuy: Math.max(0, p.need - p.bought) };
+  });
 
   var PRIORITY_LABELS = {
     Highest: {th:'จำเป็นมาก', cls:'prio-highest'},
@@ -502,13 +530,13 @@
     Normal:  {th:'ทั่วไป',     cls:'prio-normal'}
   };
 
-  // หาข้อมูล Age/Priority ของรายการที่นำเข้าไปแล้ว โดยจับคู่จากชื่อของ
-  // (ลองจับคู่ชื่อเต็มก่อน แล้วค่อยตัดจำนวนในวงเล็บท้ายชื่อออกแล้วลองใหม่)
+  // หาข้อมูล Age/Priority/จำนวนที่ต้องซื้อจริง ของรายการที่นำเข้าไปแล้ว โดยจับคู่จากชื่อของ
+  // (ลองจับคู่ชื่อเต็มก่อน แล้วค่อยตัดข้อความในวงเล็บท้ายชื่อออกแล้วลองใหม่ — เผื่อรายการเก่าที่เคยมีจำนวนต่อท้ายชื่อ)
   function resolveChecklistItem(rawName){
-    if (PRESET_META[rawName]) return { meta: PRESET_META[rawName], qty: null, name: rawName };
+    if (PRESET_META[rawName]) return { meta: PRESET_META[rawName], name: rawName };
     var m = rawName.match(/^(.*)\s\(([^)]+)\)\s*$/);
-    if (m && PRESET_META[m[1]]) return { meta: PRESET_META[m[1]], qty: m[2], name: m[1] };
-    return { meta: null, qty: null, name: rawName };
+    if (m && PRESET_META[m[1]]) return { meta: PRESET_META[m[1]], name: m[1] };
+    return { meta: null, name: rawName };
   }
 
   var SIZE_TABLE = [
@@ -551,19 +579,18 @@
   }
 
   // นำเข้ารายการของจาก PRESET_CHECKLIST ทีละรายการ (เรียงตามลำดับ กัน request ชนกัน)
-  // แล้ว toggle รายการที่ "ซื้อแล้ว" ให้เป็น Done ตามข้อมูลจริง
+  // แล้ว toggle รายการที่ซื้อครบแล้ว (toBuy <= 0) ให้เป็น Done ตามข้อมูลจริงจากชีท
   function bulkImportChecklist(onProgress){
     var p = Promise.resolve();
     var done = 0;
     PRESET_CHECKLIST.forEach(function(row){
-      var item = row[0], cat = row[1], qty = row[2], bought = row[3];
-      var label = item + (qty ? ' ('+qty+')' : '');
+      var fullyBought = (row.need - row.bought) <= 0;
       p = p.then(function(){
-        return apiPost('addChecklistItem', {item:label, category:cat, addedBy:who});
+        return apiPost('addChecklistItem', {item:row.item, category:row.cat, addedBy:who});
       }).then(function(res){
         done++;
         if (onProgress) onProgress(done, PRESET_CHECKLIST.length);
-        if (bought && res && res.ok && res.id){
+        if (fullyBought && res && res.ok && res.id){
           return apiPost('toggleChecklist', {id:res.id, done:true});
         }
       });
@@ -1022,7 +1049,7 @@
         if (resolved.meta) {
           var prio = PRIORITY_LABELS[resolved.meta.prio] || {th: resolved.meta.prio, cls:'prio-normal'};
           prioHtml = '<span class="meta-badge '+prio.cls+'">'+escapeHtml(prio.th)+'</span>';
-          var tobuyLabel = checked ? 'ซื้อครบแล้ว' : ('ต้องซื้อ' + (resolved.qty ? ' ' + resolved.qty + ' ชิ้น' : ''));
+          var tobuyLabel = checked ? 'ซื้อครบแล้ว' : ('ต้องซื้อ' + (resolved.meta.toBuy ? ' ' + resolved.meta.toBuy + ' ชิ้น' : ''));
           metaHtml =
             '<div class="item-meta">'+
               (resolved.meta.age ? '<span class="meta-badge age">อายุ '+escapeHtml(resolved.meta.age)+'</span>' : '')+
