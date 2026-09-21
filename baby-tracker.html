@@ -244,6 +244,8 @@
 
   /* Checklist */
   .check-item{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;}
+  .check-item[data-checked="true"]{background:var(--good-soft);border-radius:var(--radius-sm);}
+  .check-col{display:flex;flex-direction:column;align-items:center;gap:6px;flex:none;}
   .checkbox{
     width:22px;height:22px;border-radius:7px;border:1.5px solid var(--border);
     flex:none;cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--surface);
@@ -252,9 +254,8 @@
   .checkbox[data-checked="true"]{background:var(--good);border-color:var(--good);}
   .checkbox svg{display:none;width:14px;height:14px;stroke:#fff;}
   .checkbox[data-checked="true"] svg{display:block;}
-  .item-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;}
+  .item-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;padding-top:1px;}
   .check-item .item-name{font-size:14.5px;}
-  .check-item[data-checked="true"] .item-name{color:var(--text-muted);text-decoration:line-through;}
   .item-meta{display:flex;flex-wrap:wrap;gap:6px;}
   .meta-badge{font-size:10.5px;font-weight:600;padding:2.5px 8px;border-radius:99px;white-space:nowrap;line-height:1.4;}
   .meta-badge.age{background:var(--surface-2);color:var(--text-muted);}
@@ -263,18 +264,33 @@
   .meta-badge.prio-normal{background:var(--surface-2);color:var(--text-muted);}
   .meta-badge.tobuy{background:color-mix(in srgb, var(--accent) 16%, transparent);color:var(--accent);}
   .meta-badge.tobuy.done{background:var(--good-soft);color:var(--good);}
-  .item-price{display:flex;align-items:center;gap:4px;margin-top:1px;}
+  .item-price{display:flex;align-items:center;gap:4px;flex:none;align-self:center;}
   .price-currency{font-size:12.5px;color:var(--text-muted);}
   .price-input{
-    width:84px;font-size:12.5px;padding:3px 7px;border-radius:7px;border:1px solid var(--border);
+    width:74px;font-size:12.5px;padding:3px 7px;border-radius:7px;border:1px solid var(--border);
     background:var(--surface);color:var(--text);font-family:inherit;
   }
   .price-input:focus{outline:2px solid var(--accent);outline-offset:1px;}
   .price-input::placeholder{color:var(--text-muted);}
+  .check-item .del-btn{align-self:center;}
   .item-category{font-size:11px;color:var(--text-muted);background:var(--surface-2);padding:2px 8px;border-radius:99px;}
   .category-group{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin:18px 0 8px;}
   .category-group:first-child{margin-top:0;}
   .checklist-progress{font-size:13px;color:var(--text-muted);margin-bottom:14px;}
+
+  /* Checklist sub-tabs (by category) + done filter */
+  .prep-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-bottom:12px;scrollbar-width:none;}
+  .prep-tabs::-webkit-scrollbar{display:none;}
+  .prep-tab-btn{
+    flex:none;font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:99px;
+    border:1.5px solid var(--border);background:var(--surface);color:var(--text-muted);cursor:pointer;white-space:nowrap;
+  }
+  .prep-tab-btn[data-active="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);}
+  .prep-filter-row{display:flex;justify-content:flex-end;margin-bottom:10px;}
+  .prep-filter-btn{
+    font-size:12.5px;font-weight:600;color:var(--accent);background:none;border:none;cursor:pointer;
+    display:flex;align-items:center;gap:4px;padding:4px 2px;
+  }
 
   /* Questions */
   .q-item{padding:15px 16px;display:flex;flex-direction:column;gap:8px;}
@@ -403,6 +419,8 @@
   var apiUrl = null, who = null;
   var activeTab = 'overview';
   var openAddPanel = null; // which tab's add-panel is open
+  var prepActiveCat = 'all'; // which checklist category tab is selected
+  var prepHideDone = false; // whether to hide already-bought checklist items
 
   try { apiUrl = localStorage.getItem(LS_URL); who = localStorage.getItem(LS_WHO); } catch(e){}
 
@@ -487,10 +505,10 @@
   // หาข้อมูล Age/Priority ของรายการที่นำเข้าไปแล้ว โดยจับคู่จากชื่อของ
   // (ลองจับคู่ชื่อเต็มก่อน แล้วค่อยตัดจำนวนในวงเล็บท้ายชื่อออกแล้วลองใหม่)
   function resolveChecklistItem(rawName){
-    if (PRESET_META[rawName]) return { meta: PRESET_META[rawName], qty: null };
+    if (PRESET_META[rawName]) return { meta: PRESET_META[rawName], qty: null, name: rawName };
     var m = rawName.match(/^(.*)\s\(([^)]+)\)\s*$/);
-    if (m && PRESET_META[m[1]]) return { meta: PRESET_META[m[1]], qty: m[2] };
-    return { meta: null, qty: null };
+    if (m && PRESET_META[m[1]]) return { meta: PRESET_META[m[1]], qty: m[2], name: m[1] };
+    return { meta: null, qty: null, name: rawName };
   }
 
   var SIZE_TABLE = [
@@ -954,24 +972,60 @@
       groups[cat].push(i);
     });
 
+    // รีเซ็ต tab ถ้าหมวดที่เลือกไว้หายไปแล้ว (เช่น ลบของชิ้นสุดท้ายในหมวดนั้น)
+    if (prepActiveCat !== 'all' && order.indexOf(prepActiveCat) === -1) prepActiveCat = 'all';
+
+    // ---- Tabs ตามหมวดหมู่ ----
+    var tabsBar = el('div','prep-tabs');
+    var allTabBtn = el('button','prep-tab-btn','ทั้งหมด');
+    allTabBtn.type = 'button';
+    allTabBtn.setAttribute('data-active', String(prepActiveCat==='all'));
+    allTabBtn.onclick = function(){ prepActiveCat='all'; renderView(); };
+    tabsBar.appendChild(allTabBtn);
     order.forEach(function(cat){
-      root.appendChild(el('div','category-group', escapeHtml(cat)));
+      var tabBtn = el('button','prep-tab-btn', escapeHtml(cat));
+      tabBtn.type = 'button';
+      tabBtn.setAttribute('data-active', String(prepActiveCat===cat));
+      tabBtn.onclick = function(){ prepActiveCat=cat; renderView(); };
+      tabsBar.appendChild(tabBtn);
+    });
+    root.appendChild(tabsBar);
+
+    // ---- ปุ่มซ่อน/แสดงรายการที่ซื้อแล้ว ----
+    var filterRow = el('div','prep-filter-row');
+    var filterBtn = el('button','prep-filter-btn', prepHideDone ? 'แสดงรายการที่ซื้อแล้ว' : 'ซ่อนรายการที่ซื้อแล้ว');
+    filterBtn.type = 'button';
+    filterBtn.onclick = function(){ prepHideDone = !prepHideDone; renderView(); };
+    filterRow.appendChild(filterBtn);
+    root.appendChild(filterRow);
+
+    var catsToRender = prepActiveCat === 'all' ? order : [prepActiveCat];
+    var anyRendered = false;
+
+    catsToRender.forEach(function(cat){
+      var catItems = groups[cat] || [];
+      if (prepHideDone) catItems = catItems.filter(function(i){ return !(i.Done===true || i.Done==='TRUE'); });
+      if (!catItems.length) return;
+      anyRendered = true;
+
+      if (prepActiveCat === 'all') root.appendChild(el('div','category-group', escapeHtml(cat)));
       var list = el('div','list card');
-      groups[cat].forEach(function(item,i){
+      catItems.forEach(function(item,i){
         var checked = item.Done===true || item.Done==='TRUE';
         var row = el('div','check-item');
         row.setAttribute('data-checked', checked);
         if (i>0) row.style.borderTop = '1px solid var(--border)';
 
         var resolved = resolveChecklistItem(item.Item || '');
+        var prioHtml = '';
         var metaHtml = '';
         if (resolved.meta) {
           var prio = PRIORITY_LABELS[resolved.meta.prio] || {th: resolved.meta.prio, cls:'prio-normal'};
+          prioHtml = '<span class="meta-badge '+prio.cls+'">'+escapeHtml(prio.th)+'</span>';
           var tobuyLabel = checked ? 'ซื้อครบแล้ว' : ('ต้องซื้อ' + (resolved.qty ? ' ' + resolved.qty + ' ชิ้น' : ''));
           metaHtml =
             '<div class="item-meta">'+
               (resolved.meta.age ? '<span class="meta-badge age">อายุ '+escapeHtml(resolved.meta.age)+'</span>' : '')+
-              '<span class="meta-badge '+prio.cls+'">'+escapeHtml(prio.th)+'</span>'+
               '<span class="meta-badge tobuy'+(checked?' done':'')+'">'+escapeHtml(tobuyLabel)+'</span>'+
             '</div>';
         }
@@ -984,14 +1038,17 @@
           '</div>';
 
         row.innerHTML =
-          '<button class="checkbox" data-checked="'+checked+'" type="button" aria-label="ทำเครื่องหมาย">'+
-            '<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'+
-          '</button>'+
-          '<div class="item-main">'+
-            '<span class="item-name">'+escapeHtml(item.Item)+'</span>'+
-            metaHtml+
-            priceHtml+
+          '<div class="check-col">'+
+            '<button class="checkbox" data-checked="'+checked+'" type="button" aria-label="ทำเครื่องหมาย">'+
+              '<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'+
+            '</button>'+
+            prioHtml+
           '</div>'+
+          '<div class="item-main">'+
+            '<span class="item-name">'+escapeHtml(resolved.name)+'</span>'+
+            metaHtml+
+          '</div>'+
+          priceHtml+
           '<button class="icon-btn del-btn" type="button" aria-label="ลบ" title="ลบ">'+trashIcon()+'</button>';
         row.querySelector('.checkbox').onclick = function(){
           apiPost('toggleChecklist', {id:item.ID, done: !checked}).then(refresh);
@@ -1023,6 +1080,13 @@
       });
       root.appendChild(list);
     });
+
+    if (!anyRendered) {
+      root.appendChild(emptyState(
+        prepHideDone ? 'ซื้อครบทุกอย่างแล้วในหมวดนี้ 🎉' : 'ยังไม่มีรายการในหมวดนี้',
+        prepHideDone ? 'กดปุ่ม "แสดงรายการที่ซื้อแล้ว" ด้านบนเพื่อดูทั้งหมด' : ''
+      ));
+    }
   }
 
   // ---------------- Ask (Questions) ----------------
