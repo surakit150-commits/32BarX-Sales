@@ -308,6 +308,33 @@
   .expense-summary .num{font-family:'Mitr',sans-serif;font-weight:700;font-size:24px;font-variant-numeric:tabular-nums;color:var(--accent);}
   .expense-summary .lbl{font-size:12.5px;color:var(--text-muted);}
 
+  /* Kicks (นับลูกดิ้น) */
+  .kick-summary .num{font-size:16px;font-family:'Mitr',sans-serif;font-weight:700;color:var(--accent);}
+  .kick-tap-wrap{display:flex;justify-content:center;margin:6px 0 22px;}
+  .kick-tap-btn{
+    width:176px;height:176px;border-radius:50%;border:none;cursor:pointer;
+    background:linear-gradient(160deg,var(--accent),var(--accent-2));color:#fff;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    box-shadow:0 10px 26px color-mix(in srgb, var(--accent) 38%, transparent);
+    transition:transform .08s ease;
+  }
+  .kick-tap-btn svg{width:42px;height:42px;}
+  .kick-tap-btn span{font-family:'Mitr',sans-serif;font-weight:700;font-size:14.5px;}
+  .kick-tap-btn:active{transform:scale(0.94);}
+  .kick-tap-btn:disabled{opacity:.65;cursor:default;transform:none;}
+  .kick-subtitle{font-size:14.5px;font-weight:700;margin:20px 4px 8px;color:var(--text);}
+  .kick-day-card{padding:0;overflow:hidden;margin-bottom:10px;}
+  .kick-day-head{
+    font-size:12.5px;font-weight:700;color:var(--text-muted);
+    padding:12px 16px 6px;text-transform:uppercase;letter-spacing:0.02em;
+  }
+  .kick-day-today{color:var(--accent);}
+  .kick-item{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;}
+  .kick-item-main{display:flex;align-items:center;gap:8px;}
+  .kick-time{font-family:'Mitr',sans-serif;font-weight:700;font-size:14.5px;font-variant-numeric:tabular-nums;}
+  .kick-summary-item{display:flex;justify-content:space-between;align-items:center;padding:11px 16px;font-size:13.5px;}
+  .kick-summary-count{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;}
+
   /* Questions */
   .q-item{padding:15px 16px;display:flex;flex-direction:column;gap:8px;}
   .q-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
@@ -413,6 +440,10 @@
         <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14v16l-4-3-3 3-3-3-4 3z"/></svg>
         บันทึก
       </button>
+      <button class="tab-btn" data-tab="kicks" data-active="false" type="button">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h3l2-7 4 14 3-10 2 3h4"/></svg>
+        ลูกดิ้น
+      </button>
       <button class="tab-btn" data-tab="prep" data-active="false" type="button">
         <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
         เตรียมของ
@@ -435,7 +466,7 @@
 
   var LS_URL = 'bt_api_url';
   var LS_WHO = 'bt_who';
-  var state = { settings:{}, activities:[], checklist:[], questions:[], expenses:[] };
+  var state = { settings:{}, activities:[], checklist:[], questions:[], expenses:[], kicks:[] };
   var apiUrl = null, who = null;
   var activeTab = 'overview';
   var openAddPanel = null; // which tab's add-panel is open
@@ -764,6 +795,16 @@
     var months=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
     return d.getDate()+' '+months[d.getMonth()]+' • '+pad(d.getHours())+':'+pad(d.getMinutes());
   }
+  // แสดงผลวันที่แบบไทย (ไม่มีเวลา) จาก Date instant จริง โดยใช้เวลาท้องถิ่นของเครื่อง
+  // (ต่างจาก fmtDateTh ที่ใช้ getUTC* — อันนั้นสำหรับค่า "epoch day" ที่ไม่มี timezone)
+  function fmtDateThLocal(d){
+    var months=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    return d.getDate()+' '+months[d.getMonth()]+' '+(d.getFullYear()+543);
+  }
+  // คีย์วันที่ท้องถิ่นแบบ "YYYY-MM-DD" ไว้ใช้จัดกลุ่มรายการตามวัน (เทียบกันด้วย string ได้ตรงๆ)
+  function localDateKeyFromDate(d){
+    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  }
 
   // Current week/day comes from a reference "anchor" (a date + the gestational
   // age confirmed on that date, e.g. by a doctor) and keeps counting forward.
@@ -858,6 +899,7 @@
     root.innerHTML = '';
     if (activeTab === 'overview') renderOverview(root);
     else if (activeTab === 'log') renderLog(root);
+    else if (activeTab === 'kicks') renderKicks(root);
     else if (activeTab === 'prep') renderPrep(root);
     else if (activeTab === 'ask') renderAsk(root);
     else if (activeTab === 'expenses') renderExpenses(root);
@@ -1014,6 +1056,90 @@
       list.appendChild(row);
     });
     root.appendChild(list);
+  }
+
+  // ---------------- Kicks (นับลูกดิ้น) ----------------
+  function renderKicks(root){
+    root.appendChild(el('h2','section-title','นับลูกดิ้น'));
+
+    var kicks = (state.kicks||[]).slice().sort(function(a,b){ return new Date(b.Timestamp) - new Date(a.Timestamp); });
+    var todayKey = localDateKeyFromDate(new Date());
+    var todayCount = kicks.filter(function(k){ return localDateKeyFromDate(new Date(k.Timestamp)) === todayKey; }).length;
+    var lastKick = kicks[0];
+
+    var summary = el('div','stat-row');
+    summary.innerHTML =
+      '<div class="stat-tile kick-summary"><div class="num">'+todayCount+'</div><div class="lbl">จำนวนครั้งวันนี้</div></div>'+
+      '<div class="stat-tile kick-summary"><div class="num">'+(lastKick ? fmtDateTimeTh(lastKick.Timestamp) : '—')+'</div><div class="lbl">ครั้งล่าสุด</div></div>';
+    root.appendChild(summary);
+
+    var tapWrap = el('div','kick-tap-wrap');
+    tapWrap.innerHTML =
+      '<button class="kick-tap-btn" id="kick-tap-btn" type="button">'+
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h3l2-7 4 14 3-10 2 3h4"/></svg>'+
+        '<span>กดเมื่อลูกดิ้น</span>'+
+      '</button>';
+    root.appendChild(tapWrap);
+    var tapBtn = tapWrap.querySelector('#kick-tap-btn');
+    tapBtn.onclick = function(){
+      tapBtn.disabled = true;
+      apiPost('addKick', {loggedBy:who}).then(function(res){
+        if (!res || !res.ok) { tapBtn.disabled = false; showBanner('บันทึกไม่สำเร็จ: ' + ((res && res.error) || '')); return; }
+        refresh();
+      }).catch(function(){
+        tapBtn.disabled = false;
+        showBanner('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง');
+      });
+    };
+
+    if (!kicks.length){
+      root.appendChild(emptyState('ยังไม่มีการบันทึกลูกดิ้น','กดปุ่มด้านบนทุกครั้งที่รู้สึกว่าลูกดิ้น'));
+      return;
+    }
+
+    // จัดกลุ่มรายการดิบตามวัน (ใหม่สุดก่อน เพราะ kicks ถูก sort ไว้แล้ว)
+    var groups = [];
+    var groupMap = {};
+    kicks.forEach(function(k){
+      var d = new Date(k.Timestamp);
+      var key = localDateKeyFromDate(d);
+      if (!groupMap[key]) { groupMap[key] = { key:key, date:d, items:[] }; groups.push(groupMap[key]); }
+      groupMap[key].items.push(k);
+    });
+
+    root.appendChild(el('h3','kick-subtitle','ประวัติการกด'));
+    groups.forEach(function(g){
+      var dayCard = el('div','card kick-day-card');
+      dayCard.appendChild(el('div','kick-day-head', escapeHtml(fmtDateThLocal(g.date)) + (g.key===todayKey ? ' <span class="kick-day-today">(วันนี้)</span>' : '')));
+      var list = el('div','list');
+      g.items.forEach(function(item, i){
+        var d = new Date(item.Timestamp);
+        var row = el('div','kick-item');
+        if (i>0) row.style.borderTop = '1px solid var(--border)';
+        row.innerHTML =
+          '<div class="kick-item-main"><span class="kick-time">'+pad(d.getHours())+':'+pad(d.getMinutes())+'</span>'+whoTag(item.LoggedBy)+'</div>'+
+          '<button class="icon-btn del-btn" type="button" aria-label="ลบ" title="ลบ">'+trashIcon()+'</button>';
+        row.querySelector('.del-btn').onclick = function(){
+          apiPost('deleteKick', {id:item.ID}).then(refresh);
+        };
+        list.appendChild(row);
+      });
+      dayCard.appendChild(list);
+      root.appendChild(dayCard);
+    });
+
+    // สรุปจำนวนครั้งต่อวัน (ใหม่สุดก่อน)
+    root.appendChild(el('h3','kick-subtitle','สรุปรายวัน'));
+    var summaryList = el('div','list card');
+    groups.forEach(function(g, i){
+      var row = el('div','kick-summary-item');
+      if (i>0) row.style.borderTop = '1px solid var(--border)';
+      row.innerHTML =
+        '<span>'+escapeHtml(fmtDateThLocal(g.date))+(g.key===todayKey ? ' <span class="kick-day-today">(วันนี้)</span>' : '')+'</span>'+
+        '<span class="kick-summary-count">'+g.items.length+' ครั้ง</span>';
+      summaryList.appendChild(row);
+    });
+    root.appendChild(summaryList);
   }
 
   // ---------------- Prep (Checklist) ----------------
