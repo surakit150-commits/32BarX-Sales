@@ -286,7 +286,12 @@
   .checkbox svg{display:none;width:14px;height:14px;stroke:#fff;}
   .checkbox[data-checked="true"] svg{display:block;}
   .item-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;padding-top:1px;}
-  .check-item .item-name{font-size:14.5px;}
+  .item-name-input{
+    width:100%;font-size:14.5px;font-weight:500;color:var(--text);font-family:inherit;
+    border:none;background:transparent;padding:2px 4px;margin:-2px -4px;border-radius:6px;
+    text-overflow:ellipsis;
+  }
+  .item-name-input:focus{background:var(--surface-2);outline:2px solid var(--accent);outline-offset:0;}
   .item-meta{display:flex;flex-wrap:wrap;gap:6px;}
   .meta-badge{font-size:10.5px;font-weight:600;padding:2.5px 8px;border-radius:99px;white-space:nowrap;line-height:1.4;}
   .meta-badge.age{background:var(--surface-2);color:var(--text-muted);}
@@ -295,6 +300,12 @@
   .meta-badge.prio-normal{background:var(--surface-2);color:var(--text-muted);}
   .meta-badge.tobuy{background:color-mix(in srgb, var(--accent) 16%, transparent);color:var(--accent);}
   .meta-badge.tobuy.done{background:var(--good-soft);color:var(--good);}
+  .meta-badge.qty-edit{display:inline-flex;align-items:center;gap:3px;padding:2.5px 7px;}
+  .qty-input{
+    width:32px;text-align:center;font-size:10.5px;font-weight:700;padding:1px 2px;
+    border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--accent);font-family:inherit;
+  }
+  .qty-input:focus{outline:2px solid var(--accent);outline-offset:1px;}
   .item-price{display:flex;align-items:center;gap:4px;flex:none;align-self:center;}
   .price-currency{font-size:12.5px;color:var(--text-muted);}
   .price-input{
@@ -327,11 +338,14 @@
   }
 
   /* Expenses */
-  .expense-item{display:flex;align-items:center;gap:12px;padding:13px 16px;}
+  .expense-item{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;}
   .expense-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;}
-  .expense-date{font-size:13px;font-weight:600;}
-  .expense-cat{font-size:11.5px;color:var(--text-muted);}
-  .expense-price{font-family:'Mitr',sans-serif;font-weight:700;font-size:15.5px;color:var(--text);white-space:nowrap;}
+  .expense-name{font-size:14.5px;font-weight:700;color:var(--text);word-break:break-word;}
+  .expense-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;}
+  .expense-date{font-size:12px;font-weight:600;color:var(--text-muted);}
+  .expense-cat{font-size:11.5px;color:var(--text-muted);background:var(--surface-2);padding:1.5px 7px;border-radius:99px;}
+  .expense-note{font-size:12.5px;color:var(--text-muted);line-height:1.45;word-break:break-word;}
+  .expense-price{font-family:'Mitr',sans-serif;font-weight:700;font-size:15.5px;color:var(--text);white-space:nowrap;margin-top:1px;}
   .expense-summary{display:flex;flex-direction:column;gap:2px;}
   .expense-summary .num{font-family:'Mitr',sans-serif;font-weight:700;font-size:24px;font-variant-numeric:tabular-nums;color:var(--accent);}
   .expense-summary .lbl{font-size:12.5px;color:var(--text-muted);}
@@ -617,20 +631,27 @@
   // ลำดับการหา: 1) ข้อมูลที่กรอกเองตอนเพิ่มรายการ (เก็บอยู่ในชีทจริงคอลัมน์ Age/Priority/Qty)
   //            2) ถ้าไม่มี ลองจับคู่ชื่อของกับรายการ preset จาก Lalinlin Essentials
   //               (ลองจับคู่ชื่อเต็มก่อน แล้วค่อยตัดข้อความในวงเล็บท้ายชื่อออกแล้วลองใหม่ — เผื่อรายการเก่าที่เคยมีจำนวนต่อท้ายชื่อ)
+  // ผสานข้อมูล age/priority/qty ของแต่ละรายการ โดยให้ "ค่าที่ผู้ใช้แก้ไขเองในชีท" (item.Age/Priority/Qty)
+  // มาก่อนเสมอถ้ามีการระบุไว้ ทีละฟิลด์แยกจากกัน แล้วค่อย fallback ไปที่ PRESET_META (รายการที่นำเข้าจาก PDF)
+  // แยกทีละฟิลด์ (ไม่ใช่ all-or-nothing) เพื่อไม่ให้การแก้ "จำนวนที่ต้องซื้อ" อย่างเดียว ไปลบ badge อายุ/ความสำคัญ
+  // ของรายการ preset ที่ยังไม่เคยถูกแก้ไขฟิลด์อื่นทิ้งไปด้วย
   function resolveChecklistItem(item){
     var rawName = (item && item.Item) || '';
-    var hasOwnMeta = !!(item && (item.Age || item.Priority || (item.Qty !== undefined && item.Qty !== null && String(item.Qty).trim() !== '')));
-    if (hasOwnMeta) {
-      var qtyNum = parseFloat(item.Qty);
-      return {
-        meta: { age: item.Age || '', prio: item.Priority || '', toBuy: isFinite(qtyNum) ? qtyNum : null },
-        name: rawName
-      };
+    var preset = PRESET_META[rawName] || null;
+    if (!preset) {
+      var m = rawName.match(/^(.*)\s\(([^)]+)\)\s*$/);
+      if (m && PRESET_META[m[1]]) { preset = PRESET_META[m[1]]; rawName = m[1]; }
     }
-    if (PRESET_META[rawName]) return { meta: PRESET_META[rawName], name: rawName };
-    var m = rawName.match(/^(.*)\s\(([^)]+)\)\s*$/);
-    if (m && PRESET_META[m[1]]) return { meta: PRESET_META[m[1]], name: m[1] };
-    return { meta: null, name: rawName };
+
+    var hasRowQty = !!(item && item.Qty !== undefined && item.Qty !== null && String(item.Qty).trim() !== '');
+    var rowQtyNum = hasRowQty ? parseFloat(item.Qty) : NaN;
+
+    var age = (item && item.Age) ? item.Age : (preset ? preset.age : '');
+    var prio = (item && item.Priority) ? item.Priority : (preset ? preset.prio : '');
+    var toBuy = (hasRowQty && isFinite(rowQtyNum)) ? rowQtyNum : (preset ? preset.toBuy : null);
+
+    if (!preset && !age && !prio && !hasRowQty) return { meta: null, name: rawName };
+    return { meta: { age: age, prio: prio, toBuy: toBuy }, name: rawName };
   }
 
   // รวมรายชื่อหมวดหมู่ที่รู้จักทั้งหมด (จาก preset + จากของที่เพิ่มเองในชีทจริง) ไว้ทำ dropdown
@@ -1465,21 +1486,26 @@
         row.setAttribute('data-checked', checked);
         if (i>0) row.style.borderTop = '1px solid var(--border)';
 
+        // หมายเหตุ: แสดงช่องแก้ไข "ต้องซื้อ" ให้ทุกรายการเสมอ (ไม่ใช่แค่รายการที่มี meta อยู่แล้ว)
+        // เพื่อให้แก้ไข/เพิ่มจำนวนย้อนหลังได้แม้เป็นรายการที่เพิ่มเองแบบไม่ได้ระบุอะไรไว้ตอนแรก
         var resolved = resolveChecklistItem(item);
         var prioHtml = '';
-        var metaHtml = '';
-        if (resolved.meta) {
-          if (resolved.meta.prio) {
-            var prio = PRIORITY_LABELS[resolved.meta.prio] || {th: resolved.meta.prio, cls:'prio-normal'};
-            prioHtml = '<span class="meta-badge '+prio.cls+'">'+escapeHtml(prio.th)+'</span>';
-          }
-          var tobuyLabel = checked ? 'ซื้อครบแล้ว' : ('ต้องซื้อ' + (resolved.meta.toBuy ? ' ' + resolved.meta.toBuy + ' ชิ้น' : ''));
-          metaHtml =
-            '<div class="item-meta">'+
-              (resolved.meta.age ? '<span class="meta-badge age">อายุ '+escapeHtml(resolved.meta.age)+'</span>' : '')+
-              '<span class="meta-badge tobuy'+(checked?' done':'')+'">'+escapeHtml(tobuyLabel)+'</span>'+
-            '</div>';
+        if (resolved.meta && resolved.meta.prio) {
+          var prio = PRIORITY_LABELS[resolved.meta.prio] || {th: resolved.meta.prio, cls:'prio-normal'};
+          prioHtml = '<span class="meta-badge '+prio.cls+'">'+escapeHtml(prio.th)+'</span>';
         }
+        var ageVal = (resolved.meta && resolved.meta.age) ? resolved.meta.age : '';
+        var qtyVal = (resolved.meta && resolved.meta.toBuy !== null && resolved.meta.toBuy !== undefined) ? resolved.meta.toBuy : '';
+        var tobuyHtml = checked
+          ? '<span class="meta-badge tobuy done">ซื้อครบแล้ว</span>'
+          : ('<span class="meta-badge tobuy qty-edit">ต้องซื้อ '+
+              '<input class="qty-input" type="number" min="0" inputmode="numeric" placeholder="-" value="'+escapeHtml(String(qtyVal))+'">'+
+              ' ชิ้น</span>');
+        var metaHtml =
+          '<div class="item-meta">'+
+            (ageVal ? '<span class="meta-badge age">อายุ '+escapeHtml(ageVal)+'</span>' : '')+
+            tobuyHtml+
+          '</div>';
 
         var priceVal = (item.Price !== undefined && item.Price !== null && item.Price !== '') ? item.Price : '';
         var priceHtml =
@@ -1496,7 +1522,7 @@
             prioHtml+
           '</div>'+
           '<div class="item-main">'+
-            '<span class="item-name">'+escapeHtml(resolved.name)+'</span>'+
+            '<input class="item-name-input" type="text" value="'+escapeHtml(item.Item||'')+'">'+
             metaHtml+
           '</div>'+
           priceHtml+
@@ -1507,6 +1533,32 @@
         row.querySelector('.del-btn').onclick = function(){
           apiPost('deleteChecklistItem', {id:item.ID}).then(refresh);
         };
+
+        var nameInput = row.querySelector('.item-name-input');
+        nameInput.addEventListener('click', function(e){ e.stopPropagation(); });
+        nameInput.addEventListener('keydown', function(e){ if (e.key==='Enter') nameInput.blur(); });
+        nameInput.addEventListener('change', function(){
+          var val = nameInput.value.trim();
+          if (!val) { nameInput.value = item.Item || ''; return; }
+          apiPost('setChecklistName', {id:item.ID, name: val}).then(function(res){
+            if (!res || !res.ok) { showBanner('บันทึกชื่อไม่สำเร็จ ลองใหม่อีกครั้ง'); nameInput.value = item.Item || ''; return; }
+            item.Item = val;
+          }).catch(function(){ showBanner('บันทึกชื่อไม่สำเร็จ ลองใหม่อีกครั้ง'); nameInput.value = item.Item || ''; });
+        });
+
+        var qtyInput = row.querySelector('.qty-input');
+        if (qtyInput) {
+          qtyInput.addEventListener('click', function(e){ e.stopPropagation(); });
+          qtyInput.addEventListener('keydown', function(e){ if (e.key==='Enter') qtyInput.blur(); });
+          qtyInput.addEventListener('change', function(){
+            var val = qtyInput.value.trim();
+            apiPost('setChecklistQty', {id:item.ID, qty: val}).then(function(res){
+              if (!res || !res.ok) { showBanner('บันทึกจำนวนไม่สำเร็จ ลองใหม่อีกครั้ง'); return; }
+              item.Qty = val;
+            }).catch(function(){ showBanner('บันทึกจำนวนไม่สำเร็จ ลองใหม่อีกครั้ง'); });
+          });
+        }
+
         var priceInput = row.querySelector('.price-input');
         priceInput.addEventListener('click', function(e){ e.stopPropagation(); });
         priceInput.addEventListener('change', function(){
@@ -1650,12 +1702,16 @@
       var panel = el('div','add-panel');
       var todayVal = epochDayToInputValue(localTodayEpochDay());
       panel.innerHTML =
+        '<span class="field-label">ชื่อค่าใช้จ่าย</span>'+
+        '<input class="field" id="exp-name" placeholder="เช่น ค่าฝากครรภ์">'+
         '<span class="field-label">หมวดหมู่</span>'+
         dropdownWithAddHtml('exp-cat', getKnownExpenseCategories(), 'พิมพ์หมวดหมู่ใหม่')+
         '<span class="field-label">วันที่จ่าย</span>'+
         '<input class="field" id="exp-date" type="date" value="'+todayVal+'">'+
         '<span class="field-label">ราคา</span>'+
         '<input class="field" id="exp-price" type="text" inputmode="decimal" placeholder="เช่น 350">'+
+        '<span class="field-label">รายละเอียด (ไม่บังคับ)</span>'+
+        '<textarea class="field" id="exp-note" rows="2" placeholder="รายละเอียดเพิ่มเติม เช่น จ่ายที่ รพ. ไหน"></textarea>'+
         '<div class="add-panel-actions">'+
           '<button class="btn btn-secondary" id="exp-cancel" type="button">ยกเลิก</button>'+
           '<button class="btn btn-primary" id="exp-save" type="button">เพิ่ม</button>'+
@@ -1664,12 +1720,15 @@
       wireDropdownWithAdd('exp-cat');
       panel.querySelector('#exp-cancel').onclick = function(){ openAddPanel=null; renderView(); };
       panel.querySelector('#exp-save').onclick = function(){
+        var name = document.getElementById('exp-name').value.trim();
         var cat = readDropdownWithAdd('exp-cat');
         var dateVal = document.getElementById('exp-date').value;
         var price = document.getElementById('exp-price').value.trim();
+        var note = document.getElementById('exp-note').value.trim();
+        if (!name) { showBanner('กรุณาใส่ชื่อค่าใช้จ่าย'); return; }
         if (!price) { showBanner('กรุณาใส่ราคา'); return; }
         var dateEpoch = dateVal ? dateStrToEpochDay(dateVal) : '';
-        apiPost('addExpense', {category:cat, date:dateEpoch, price:price, addedBy:who}).then(function(res){
+        apiPost('addExpense', {name:name, category:cat, date:dateEpoch, price:price, note:note, addedBy:who}).then(function(res){
           if (!res || !res.ok) { showBanner('บันทึกไม่สำเร็จ: ' + ((res && res.error) || '')); return; }
           openAddPanel = null;
           refresh();
@@ -1701,8 +1760,12 @@
       var priceLabel = isFinite(priceNum) ? '฿'+priceNum.toLocaleString('th-TH') : '฿'+escapeHtml(String(item.Price||''));
       row.innerHTML =
         '<div class="expense-main">'+
-          '<span class="expense-date">'+escapeHtml(dateLabel)+'</span>'+
-          (item.Category ? '<span class="expense-cat">'+escapeHtml(item.Category)+'</span>' : '')+
+          '<span class="expense-name">'+escapeHtml(item.Name || '(ไม่มีชื่อ)')+'</span>'+
+          '<div class="expense-meta">'+
+            '<span class="expense-date">'+escapeHtml(dateLabel)+'</span>'+
+            (item.Category ? '<span class="expense-cat">'+escapeHtml(item.Category)+'</span>' : '')+
+          '</div>'+
+          (item.Note ? '<div class="expense-note">'+escapeHtml(item.Note)+'</div>' : '')+
         '</div>'+
         '<span class="expense-price">'+priceLabel+'</span>'+
         '<button class="icon-btn del-btn" type="button" aria-label="ลบ" title="ลบ">'+trashIcon()+'</button>';
