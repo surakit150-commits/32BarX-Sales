@@ -415,6 +415,7 @@
     display:flex;justify-content:space-between;gap:10px;align-items:center;
   }
   .banner button{background:none;border:none;color:inherit;font-weight:700;cursor:pointer;font-size:12px;}
+  .banner-actions{display:flex;gap:12px;flex:none;}
   [hidden]{display:none!important;}
 
   @media (min-width:480px){
@@ -456,7 +457,7 @@
 
     <header class="topbar">
       <div class="hero-row">
-        <div class="brand-title">ลลิลลิล<span class="brand-sub">records<span class="version-badge">V1.2</span></span></div>
+        <div class="brand-title">ลลิลลิล<span class="brand-sub">records<span class="version-badge">V1.3</span></span></div>
         <div class="week-block">
           <span class="week-num" id="week-num">—<span class="unit">สัปดาห์</span></span>
           <span class="week-days" id="week-days"></span>
@@ -731,7 +732,10 @@
 
   // ---------------- API ----------------
   function apiGet(){
-    return fetch(apiUrl + '?action=getAll').then(function(r){ return r.json(); });
+    return fetch(apiUrl + '?action=getAll').then(function(r){
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
   }
   function apiPost(action, data){
     var body = Object.assign({action: action}, data || {});
@@ -739,7 +743,20 @@
       method:'POST',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify(body)
-    }).then(function(r){ return r.json(); });
+    }).then(function(r){
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+  }
+  // เรียก fn (ที่ return Promise) ซ้ำอัตโนมัติสูงสุด attempts ครั้งถ้าล้มเหลว โดยเว้นระยะห่างขึ้นเรื่อยๆ
+  // เผื่อกรณี Google Apps Script เพิ่งตื่นจากโหมดพัก (cold start) หรือเพิ่ง deploy เวอร์ชันใหม่แล้วยังไม่พร้อม
+  // ใช้งานเต็มที่ทันที ซึ่งเป็นเรื่องปกติของแพลตฟอร์มนี้ — ไม่ต้องให้ผู้ใช้ปิดเปิดแอปเองทุกครั้ง
+  function withRetry(fn, attempts, delayMs){
+    return fn().catch(function(err){
+      if (attempts <= 1) throw err;
+      return new Promise(function(resolve){ setTimeout(resolve, delayMs); })
+        .then(function(){ return withRetry(fn, attempts - 1, delayMs * 1.7); });
+    });
   }
   function saveSettings(obj){
     var keys = Object.keys(obj);
@@ -775,26 +792,47 @@
     return p;
   }
 
-  function showBanner(msg){
+  // retryFn (ไม่บังคับ): ถ้าใส่มา จะมีปุ่ม "ลองใหม่" โผล่มาให้กดเรียกซ้ำได้ทันทีโดยไม่ต้องปิดเปิดแอป
+  function showBanner(msg, retryFn){
     var root = document.getElementById('view-root');
     var b = document.createElement('div');
     b.className = 'banner';
-    b.innerHTML = '<span>'+msg+'</span><button type="button">ปิด</button>';
-    b.querySelector('button').onclick = function(){ b.remove(); };
+    b.innerHTML = '<span>'+msg+'</span>';
+    var actions = document.createElement('div');
+    actions.className = 'banner-actions';
+    if (retryFn) {
+      var retryBtn = document.createElement('button');
+      retryBtn.type = 'button';
+      retryBtn.textContent = 'ลองใหม่';
+      retryBtn.onclick = function(){ b.remove(); retryFn(); };
+      actions.appendChild(retryBtn);
+    }
+    var closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.textContent = 'ปิด';
+    closeBtn.onclick = function(){ b.remove(); };
+    actions.appendChild(closeBtn);
+    b.appendChild(actions);
     root.prepend(b);
   }
 
   function refresh(){
-    return apiGet().then(function(data){
+    // ลองซ้ำอัตโนมัติ 3 ครั้งก่อนจะถือว่าล้มเหลวจริง (เว้นระยะ ~1.5s, ~2.6s) เพราะ Google Apps Script
+    // มักเจอ cold start หรืออยู่ระหว่าง deploy เวอร์ชันใหม่ ทำให้ request แรกๆ พังได้บ่อยโดยไม่ใช่ปัญหาถาวร
+    return withRetry(apiGet, 3, 1500).then(function(data){
       if (data && data.ok) {
         state = data;
         renderTopbar();
         renderView();
       } else {
-        showBanner('โหลดข้อมูลไม่สำเร็จ: ' + (data && data.error ? data.error : 'ไม่ทราบสาเหตุ'));
+        showBanner('โหลดข้อมูลไม่สำเร็จ: ' + (data && data.error ? data.error : 'ไม่ทราบสาเหตุ'), refresh);
       }
     }).catch(function(err){
-      showBanner('เชื่อมต่อ Google Sheet ไม่ได้ ตรวจสอบ URL หรือการเชื่อมต่ออินเทอร์เน็ต');
+      showBanner(
+        'เชื่อมต่อ Google Sheet ไม่ได้ (ลองอัตโนมัติให้แล้วหลายครั้ง) — ส่วนใหญ่เกิดจาก Apps Script เพิ่งตื่นจากโหมดพัก ' +
+        'หรือเพิ่งกด deploy เวอร์ชันใหม่แล้วยังไม่พร้อมเต็มที่ (รอ 1-2 นาทีแล้วลองใหม่) หรือยังไม่ได้กด Allow สิทธิ์ที่ขอเพิ่มตอน deploy ล่าสุด',
+        refresh
+      );
     });
   }
 
