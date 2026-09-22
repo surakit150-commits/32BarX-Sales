@@ -731,19 +731,36 @@
   ];
 
   // ---------------- API ----------------
+  // fetch เดิมไม่มี timeout เลย — ถ้า Apps Script ค้าง (เช่น cold start หนักๆ หรือรอ lock)
+  // เบราว์เซอร์จะรอเงียบๆ ได้นานเป็นนาทีโดยไม่มีอะไรเกิดขึ้นเลย ทำให้ดูเหมือน "ค้าง"
+  // ใส่ timeout ให้ยกเลิก request เองถ้านานเกินไป จะได้เข้ากลไก retry ที่มีอยู่แล้วเร็วขึ้น
+  function fetchWithTimeout(url, options, timeoutMs){
+    var controller = ('AbortController' in window) ? new AbortController() : null;
+    var opts = Object.assign({}, options || {});
+    if (controller) opts.signal = controller.signal;
+    var timer = controller ? setTimeout(function(){ controller.abort(); }, timeoutMs) : null;
+    return fetch(url, opts).then(function(r){
+      if (timer) clearTimeout(timer);
+      return r;
+    }).catch(function(err){
+      if (timer) clearTimeout(timer);
+      if (err && err.name === 'AbortError') throw new Error('หมดเวลาเชื่อมต่อ (timeout)');
+      throw err;
+    });
+  }
   function apiGet(){
-    return fetch(apiUrl + '?action=getAll').then(function(r){
+    return fetchWithTimeout(apiUrl + '?action=getAll', {}, 20000).then(function(r){
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     });
   }
   function apiPost(action, data){
     var body = Object.assign({action: action}, data || {});
-    return fetch(apiUrl, {
+    return fetchWithTimeout(apiUrl, {
       method:'POST',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify(body)
-    }).then(function(r){
+    }, 20000).then(function(r){
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     });
@@ -1197,9 +1214,21 @@
       panel.querySelector('#act-save').onclick = function(){
         var type = document.getElementById('act-type').value;
         var note = document.getElementById('act-note').value.trim();
-        apiPost('addActivity', {type:type, note:note, loggedBy:who}).then(function(){
-          openAddPanel = null;
-          refresh();
+        // บันทึกแบบ optimistic: ใส่ลงหน้าจอทันที ไม่ต้องรอ network เพื่อไม่ให้รู้สึกค้าง
+        var tempId = 'tmp-'+Date.now();
+        var tempItem = {ID:tempId, Timestamp:new Date().toISOString(), Type:type, Note:note, LoggedBy:who};
+        state.activities = state.activities || [];
+        state.activities.push(tempItem);
+        openAddPanel = null;
+        renderView();
+        apiPost('addActivity', {type:type, note:note, loggedBy:who}).then(function(res){
+          if (!res || !res.ok) throw new Error('add failed');
+          if (res.id) tempItem.ID = res.id;
+        }).catch(function(){
+          var idx = state.activities.indexOf(tempItem);
+          if (idx > -1) state.activities.splice(idx, 1);
+          renderView();
+          showBanner('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง');
         });
       };
     }
@@ -1224,7 +1253,18 @@
         '</div>'+
         '<button class="icon-btn del-btn" type="button" aria-label="ลบ" title="ลบ">'+trashIcon()+'</button>';
       row.querySelector('.del-btn').onclick = function(){
-        apiPost('deleteActivity', {id:item.ID}).then(refresh);
+        // ลบแบบ optimistic: เอาออกจากหน้าจอทันทีโดยไม่รอ network เพื่อไม่ให้รู้สึกค้าง
+        // ถ้าฝั่งเซิร์ฟเวอร์ลบไม่สำเร็จ ค่อยเอากลับมาใส่คืน
+        var idx = (state.activities||[]).indexOf(item);
+        if (idx > -1) state.activities.splice(idx, 1);
+        renderView();
+        apiPost('deleteActivity', {id:item.ID}).then(function(res){
+          if (!res || !res.ok) throw new Error('delete failed');
+        }).catch(function(){
+          if (idx > -1) state.activities.splice(idx, 0, item);
+          renderView();
+          showBanner('ลบไม่สำเร็จ ลองใหม่อีกครั้ง');
+        });
       };
       list.appendChild(row);
     });
@@ -1415,9 +1455,20 @@
         var qty = document.getElementById('item-qty').value.trim();
         var price = document.getElementById('item-price').value.trim();
         if (!name) return;
-        apiPost('addChecklistItem', {item:name, category:cat, addedBy:who, age:age, priority:prio, qty:qty, price:price}).then(function(){
-          openAddPanel = null;
-          refresh();
+        var tempId = 'tmp-'+Date.now();
+        var tempItem = {ID:tempId, Item:name, Category:cat, Done:false, AddedBy:who, Timestamp:new Date().toISOString(), Price:price, Age:age, Priority:prio, Qty:qty};
+        state.checklist = state.checklist || [];
+        state.checklist.push(tempItem);
+        openAddPanel = null;
+        renderView();
+        apiPost('addChecklistItem', {item:name, category:cat, addedBy:who, age:age, priority:prio, qty:qty, price:price}).then(function(res){
+          if (!res || !res.ok) throw new Error('add failed');
+          if (res.id) tempItem.ID = res.id;
+        }).catch(function(){
+          var idx = state.checklist.indexOf(tempItem);
+          if (idx > -1) state.checklist.splice(idx, 1);
+          renderView();
+          showBanner('เพิ่มรายการไม่สำเร็จ ลองใหม่อีกครั้ง');
         });
       };
     }
@@ -1566,10 +1617,29 @@
           priceHtml+
           '<button class="icon-btn del-btn" type="button" aria-label="ลบ" title="ลบ">'+trashIcon()+'</button>';
         row.querySelector('.checkbox').onclick = function(){
-          apiPost('toggleChecklist', {id:item.ID, done: !checked}).then(refresh);
+          var newDone = !checked;
+          var prevDone = item.Done;
+          item.Done = newDone; // optimistic
+          renderView();
+          apiPost('toggleChecklist', {id:item.ID, done: newDone}).then(function(res){
+            if (!res || !res.ok) throw new Error('toggle failed');
+          }).catch(function(){
+            item.Done = prevDone;
+            renderView();
+            showBanner('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง');
+          });
         };
         row.querySelector('.del-btn').onclick = function(){
-          apiPost('deleteChecklistItem', {id:item.ID}).then(refresh);
+          var idx = (state.checklist||[]).indexOf(item);
+          if (idx > -1) state.checklist.splice(idx, 1);
+          renderView();
+          apiPost('deleteChecklistItem', {id:item.ID}).then(function(res){
+            if (!res || !res.ok) throw new Error('delete failed');
+          }).catch(function(){
+            if (idx > -1) state.checklist.splice(idx, 0, item);
+            renderView();
+            showBanner('ลบไม่สำเร็จ ลองใหม่อีกครั้ง');
+          });
         };
 
         var nameInput = row.querySelector('.item-name-input');
@@ -1655,9 +1725,20 @@
       panel.querySelector('#q-save').onclick = function(){
         var text = document.getElementById('q-text').value.trim();
         if (!text) return;
-        apiPost('addQuestion', {question:text, askedBy:who}).then(function(){
-          openAddPanel=null;
-          refresh();
+        var tempId = 'tmp-'+Date.now();
+        var tempItem = {ID:tempId, Question:text, Answered:false, Answer:'', AskedBy:who, Timestamp:new Date().toISOString(), AnsweredAt:''};
+        state.questions = state.questions || [];
+        state.questions.push(tempItem);
+        openAddPanel=null;
+        renderView();
+        apiPost('addQuestion', {question:text, askedBy:who}).then(function(res){
+          if (!res || !res.ok) throw new Error('add failed');
+          if (res.id) tempItem.ID = res.id;
+        }).catch(function(){
+          var idx = state.questions.indexOf(tempItem);
+          if (idx > -1) state.questions.splice(idx, 1);
+          renderView();
+          showBanner('เพิ่มคำถามไม่สำเร็จ ลองใหม่อีกครั้ง');
         });
       };
     }
@@ -1698,17 +1779,48 @@
         saveBtn.onclick = function(){
           var v = form.querySelector('input').value.trim();
           if (!v) return;
-          apiPost('answerQuestion', {id:item.ID, answer:v}).then(refresh);
+          var prevAnswered = item.Answered, prevAnswer = item.Answer;
+          item.Answered = true; item.Answer = v; // optimistic
+          renderView();
+          apiPost('answerQuestion', {id:item.ID, answer:v}).then(function(res){
+            if (!res || !res.ok) throw new Error('answer failed');
+          }).catch(function(){
+            item.Answered = prevAnswered; item.Answer = prevAnswer;
+            renderView();
+            showBanner('บันทึกคำตอบไม่สำเร็จ ลองใหม่อีกครั้ง');
+          });
         };
         card.appendChild(form);
       } else {
         var reopenBtn = el('button','btn-ghost','เปิดใหม่');
-        reopenBtn.onclick = function(){ apiPost('reopenQuestion', {id:item.ID}).then(refresh); };
+        reopenBtn.onclick = function(){
+          var prevAnswered = item.Answered;
+          item.Answered = false; // optimistic
+          renderView();
+          apiPost('reopenQuestion', {id:item.ID}).then(function(res){
+            if (!res || !res.ok) throw new Error('reopen failed');
+          }).catch(function(){
+            item.Answered = prevAnswered;
+            renderView();
+            showBanner('เปิดใหม่ไม่สำเร็จ ลองใหม่อีกครั้ง');
+          });
+        };
         actions.appendChild(reopenBtn);
       }
       var delBtn = el('button','btn-ghost','ลบคำถาม');
       delBtn.style.color = 'var(--danger)';
-      delBtn.onclick = function(){ apiPost('deleteQuestion', {id:item.ID}).then(refresh); };
+      delBtn.onclick = function(){
+        var idx = (state.questions||[]).indexOf(item);
+        if (idx > -1) state.questions.splice(idx, 1);
+        renderView();
+        apiPost('deleteQuestion', {id:item.ID}).then(function(res){
+          if (!res || !res.ok) throw new Error('delete failed');
+        }).catch(function(){
+          if (idx > -1) state.questions.splice(idx, 0, item);
+          renderView();
+          showBanner('ลบไม่สำเร็จ ลองใหม่อีกครั้ง');
+        });
+      };
       actions.appendChild(delBtn);
       card.appendChild(actions);
 
@@ -1766,11 +1878,21 @@
         if (!name) { showBanner('กรุณาใส่ชื่อค่าใช้จ่าย'); return; }
         if (!price) { showBanner('กรุณาใส่ราคา'); return; }
         var dateEpoch = dateVal ? dateStrToEpochDay(dateVal) : '';
+        var tempId = 'tmp-'+Date.now();
+        var tempItem = {ID:tempId, Category:cat, Date:String(dateEpoch), Price:price, AddedBy:who, Timestamp:new Date().toISOString(), Name:name, Note:note};
+        state.expenses = state.expenses || [];
+        state.expenses.push(tempItem);
+        openAddPanel = null;
+        renderView();
         apiPost('addExpense', {name:name, category:cat, date:dateEpoch, price:price, note:note, addedBy:who}).then(function(res){
-          if (!res || !res.ok) { showBanner('บันทึกไม่สำเร็จ: ' + ((res && res.error) || '')); return; }
-          openAddPanel = null;
-          refresh();
-        }).catch(function(){ showBanner('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'); });
+          if (!res || !res.ok) throw new Error((res && res.error) || 'add failed');
+          if (res.id) tempItem.ID = res.id;
+        }).catch(function(err){
+          var idx = state.expenses.indexOf(tempItem);
+          if (idx > -1) state.expenses.splice(idx, 1);
+          renderView();
+          showBanner('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง' + (err && err.message ? (': '+err.message) : ''));
+        });
       };
     }
 
@@ -1808,7 +1930,16 @@
         '<span class="expense-price">'+priceLabel+'</span>'+
         '<button class="icon-btn del-btn" type="button" aria-label="ลบ" title="ลบ">'+trashIcon()+'</button>';
       row.querySelector('.del-btn').onclick = function(){
-        apiPost('deleteExpense', {id:item.ID}).then(refresh);
+        var idx = (state.expenses||[]).indexOf(item);
+        if (idx > -1) state.expenses.splice(idx, 1);
+        renderView();
+        apiPost('deleteExpense', {id:item.ID}).then(function(res){
+          if (!res || !res.ok) throw new Error('delete failed');
+        }).catch(function(){
+          if (idx > -1) state.expenses.splice(idx, 0, item);
+          renderView();
+          showBanner('ลบไม่สำเร็จ ลองใหม่อีกครั้ง');
+        });
       };
       list.appendChild(row);
     });
