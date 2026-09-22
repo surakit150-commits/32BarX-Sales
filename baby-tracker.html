@@ -10,21 +10,21 @@
 <style>
   html,body{margin:0;padding:0;height:100%;}
   :root{
-    --bg:#F4F6F2;
+    --bg:#FFF7F9;
     --surface:#FFFFFF;
-    --surface-2:#EBF0E7;
-    --border:#DCE3D8;
-    --text:#22312A;
-    --text-muted:#5E6F65;
-    --accent:#4C7A92;      /* พ่อ */
-    --accent-2:#C97A63;    /* แม่ */
-    --accent-soft:#E3ECE8;
-    --good:#4C8A57;
-    --good-soft:#E1EEE0;
-    --warn:#C98A3D;
-    --warn-soft:#F5E8D3;
-    --danger:#B8574A;
-    --shadow: 0 1px 2px rgba(30,45,35,0.06), 0 4px 14px rgba(30,45,35,0.07);
+    --surface-2:#FDEDF2;
+    --border:#F6D9E3;
+    --text:#4A2E38;
+    --text-muted:#A5808C;
+    --accent:#E27A9B;      /* พ่อ / สีหลักของธีม */
+    --accent-2:#F0A868;    /* แม่ / สีคู่สำหรับไล่เฉด */
+    --accent-soft:#FBE2EA;
+    --good:#6FAE8E;
+    --good-soft:#E3F1E9;
+    --warn:#DDA246;
+    --warn-soft:#FAEFD9;
+    --danger:#D6555F;
+    --shadow: 0 1px 2px rgba(178,60,100,0.07), 0 4px 14px rgba(178,60,100,0.08);
     --radius-lg:20px;
     --radius-md:14px;
     --radius-sm:10px;
@@ -32,38 +32,38 @@
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --bg:#10140F;
-      --surface:#1A2118;
-      --surface-2:#212B1E;
-      --border:#324033;
-      --text:#EAF0E6;
-      --text-muted:#9FB29B;
-      --accent:#84B7CC;
-      --accent-2:#E4A491;
-      --accent-soft:#22302B;
-      --good:#7FC988;
-      --good-soft:#1D2E1F;
-      --warn:#E0AE6C;
-      --warn-soft:#2E2717;
-      --danger:#E28E80;
+      --bg:#251720;
+      --surface:#2F1E28;
+      --surface-2:#3B2530;
+      --border:#4D2F3B;
+      --text:#F9E7EE;
+      --text-muted:#CB9CAC;
+      --accent:#F0A0BB;
+      --accent-2:#F5BE85;
+      --accent-soft:#3F2531;
+      --good:#8DCBAB;
+      --good-soft:#233527;
+      --warn:#E7C081;
+      --warn-soft:#3A2E1C;
+      --danger:#EC8B92;
       --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.35);
     }
   }
   :root[data-theme="dark"]{
-    --bg:#10140F;
-    --surface:#1A2118;
-    --surface-2:#212B1E;
-    --border:#324033;
-    --text:#EAF0E6;
-    --text-muted:#9FB29B;
-    --accent:#84B7CC;
-    --accent-2:#E4A491;
-    --accent-soft:#22302B;
-    --good:#7FC988;
-    --good-soft:#1D2E1F;
-    --warn:#E0AE6C;
-    --warn-soft:#2E2717;
-    --danger:#E28E80;
+    --bg:#251720;
+    --surface:#2F1E28;
+    --surface-2:#3B2530;
+    --border:#4D2F3B;
+    --text:#F9E7EE;
+    --text-muted:#CB9CAC;
+    --accent:#F0A0BB;
+    --accent-2:#F5BE85;
+    --accent-soft:#3F2531;
+    --good:#8DCBAB;
+    --good-soft:#233527;
+    --warn:#E7C081;
+    --warn-soft:#3A2E1C;
+    --danger:#EC8B92;
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.35);
   }
 
@@ -143,29 +143,36 @@
   #main-app{display:flex;flex-direction:column;min-height:100vh;}
   .topbar{
     position:relative;
-    padding:calc(16px + env(safe-area-inset-top,0px)) 20px 16px;
+    padding:calc(16px + 1cm + env(safe-area-inset-top,0px)) 20px 16px;
     background:var(--surface);
     border-bottom:1px solid var(--border);
   }
   .version-badge{
-    position:absolute;
-    top:calc(10px + env(safe-area-inset-top,0px));
-    right:14px;
-    font-size:10.5px;font-weight:700;letter-spacing:0.03em;
-    color:var(--text-muted);
-    background:var(--surface-2);
-    padding:3px 8px;border-radius:99px;
+    display:inline-block;vertical-align:middle;margin-left:6px;
+    font-size:10px;font-weight:700;letter-spacing:0.03em;
+    color:var(--accent-2);
+    background:var(--accent-soft);
+    padding:2.5px 8px;border-radius:99px;
     font-variant-numeric:tabular-nums;
   }
-  .week-hero{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .hero-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+  .brand-title{
+    font-family:'Mitr',sans-serif;font-weight:700;font-size:25px;
+    line-height:1.2;color:var(--accent);
+  }
+  .brand-sub{
+    display:block;font-size:12px;font-weight:600;color:var(--accent-2);
+    letter-spacing:0.03em;margin-top:2px;
+  }
+  .week-block{flex:none;text-align:right;}
   .week-num{
-    font-family:'Mitr',sans-serif;font-weight:700;font-size:40px;
+    font-family:'Mitr',sans-serif;font-weight:700;font-size:30px;
     line-height:1;color:var(--accent);
     font-variant-numeric:tabular-nums;
   }
-  .week-num .unit{font-size:16px;font-weight:600;color:var(--text-muted);margin-left:6px;}
-  .week-days{font-size:14px;font-weight:600;color:var(--text-muted);}
-  .week-sub{font-size:12.5px;color:var(--text-muted);margin-top:4px;width:100%;}
+  .week-num .unit{font-size:13px;font-weight:600;color:var(--text-muted);margin-left:4px;}
+  .week-days{display:block;font-size:13px;font-weight:600;color:var(--text-muted);margin-top:3px;}
+  .week-sub{display:block;font-size:11.5px;color:var(--text-muted);margin-top:2px;}
   .due-part{
     margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);
     display:flex;justify-content:space-between;align-items:baseline;gap:10px;
@@ -191,6 +198,27 @@
     text-align:center;padding:36px 16px;color:var(--text-muted);font-size:14px;
     display:flex;flex-direction:column;align-items:center;gap:8px;
   }
+
+  /* Overview photo thumbnail (อัปโหลดรูป) */
+  .photo-upload-wrap{display:flex;justify-content:center;margin:4px 0 18px;}
+  .photo-circle{
+    position:relative;width:132px;height:132px;border-radius:50%;
+    background:var(--accent-soft);border:2.5px dashed var(--border);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    cursor:pointer;overflow:hidden;flex:none;color:var(--accent);
+  }
+  .photo-circle[data-has-photo="true"]{border-style:solid;border-color:var(--accent);}
+  .photo-circle img{width:100%;height:100%;object-fit:cover;display:block;}
+  .photo-placeholder{display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 12px;text-align:center;}
+  .photo-placeholder svg{width:28px;height:28px;}
+  .photo-placeholder span{font-size:11.5px;font-weight:600;line-height:1.3;}
+  .photo-edit-badge{
+    position:absolute;right:4px;bottom:4px;width:32px;height:32px;border-radius:50%;
+    background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;
+    border:2.5px solid var(--surface);
+  }
+  .photo-edit-badge svg{width:15px;height:15px;}
+  .photo-circle[data-uploading="true"]{opacity:0.6;pointer-events:none;}
 
   /* size-compare card */
   .size-card{padding:20px;display:flex;gap:16px;align-items:center;margin-bottom:14px;}
@@ -413,11 +441,13 @@
   <div id="main-app" hidden>
 
     <header class="topbar">
-      <span class="version-badge">V1.2</span>
-      <div class="week-hero">
-        <span class="week-num" id="week-num">—<span class="unit">สัปดาห์</span></span>
-        <span class="week-days" id="week-days"></span>
-        <span class="week-sub" id="week-sub">Hello World !!!</span>
+      <div class="hero-row">
+        <div class="brand-title">ลลิลลิล<span class="brand-sub">records<span class="version-badge">V1.2</span></span></div>
+        <div class="week-block">
+          <span class="week-num" id="week-num">—<span class="unit">สัปดาห์</span></span>
+          <span class="week-days" id="week-days"></span>
+          <span class="week-sub" id="week-sub"></span>
+        </div>
       </div>
       <div class="due-part">
         <span class="due-part-label">กำหนดคลอด</span>
@@ -473,6 +503,7 @@
   var prepActiveCat = 'all'; // which checklist category tab is selected
   var prepActivePrio = 'all'; // which priority level filter is selected ('all' | 'Highest' | 'High' | 'Normal')
   var prepHideDone = false; // whether to hide already-bought checklist items
+  var overviewEditOpen = false; // whether the "แก้ไขอายุครรภ์/กำหนดคลอด" panel is expanded (closed by default)
 
   try { apiUrl = localStorage.getItem(LS_URL); who = localStorage.getItem(LS_WHO); } catch(e){}
 
@@ -924,6 +955,8 @@
     var h = el('h2','section-title','ภาพรวม');
     root.appendChild(h);
 
+    renderPhotoUpload(root);
+
     if (!info){
       root.appendChild(pregnancySetupCard());
       return;
@@ -945,7 +978,85 @@
       root.appendChild(stats);
     }
 
-    root.appendChild(pregnancySetupCard(true));
+    var editToggle = el('button','add-toggle', overviewEditOpen ? 'ซ่อนการแก้ไขอายุครรภ์ / กำหนดคลอด' : '+ แก้ไขอายุครรภ์ / กำหนดคลอด');
+    editToggle.onclick = function(){ overviewEditOpen = !overviewEditOpen; renderView(); };
+    root.appendChild(editToggle);
+    if (overviewEditOpen){
+      root.appendChild(pregnancySetupCard(true));
+    }
+  }
+
+  // Thumbnail วงกลมตรงกลางหน้าภาพรวม — แตะเพื่ออัปโหลดรูป (เก็บไฟล์จริงไว้ใน Drive ผ่าน backend)
+  function renderPhotoUpload(root){
+    var photoUrl = (state.settings && state.settings.ProfilePhotoUrl) || '';
+    var wrap = el('div','photo-upload-wrap');
+    wrap.innerHTML =
+      '<label class="photo-circle" id="photo-circle" data-has-photo="'+(photoUrl?'true':'false')+'">'+
+        '<img id="photo-img" alt="รูปภาพ" src="'+escapeHtml(photoUrl)+'" style="display:'+(photoUrl?'block':'none')+'">'+
+        '<span class="photo-placeholder" id="photo-placeholder" style="display:'+(photoUrl?'none':'flex')+'">'+
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8a2 2 0 012-2h2l1.5-2h5L16 6h2a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V8z"/><circle cx="12" cy="13" r="3.5"/></svg>'+
+          '<span>เพิ่มรูปภาพ</span>'+
+        '</span>'+
+        '<span class="photo-edit-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>'+
+        '<input type="file" accept="image/*" id="photo-input" style="display:none">'+
+      '</label>';
+    root.appendChild(wrap);
+
+    var circle = wrap.querySelector('#photo-circle');
+    var imgEl = wrap.querySelector('#photo-img');
+    var placeholderEl = wrap.querySelector('#photo-placeholder');
+    var input = wrap.querySelector('#photo-input');
+
+    input.onchange = function(){
+      var file = input.files && input.files[0];
+      if (!file) return;
+      resizeImageToDataUrl(file, 480, 0.82).then(function(dataUrl){
+        // อัปเดตหน้าจอให้เห็นรูปทันที (optimistic) แล้วค่อยอัปโหลดขึ้น Drive เบื้องหลัง
+        imgEl.src = dataUrl;
+        imgEl.style.display = 'block';
+        placeholderEl.style.display = 'none';
+        circle.setAttribute('data-has-photo','true');
+        circle.setAttribute('data-uploading','true');
+        apiPost('uploadPhoto', {dataUrl:dataUrl}).then(function(res){
+          circle.removeAttribute('data-uploading');
+          if (!res || !res.ok) { showBanner('อัปโหลดรูปไม่สำเร็จ: ' + ((res && res.error) || '')); return; }
+          state.settings = state.settings || {};
+          state.settings.ProfilePhotoUrl = res.url;
+        }).catch(function(){
+          circle.removeAttribute('data-uploading');
+          showBanner('อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง');
+        });
+      }).catch(function(){
+        showBanner('ไม่สามารถอ่านไฟล์รูปภาพนี้ได้');
+      });
+      input.value = ''; // เผื่อเลือกไฟล์เดิมซ้ำในครั้งถัดไป จะได้ trigger onchange อีก
+    };
+  }
+
+  // ย่อ/บีบอัดรูปฝั่งเบราว์เซอร์ก่อนส่งขึ้นเซิร์ฟเวอร์ (จำกัดด้านยาวสุดไม่เกิน maxDim พิกเซล
+  // และแปลงเป็น JPEG ตาม quality ที่กำหนด) เพื่อให้อัปโหลดเร็วและไม่โดนจำกัดขนาด payload ของ Apps Script
+  function resizeImageToDataUrl(file, maxDim, quality){
+    return new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onerror = function(){ reject(new Error('read failed')); };
+      reader.onload = function(){
+        var img = new Image();
+        img.onerror = function(){ reject(new Error('decode failed')); };
+        img.onload = function(){
+          var w = img.width, h = img.height;
+          var scale = Math.min(1, maxDim / Math.max(w, h));
+          var outW = Math.max(1, Math.round(w * scale));
+          var outH = Math.max(1, Math.round(h * scale));
+          var canvas = document.createElement('canvas');
+          canvas.width = outW; canvas.height = outH;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, outW, outH);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   // Setup/edit card for the reference (anchor) week/day + due date.
@@ -991,7 +1102,10 @@
       if (!Object.keys(toSave).length) return;
       var btn = document.getElementById('save-pregnancy-btn');
       btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
-      saveSettings(toSave).then(refresh).catch(function(err){
+      saveSettings(toSave).then(function(){
+        overviewEditOpen = false; // บันทึกสำเร็จแล้วพับกลับเป็นปิดไว้ตามค่าเริ่มต้น
+        return refresh();
+      }).catch(function(err){
         btn.disabled = false; btn.textContent = 'บันทึก';
         showBanner('บันทึกไม่สำเร็จ: '+err.message+' — เช็คว่าอัปเดต Code.gs เวอร์ชันใหม่ (มี action "setSetting") และกด Deploy > Manage deployments > New version แล้วหรือยัง');
       });
@@ -1081,13 +1195,29 @@
       '</button>';
     root.appendChild(tapWrap);
     var tapBtn = tapWrap.querySelector('#kick-tap-btn');
+    // อัปเดตหน้าจอทันทีตอนกด (optimistic) แล้วค่อยยิง request ไปเซิร์ฟเวอร์เบื้องหลัง
+    // ไม่ต้องรอ round-trip ของ Google Apps Script (ซึ่งช้ากว่าปกติ) ก่อนเห็นผลบนจอ
     tapBtn.onclick = function(){
-      tapBtn.disabled = true;
+      var tempId = 'tmp_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+      var optimisticKick = { ID: tempId, Timestamp: new Date().toISOString(), LoggedBy: who || '' };
+      state.kicks = (state.kicks || []).concat([optimisticKick]);
+      renderView();
       apiPost('addKick', {loggedBy:who}).then(function(res){
-        if (!res || !res.ok) { tapBtn.disabled = false; showBanner('บันทึกไม่สำเร็จ: ' + ((res && res.error) || '')); return; }
-        refresh();
+        if (!res || !res.ok) {
+          state.kicks = state.kicks.filter(function(k){ return k.ID !== tempId; });
+          renderView();
+          showBanner('บันทึกไม่สำเร็จ: ' + ((res && res.error) || ''));
+          return;
+        }
+        if (optimisticKick._cancelled) {
+          // ผู้ใช้กดลบรายการนี้ไปแล้วก่อน request จะเสร็จ -> ลบแถวที่เพิ่งสร้างเสร็จออกจากชีทด้วย
+          apiPost('deleteKick', {id: res.id});
+          return;
+        }
+        optimisticKick.ID = res.id; // แทนที่ id ชั่วคราวด้วย id จริงจากชีท เผื่อกดลบต่อทันที
       }).catch(function(){
-        tapBtn.disabled = false;
+        state.kicks = state.kicks.filter(function(k){ return k.ID !== tempId; });
+        renderView();
         showBanner('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง');
       });
     };
@@ -1120,7 +1250,23 @@
           '<div class="kick-item-main"><span class="kick-time">'+pad(d.getHours())+':'+pad(d.getMinutes())+'</span>'+whoTag(item.LoggedBy)+'</div>'+
           '<button class="icon-btn del-btn" type="button" aria-label="ลบ" title="ลบ">'+trashIcon()+'</button>';
         row.querySelector('.del-btn').onclick = function(){
-          apiPost('deleteKick', {id:item.ID}).then(refresh);
+          var removedId = item.ID;
+          var backup = state.kicks;
+          state.kicks = state.kicks.filter(function(k){ return k.ID !== removedId; });
+          renderView();
+          if (String(removedId).indexOf('tmp_') === 0) {
+            // ยังไม่ทันบันทึกขึ้นชีทเลย (กด add แล้วกด delete รัวๆ) — แค่ทำเครื่องหมายไว้
+            // ให้ addKick เคลียร์แถวทิ้งเองทันทีที่บันทึกเสร็จ ไม่ต้องยิง request ลบซ้ำตอนนี้
+            item._cancelled = true;
+            return;
+          }
+          apiPost('deleteKick', {id:removedId}).then(function(res){
+            if (!res || !res.ok) { state.kicks = backup; renderView(); showBanner('ลบไม่สำเร็จ: ' + ((res && res.error) || '')); }
+          }).catch(function(){
+            state.kicks = backup;
+            renderView();
+            showBanner('ลบไม่สำเร็จ ลองใหม่อีกครั้ง');
+          });
         };
         list.appendChild(row);
       });
