@@ -298,6 +298,16 @@
     display:flex;align-items:center;gap:4px;padding:4px 2px;
   }
 
+  /* Expenses */
+  .expense-item{display:flex;align-items:center;gap:12px;padding:13px 16px;}
+  .expense-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;}
+  .expense-date{font-size:13px;font-weight:600;}
+  .expense-cat{font-size:11.5px;color:var(--text-muted);}
+  .expense-price{font-family:'Mitr',sans-serif;font-weight:700;font-size:15.5px;color:var(--text);white-space:nowrap;}
+  .expense-summary{display:flex;flex-direction:column;gap:2px;}
+  .expense-summary .num{font-family:'Mitr',sans-serif;font-weight:700;font-size:24px;font-variant-numeric:tabular-nums;color:var(--accent);}
+  .expense-summary .lbl{font-size:12.5px;color:var(--text-muted);}
+
   /* Questions */
   .q-item{padding:15px 16px;display:flex;flex-direction:column;gap:8px;}
   .q-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
@@ -411,6 +421,10 @@
         <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M12 10v.01M12 7.2c.9 0 1.6.6 1.6 1.4 0 1.2-1.6 1.2-1.6 2.4"/></svg>
         ถามหมอ
       </button>
+      <button class="tab-btn" data-tab="expenses" data-active="false" type="button">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 012-2h11l4 4v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/><path d="M16 5v4h4"/><path d="M8 13h6M8 16.5h4"/></svg>
+        ค่าใช้จ่าย
+      </button>
     </nav>
   </div>
 </div>
@@ -421,7 +435,7 @@
 
   var LS_URL = 'bt_api_url';
   var LS_WHO = 'bt_who';
-  var state = { settings:{}, activities:[], checklist:[], questions:[] };
+  var state = { settings:{}, activities:[], checklist:[], questions:[], expenses:[] };
   var apiUrl = null, who = null;
   var activeTab = 'overview';
   var openAddPanel = null; // which tab's add-panel is open
@@ -578,6 +592,16 @@
       if (a && ages.indexOf(a) === -1) ages.push(a);
     });
     return ages;
+  }
+
+  // รวมรายชื่อหมวดหมู่ค่าใช้จ่ายที่เคยใช้แล้ว (สำหรับ dropdown ในแท็บ "ค่าใช้จ่าย" — แยกกันคนละชุดกับหมวดหมู่ของเตรียมของ)
+  function getKnownExpenseCategories(){
+    var cats = [];
+    (state.expenses || []).forEach(function(e){
+      var c = (e.Category || '').trim();
+      if (c && cats.indexOf(c) === -1) cats.push(c);
+    });
+    return cats;
   }
 
   // ---- dropdown ที่มีตัวเลือก "+ เพิ่มใหม่..." สำหรับสร้างค่าที่ยังไม่มีในลิสต์เอง ----
@@ -836,6 +860,7 @@
     else if (activeTab === 'log') renderLog(root);
     else if (activeTab === 'prep') renderPrep(root);
     else if (activeTab === 'ask') renderAsk(root);
+    else if (activeTab === 'expenses') renderExpenses(root);
   }
 
   function el(tag, cls, html){
@@ -1327,6 +1352,94 @@
 
       root.appendChild(card);
     });
+  }
+
+  // ---------------- Expenses (รวมค่าใช้จ่าย) ----------------
+  function renderExpenses(root){
+    root.appendChild(el('h2','section-title','รวมค่าใช้จ่าย'));
+
+    var expenses = state.expenses || [];
+    var total = expenses.reduce(function(sum, e){
+      var n = parseFloat(String(e.Price).replace(/,/g,''));
+      return isFinite(n) ? sum + n : sum;
+    }, 0);
+
+    var summary = el('div','stat-row');
+    summary.innerHTML =
+      '<div class="stat-tile expense-summary"><div class="num">฿'+total.toLocaleString('th-TH')+'</div><div class="lbl">ยอดรวมทั้งหมด</div></div>'+
+      '<div class="stat-tile expense-summary"><div class="num">'+expenses.length+'</div><div class="lbl">จำนวนรายการ</div></div>';
+    root.appendChild(summary);
+
+    var toggle = el('button','add-toggle','+ เพิ่มรายการค่าใช้จ่าย');
+    toggle.onclick = function(){ openAddPanel = (openAddPanel==='expenses') ? null : 'expenses'; renderView(); };
+    root.appendChild(toggle);
+
+    if (openAddPanel === 'expenses'){
+      var panel = el('div','add-panel');
+      var todayVal = epochDayToInputValue(localTodayEpochDay());
+      panel.innerHTML =
+        '<span class="field-label">หมวดหมู่</span>'+
+        dropdownWithAddHtml('exp-cat', getKnownExpenseCategories(), 'พิมพ์หมวดหมู่ใหม่')+
+        '<span class="field-label">วันที่จ่าย</span>'+
+        '<input class="field" id="exp-date" type="date" value="'+todayVal+'">'+
+        '<span class="field-label">ราคา</span>'+
+        '<input class="field" id="exp-price" type="text" inputmode="decimal" placeholder="เช่น 350">'+
+        '<div class="add-panel-actions">'+
+          '<button class="btn btn-secondary" id="exp-cancel" type="button">ยกเลิก</button>'+
+          '<button class="btn btn-primary" id="exp-save" type="button">เพิ่ม</button>'+
+        '</div>';
+      root.appendChild(panel);
+      wireDropdownWithAdd('exp-cat');
+      panel.querySelector('#exp-cancel').onclick = function(){ openAddPanel=null; renderView(); };
+      panel.querySelector('#exp-save').onclick = function(){
+        var cat = readDropdownWithAdd('exp-cat');
+        var dateVal = document.getElementById('exp-date').value;
+        var price = document.getElementById('exp-price').value.trim();
+        if (!price) { showBanner('กรุณาใส่ราคา'); return; }
+        var dateEpoch = dateVal ? dateStrToEpochDay(dateVal) : '';
+        apiPost('addExpense', {category:cat, date:dateEpoch, price:price, addedBy:who}).then(function(res){
+          if (!res || !res.ok) { showBanner('บันทึกไม่สำเร็จ: ' + ((res && res.error) || '')); return; }
+          openAddPanel = null;
+          refresh();
+        }).catch(function(){ showBanner('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'); });
+      };
+    }
+
+    if (!expenses.length){
+      root.appendChild(emptyState('ยังไม่มีรายการค่าใช้จ่าย','กดปุ่ม "+ เพิ่มรายการค่าใช้จ่าย" ด้านบนเพื่อเริ่มบันทึก'));
+      return;
+    }
+
+    var sorted = expenses.slice().sort(function(a,b){
+      var da = parseEpochDaySetting(a.Date);
+      var db = parseEpochDaySetting(b.Date);
+      if (da==null && db==null) return 0;
+      if (da==null) return 1;
+      if (db==null) return -1;
+      return db - da; // ใหม่สุดก่อน
+    });
+
+    var list = el('div','list card');
+    sorted.forEach(function(item,i){
+      var row = el('div','expense-item');
+      if (i>0) row.style.borderTop = '1px solid var(--border)';
+      var dEpoch = parseEpochDaySetting(item.Date);
+      var dateLabel = dEpoch!=null ? fmtDateTh(epochDayToDate(dEpoch)) : '—';
+      var priceNum = parseFloat(String(item.Price).replace(/,/g,''));
+      var priceLabel = isFinite(priceNum) ? '฿'+priceNum.toLocaleString('th-TH') : '฿'+escapeHtml(String(item.Price||''));
+      row.innerHTML =
+        '<div class="expense-main">'+
+          '<span class="expense-date">'+escapeHtml(dateLabel)+'</span>'+
+          (item.Category ? '<span class="expense-cat">'+escapeHtml(item.Category)+'</span>' : '')+
+        '</div>'+
+        '<span class="expense-price">'+priceLabel+'</span>'+
+        '<button class="icon-btn del-btn" type="button" aria-label="ลบ" title="ลบ">'+trashIcon()+'</button>';
+      row.querySelector('.del-btn').onclick = function(){
+        apiPost('deleteExpense', {id:item.ID}).then(refresh);
+      };
+      list.appendChild(row);
+    });
+    root.appendChild(list);
   }
 
   function emptyState(title, sub){
