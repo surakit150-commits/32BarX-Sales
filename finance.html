@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#3b2418">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>รายรับรายจ่าย 32Bar X</title>
+<style>
+:root{
+  --bg:#f6f2ee;--card:#fff;--ink:#2a1d16;--mute:#8a7b72;--line:#e7dfd8;
+  --brand:#3b2418;--brand-ink:#fff;--inc:#1f8a4c;--inc-bg:#e6f4ec;--exp:#c0392b;--exp-bg:#fbeae8;
+  --warn:#b7791f;--warn-bg:#fdf3e1;--r:14px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#17110e;--card:#221a16;--ink:#f1e9e3;--mute:#a1928a;--line:#3a2e28;
+  --brand:#c89b7b;--brand-ink:#1b120d;--inc:#4cc685;--inc-bg:#173325;--exp:#f07466;--exp-bg:#3a1c19;
+  --warn:#f0b54a;--warn-bg:#3a2c12;
+}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Sukhumvit Set","Noto Sans Thai",sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+header{position:sticky;top:0;z-index:5;background:var(--brand);color:var(--brand-ink);padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;display:flex;align-items:center;gap:10px}
+header h1{font-size:17px;margin:0;flex:1;font-weight:600}
+.sync{font-size:12px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.18);border:0;color:inherit;cursor:pointer}
+.sync.pending{background:var(--warn-bg);color:var(--warn)}
+.sync.err{background:var(--exp-bg);color:var(--exp)}
+.icon-btn{background:none;border:0;color:inherit;font-size:20px;padding:4px;cursor:pointer}
+main{max-width:640px;margin:0 auto;padding:14px 16px calc(90px + env(safe-area-inset-bottom))}
+.page{display:none}.page.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+label.f{display:block;font-size:13px;color:var(--mute);margin:14px 0 6px}
+input.in,textarea.in{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);outline:none}
+input.in:focus,textarea.in:focus{border-color:var(--brand)}
+.amount{font-size:28px;font-weight:600;text-align:right}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg button{padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-weight:600;cursor:pointer}
+.seg button.on[data-type="รายรับ"]{background:var(--inc);border-color:var(--inc);color:#fff}
+.seg button.on[data-type="รายจ่าย"]{background:var(--exp);border-color:var(--exp);color:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--card);font-size:13px;cursor:pointer}
+.chip.on{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.switch{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.switch input{width:46px;height:26px;appearance:none;border-radius:99px;background:var(--line);position:relative;cursor:pointer;transition:.2s;flex:none}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+.switch input:checked{background:var(--inc)}.switch input:checked::after{left:23px}
+.btn{display:block;width:100%;padding:14px;border:0;border-radius:12px;background:var(--brand);color:var(--brand-ink);font-weight:600;font-size:16px;margin-top:18px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);margin-top:10px}
+.btn.danger{background:transparent;color:var(--exp);border:1px solid var(--exp);margin-top:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+.tabs button{border:0;background:none;padding:9px 0;border-radius:9px;cursor:pointer;font-size:14px}
+.tabs button.on{background:var(--brand);color:var(--brand-ink);font-weight:600}
+.nav{display:flex;align-items:center;justify-content:space-between;margin:12px 0}
+.nav button{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);font-size:20px;cursor:pointer}
+.nav .lbl{font-weight:600;text-align:center;flex:1;cursor:pointer}
+.custom{display:none;margin:12px 0}.custom.on{display:grid}
+.tot{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tot .card{padding:12px}
+.tot .k{font-size:12px;color:var(--mute)}
+.tot .v{font-size:20px;font-weight:700;margin-top:2px;word-break:break-all}
+.tot .inc .v{color:var(--inc)}.tot .exp .v{color:var(--exp)}
+.tot .net{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center}
+.tot .net .v{font-size:24px}
+.pend{font-size:13px;color:var(--warn);background:var(--warn-bg);border-radius:10px;padding:8px 12px;margin-top:10px;display:none}
+.pie-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:10px;padding:11px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-weight:600;cursor:pointer}
+.filters{display:flex;gap:6px;margin:14px 0 6px;overflow-x:auto}
+.day{display:flex;justify-content:space-between;font-size:13px;color:var(--mute);margin:16px 4px 6px}
+.item{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 8px 11px 12px;margin-bottom:6px;cursor:pointer}
+.item .dot{width:8px;height:36px;border-radius:4px;flex:none}
+.item .mid{flex:1;min-width:0}
+.item .cat{font-weight:600}
+.item .note{font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .amt{font-weight:700;text-align:right;white-space:nowrap}
+.item .ed{flex:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--mute);font-size:15px;cursor:pointer}
+.rb{display:inline-block;margin-top:4px;font-size:11px;padding:3px 8px;border-radius:99px;border:0;cursor:pointer}
+.rb.no{background:var(--warn-bg);color:var(--warn)}.rb.yes{background:var(--inc-bg);color:var(--inc)}
+.empty{text-align:center;color:var(--mute);padding:40px 0}
+.bottom{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;padding-bottom:env(safe-area-inset-bottom);z-index:5}
+.bottom button{border:0;background:none;padding:12px 0 10px;font-size:13px;color:var(--mute);cursor:pointer}
+.bottom button b{display:block;font-size:20px}
+.bottom button.on{color:var(--brand);font-weight:600}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:20}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+dialog{border:0;border-radius:var(--r);background:var(--card);color:var(--ink);width:min(94vw,460px);max-height:88vh;overflow-y:auto;padding:18px}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h3{margin:0 0 4px}
+.dlg-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.x{border:0;background:var(--bg);width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;flex:none}
+.hint{font-size:12px;color:var(--mute);margin-top:8px}
+.pie-wrap{position:relative;width:220px;height:220px;margin:16px auto 8px}
+.pie-wrap svg{width:100%;height:100%;transform:rotate(-90deg)}
+.pie-wrap circle.sl{transition:stroke-width .15s;cursor:pointer}
+.pie-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;padding:50px}
+.pie-mid .k{font-size:12px;color:var(--mute)}
+.pie-mid .v{font-size:18px;font-weight:700;word-break:break-all}
+.legend{margin-top:8px}
+.lg{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:8px}
+.lg:last-child{border-bottom:0}
+.lg.on{background:var(--bg)}
+.lg .sw{width:12px;height:12px;border-radius:3px;flex:none}
+.lg .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lg .pc{color:var(--mute);font-size:13px;width:48px;text-align:right}
+.lg .am{font-weight:600;text-align:right;min-width:80px}
+.cm{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.cm .nm{flex:1}.cm .n{color:var(--mute);font-size:13px}
+.cm-h{font-size:13px;color:var(--mute);margin:14px 0 2px;font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <h1>รายรับรายจ่าย</h1>
+  <button class="sync" id="sync">…</button>
+  <button class="icon-btn" id="openSettings" aria-label="ตั้งค่า">⚙︎</button>
+</header>
+
+<main>
+  <!-- ===== บันทึก ===== -->
+  <section class="page" id="page-add">
+    <div class="card">
+      <div class="seg" id="typeSeg">
+        <button data-type="รายรับ">รายรับ</button>
+        <button data-type="รายจ่าย">รายจ่าย</button>
+      </div>
+      <label class="f">จำนวนเงิน (บาท)</label>
+      <input class="in amount" id="fAmount" inputmode="decimal" placeholder="0.00" autocomplete="off">
+      <label class="f">หมวดหมู่</label>
+      <input class="in" id="fCat" placeholder="พิมพ์หรือเลือกด้านล่าง" autocomplete="off">
+      <div class="chips" id="catChips"></div>
+      <label class="f">วันที่</label>
+      <input class="in" type="date" id="fDate">
+      <label class="f">Note</label>
+      <textarea class="in" id="fNote" rows="2" placeholder="รายละเอียดเพิ่มเติม"></textarea>
+      <div class="switch" id="reimbWrap">
+        <span>เบิกเงินก้อนนี้ออกไปแล้ว</span>
+        <input type="checkbox" id="fReimb">
+      </div>
+      <button class="btn" id="saveBtn">บันทึก</button>
+    </div>
+  </section>
+
+  <!-- ===== สรุป ===== -->
+  <section class="page" id="page-sum">
+    <div class="tabs" id="modeTabs">
+      <button data-mode="day">วัน</button>
+      <button data-mode="week">สัปดาห์</button>
+      <button data-mode="month">เดือน</button>
+      <button data-mode="custom">กำหนดเอง</button>
+    </div>
+    <div class="nav" id="navRow">
+      <button id="prev">‹</button>
+      <div class="lbl" id="rangeLbl" title="กลับไปช่วงปัจจุบัน"></div>
+      <button id="next">›</button>
+    </div>
+    <div class="custom row2" id="customRow">
+      <div><label class="f" style="margin-top:0">ตั้งแต่</label><input class="in" type="date" id="cFrom"></div>
+      <div><label class="f" style="margin-top:0">ถึง</label><input class="in" type="date" id="cTo"></div>
+    </div>
+    <div class="tot">
+      <div class="card inc"><div class="k">รายรับ</div><div class="v" id="tInc">0</div></div>
+      <div class="card exp"><div class="k">รายจ่าย</div><div class="v" id="tExp">0</div></div>
+      <div class="card net"><div><div class="k">ผลต่าง (รายรับ − รายจ่าย)</div><div class="k" id="tCount"></div></div><div class="v" id="tNet">0</div></div>
+    </div>
+    <div class="pend" id="tPend"></div>
+    <button class="pie-btn" id="pieBtn">◔ ดูสัดส่วนรายจ่ายตามหมวดหมู่</button>
+    <div class="filters" id="filterChips">
+      <button class="chip on" data-f="all">ทั้งหมด</button>
+      <button class="chip" data-f="รายรับ">รายรับ</button>
+      <button class="chip" data-f="รายจ่าย">รายจ่าย</button>
+      <button class="chip" data-f="unpaid">ยังไม่เบิก</button>
+    </div>
+    <div id="list"></div>
+  </section>
+</main>
+
+<nav class="bottom">
+  <button data-page="add"><b>＋</b>บันทึก</button>
+  <button data-page="sum"><b>☰</b>สรุป</button>
+</nav>
+
+<!-- ===== แก้ไขรายการ ===== -->
+<dialog id="editDlg">
+  <div class="dlg-head"><h3>แก้ไขรายการ</h3><button class="x" data-close>✕</button></div>
+  <div class="seg" id="eTypeSeg" style="margin-top:12px">
+    <button data-type="รายรับ">รายรับ</button>
+    <button data-type="รายจ่าย">รายจ่าย</button>
+  </div>
+  <label class="f">จำนวนเงิน (บาท)</label>
+  <input class="in amount" id="eAmount" inputmode="decimal" autocomplete="off">
+  <label class="f">หมวดหมู่</label>
+  <input class="in" id="eCat" autocomplete="off">
+  <div class="chips" id="eCatChips"></div>
+  <label class="f">วันที่</label>
+  <input class="in" type="date" id="eDate">
+  <label class="f">Note</label>
+  <textarea class="in" id="eNote" rows="2"></textarea>
+  <div class="switch" id="eReimbWrap">
+    <span>เบิกเงินก้อนนี้ออกไปแล้ว</span>
+    <input type="checkbox" id="eReimb">
+  </div>
+  <button class="btn" id="eSave">บันทึกการแก้ไข</button>
+  <button class="btn danger" id="eDel">ลบรายการนี้</button>
+</dialog>
+
+<!-- ===== แผนภูมิวงกลม ===== -->
+<dialog id="pieDlg">
+  <div class="dlg-head"><div><h3>สัดส่วนรายจ่าย</h3><div class="hint" style="margin:0" id="pieRange"></div></div><button class="x" data-close>✕</button></div>
+  <div id="pieBody"></div>
+</dialog>
+
+<!-- ===== จัดการหมวดหมู่ ===== -->
+<dialog id="catDlg">
+  <div class="dlg-head"><h3>แก้ไขหมวดหมู่</h3><button class="x" data-close>✕</button></div>
+  <div class="hint">เปลี่ยนชื่อแล้วทุกรายการในหมวดนั้นจะเปลี่ยนตาม ตั้งชื่อซ้ำกับหมวดที่มีอยู่ = รวมเป็นหมวดเดียว</div>
+  <div id="catBody"></div>
+</dialog>
+
+<!-- ===== ตั้งค่า ===== -->
+<dialog id="settings">
+  <div class="dlg-head"><h3>ตั้งค่า</h3><button class="x" data-close>✕</button></div>
+  <div class="hint">URL และ Key เก็บไว้ในเครื่องนี้เท่านั้น ไม่อยู่ในโค้ดบน GitHub</div>
+  <label class="f">Apps Script Web App URL (ลงท้าย /exec)</label>
+  <input class="in" id="sUrl" placeholder="https://script.google.com/macros/s/.../exec">
+  <label class="f">API Key</label>
+  <input class="in" id="sKey" placeholder="ตรงกับ API_KEY ใน Code.gs">
+  <button class="btn" id="sSave">บันทึกและเชื่อมต่อ</button>
+  <button class="btn ghost" id="sCats">แก้ไขชื่อหมวดหมู่</button>
+  <button class="btn ghost" id="sReload">โหลดข้อมูลใหม่ทั้งหมด</button>
+  <div class="hint" id="sInfo"></div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- utils ---------- */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const fmtD = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const parseD = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = parseD(s); d.setDate(d.getDate() + n); return fmtD(d); };
+const todayStr = () => fmtD(new Date());
+const nowStr = () => { const d = new Date(); return fmtD(d) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); };
+const money = n => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const thD = (s, o) => parseD(s).toLocaleDateString('th-TH', o);
+const load = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
+const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const parseAmt = v => parseFloat(String(v).replace(/,/g, ''));
+let toastT;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1800); }
+$$('[data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
+$$('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));   // แตะพื้นหลังเพื่อปิด
+
+const DEFAULT_CATS = {
+  'รายรับ': ['ขายหน้าร้าน', 'ขายออนไลน์', 'ขายส่ง', 'เวิร์กช็อป', 'อื่นๆ'],
+  'รายจ่าย': ['วัตถุดิบ', 'บรรจุภัณฑ์', 'ค่าแรง', 'ค่าเช่า', 'ค่าน้ำค่าไฟ', 'ค่าขนส่ง', 'การตลาด', 'ซ่อมบำรุง', 'อุปกรณ์', 'อื่นๆ']
+};
+const PIE_COLORS = ['#c0392b', '#e67e22', '#d4a017', '#27ae60', '#16a085', '#2980b9', '#8e44ad', '#c2185b', '#6d4c41', '#7f8c8d'];
+
+/* ---------- state ----------
+   serverRows = สำเนาข้อมูลล่าสุดจาก Sheet (แคชในเครื่อง)
+   queue      = รายการที่บันทึกแล้วแต่ยังไม่ถึง Sheet (เก็บในเครื่อง ไม่หายแม้ปิดแอป)
+   rows       = serverRows + queue → ใช้แสดงผล เลยเห็นผลทันทีไม่ต้องรอเน็ต */
+const K = { cfg: 'ie_cfg', rows: 'ie_rows', queue: 'ie_queue', ui: 'ie_ui' };
+let cfg = load(K.cfg, { url: '', key: '' });
+let serverRows = load(K.rows, []);
+let queue = load(K.queue, []);
+let rows = [];
+let ui = Object.assign({ page: 'add', type: 'รายจ่าย', mode: 'month' }, load(K.ui, {}));
+let view = { mode: ui.mode, anchor: todayStr(), from: addDays(todayStr(), -6), to: todayStr(), filter: 'all' };
+let flushing = false, loading = false, failCount = 0, retryTimer = null, authErr = false;
+let formType = ui.type;
+let editing = null, eType = 'รายจ่าย';
+
+function applyOps(base, ops) {
+  const m = new Map(base.map(r => [r.id, r]));
+  for (const op of ops) {
+    if (op.op === 'delete') m.delete(op.id);
+    else if (op.op === 'upsert') {
+      const cur = m.get(op.row.id);
+      if (cur) m.set(op.row.id, Object.assign({}, cur, op.row));
+      else if (op.row.date) m.set(op.row.id, Object.assign({}, op.row));
+    }
+  }
+  return [...m.values()];
+}
+function recompute() {
+  rows = applyOps(serverRows, queue);
+  renderSummary(); renderChips();
+  if ($('#pieDlg').open) renderPie();
+  if ($('#catDlg').open) renderCatMgr();
+  updateSync();
+}
+function saveUI() { store(K.ui, ui); }
+
+/* ---------- sync ---------- */
+function enqueue(...ops) { queue.push(...ops); store(K.queue, queue); recompute(); flush(); }
+
+async function flush() {
+  if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+  if (flushing || !queue.length || !cfg.url || authErr) { updateSync(); return; }
+  flushing = true; updateSync();
+  const batch = queue.slice(0, 50);
+  let ok = false;
+  try {
+    const res = await fetch(cfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key: cfg.key, ops: batch }) });
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error || 'error');
+    serverRows = applyOps(serverRows, batch); store(K.rows, serverRows);
+    queue = queue.slice(batch.length); store(K.queue, queue);
+    failCount = 0; ok = true;
+  } catch (e) {
+    failCount++;
+    if (e.message === 'unauthorized') { authErr = true; toast('API Key ไม่ถูกต้อง'); openSettings(); }
+    else retryTimer = setTimeout(flush, Math.min(30000, 2000 * failCount));
+  }
+  flushing = false;
+  recompute();
+  if (ok && queue.length) flush();
+}
+
+async function refresh(manual) {
+  if (!cfg.url || loading) return;
+  loading = true; updateSync();
+  try {
+    const res = await fetch(cfg.url + '?key=' + encodeURIComponent(cfg.key) + '&t=' + Date.now());
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error || 'error');
+    serverRows = j.rows; store(K.rows, serverRows);
+    authErr = false;
+    if (manual) toast('โหลดข้อมูลล่าสุดแล้ว');
+  } catch (e) {
+    if (e.message === 'unauthorized') { authErr = true; toast('API Key ไม่ถูกต้อง'); openSettings(); }
+    else if (manual) toast('เชื่อมต่อไม่ได้ — ใช้ข้อมูลในเครื่องไปก่อน');
+  }
+  loading = false;
+  recompute();
+  flush();
+}
+
+function updateSync() {
+  const el = $('#sync');
+  if (!cfg.url) { el.textContent = 'ยังไม่ได้ตั้งค่า'; el.className = 'sync err'; return; }
+  if (authErr) { el.textContent = 'Key ไม่ถูกต้อง'; el.className = 'sync err'; return; }
+  if (queue.length) {
+    const pre = flushing ? 'กำลังส่ง ' : (navigator.onLine ? 'รอส่ง ' : 'ออฟไลน์ · รอส่ง ');
+    el.textContent = pre + queue.length; el.className = 'sync pending'; return;
+  }
+  el.textContent = loading ? 'กำลังโหลด…' : '✓ ตรงกับ Sheet';
+  el.className = 'sync';
+}
+
+/* ---------- pages ---------- */
+function showPage(p) {
+  ui.page = p; saveUI();
+  $$('.page').forEach(s => s.classList.toggle('on', s.id === 'page-' + p));
+  $$('.bottom button').forEach(b => b.classList.toggle('on', b.dataset.page === p));
+  if (p === 'sum') renderSummary();
+  window.scrollTo(0, 0);
+}
+$$('.bottom button').forEach(b => b.onclick = () => showPage(b.dataset.page));
+
+/* ---------- categories ---------- */
+function catsFor(t) {
+  const cnt = {};
+  for (const r of rows) if (r.type === t && r.category) cnt[r.category] = (cnt[r.category] || 0) + 1;
+  const used = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]);
+  return used.concat(DEFAULT_CATS[t].filter(c => !cnt[c])).slice(0, 14);
+}
+function chipsHtml(t, cur) {
+  return catsFor(t).map(c => `<button class="chip${c === cur ? ' on' : ''}" data-c="${esc(c)}">${esc(c)}</button>`).join('');
+}
+
+/* ---------- add form ---------- */
+function setType(t) {
+  formType = t;
+  $$('#typeSeg button').forEach(b => b.classList.toggle('on', b.dataset.type === t));
+  $('#reimbWrap').style.display = t === 'รายจ่าย' ? 'flex' : 'none';
+  renderChips();
+}
+$$('#typeSeg button').forEach(b => b.onclick = () => { setType(b.dataset.type); ui.type = formType; saveUI(); });
+function renderChips() { $('#catChips').innerHTML = chipsHtml(formType, $('#fCat').value.trim()); }
+$('#catChips').onclick = e => { const b = e.target.closest('.chip'); if (!b) return; $('#fCat').value = b.dataset.c; renderChips(); };
+$('#fCat').oninput = renderChips;
+
+function resetForm() {
+  $('#fAmount').value = ''; $('#fCat').value = ''; $('#fNote').value = '';
+  $('#fDate').value = todayStr(); $('#fReimb').checked = false;
+  setType(ui.type);
+}
+$('#saveBtn').onclick = () => {
+  const amount = parseAmt($('#fAmount').value);
+  if (!(amount > 0)) { toast('ใส่จำนวนเงินก่อน'); $('#fAmount').focus(); return; }
+  const row = {
+    id: uid(),
+    date: $('#fDate').value || todayStr(),
+    type: formType,
+    category: $('#fCat').value.trim() || 'อื่นๆ',
+    amount: Math.round(amount * 100) / 100,
+    note: $('#fNote').value.trim(),
+    reimbursed: formType === 'รายจ่าย' ? $('#fReimb').checked : false,
+    createdAt: nowStr()
+  };
+  enqueue({ op: 'upsert', row });
+  toast(`บันทึก${row.type} ${money(row.amount)} ฿ แล้ว`);
+  $('#fAmount').value = ''; $('#fNote').value = ''; $('#fCat').value = ''; $('#fReimb').checked = false;
+  renderChips(); $('#fAmount').focus();
+};
+
+/* ---------- edit dialog ---------- */
+function setEType(t) {
+  eType = t;
+  $$('#eTypeSeg button').forEach(b => b.classList.toggle('on', b.dataset.type === t));
+  $('#eReimbWrap').style.display = t === 'รายจ่าย' ? 'flex' : 'none';
+  renderEChips();
+}
+function renderEChips() { $('#eCatChips').innerHTML = chipsHtml(eType, $('#eCat').value.trim()); }
+$$('#eTypeSeg button').forEach(b => b.onclick = () => setEType(b.dataset.type));
+$('#eCatChips').onclick = e => { const b = e.target.closest('.chip'); if (!b) return; $('#eCat').value = b.dataset.c; renderEChips(); };
+$('#eCat').oninput = renderEChips;
+
+function openEdit(r) {
+  editing = r;
+  $('#eAmount').value = r.amount; $('#eCat').value = r.category; $('#eNote').value = r.note || '';
+  $('#eDate').value = r.date; $('#eReimb').checked = !!r.reimbursed;
+  setEType(r.type);
+  $('#editDlg').showModal();
+}
+$('#eSave').onclick = () => {
+  if (!editing) return;
+  const amount = parseAmt($('#eAmount').value);
+  if (!(amount > 0)) { toast('ใส่จำนวนเงินก่อน'); return; }
+  enqueue({ op: 'upsert', row: {
+    id: editing.id,
+    date: $('#eDate').value || editing.date,
+    type: eType,
+    category: $('#eCat').value.trim() || 'อื่นๆ',
+    amount: Math.round(amount * 100) / 100,
+    note: $('#eNote').value.trim(),
+    reimbursed: eType === 'รายจ่าย' ? $('#eReimb').checked : false
+  } });
+  editing = null; $('#editDlg').close(); toast('แก้ไขแล้ว');
+};
+$('#eDel').onclick = () => {
+  if (!editing || !confirm('ลบรายการนี้?')) return;
+  enqueue({ op: 'delete', id: editing.id });
+  editing = null; $('#editDlg').close(); toast('ลบแล้ว');
+};
+
+/* ---------- summary ---------- */
+function getRange() {
+  const a = view.anchor;
+  if (view.mode === 'day') return [a, a];
+  if (view.mode === 'week') { const d = parseD(a); const mon = addDays(a, -((d.getDay() + 6) % 7)); return [mon, addDays(mon, 6)]; }
+  if (view.mode === 'month') { const d = parseD(a); return [fmtD(new Date(d.getFullYear(), d.getMonth(), 1)), fmtD(new Date(d.getFullYear(), d.getMonth() + 1, 0))]; }
+  let f = view.from || todayStr(), t = view.to || todayStr();
+  return f <= t ? [f, t] : [t, f];
+}
+function rangeLabel([f, t]) {
+  if (view.mode === 'day') return thD(f, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  if (view.mode === 'month') return thD(f, { month: 'long', year: 'numeric' });
+  const sameM = f.slice(0, 7) === t.slice(0, 7);
+  return (sameM ? thD(f, { day: 'numeric' }) : thD(f, { day: 'numeric', month: 'short' })) + ' – ' + thD(t, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function shift(dir) {
+  const d = parseD(view.anchor);
+  if (view.mode === 'day') d.setDate(d.getDate() + dir);
+  else if (view.mode === 'week') d.setDate(d.getDate() + 7 * dir);
+  else { d.setDate(1); d.setMonth(d.getMonth() + dir); }
+  view.anchor = fmtD(d); renderSummary();
+}
+$('#prev').onclick = () => shift(-1);
+$('#next').onclick = () => shift(1);
+$('#rangeLbl').onclick = () => { view.anchor = todayStr(); renderSummary(); };
+$$('#modeTabs button').forEach(b => b.onclick = () => { view.mode = ui.mode = b.dataset.mode; saveUI(); renderSummary(); });
+$('#cFrom').onchange = e => { view.from = e.target.value; renderSummary(); };
+$('#cTo').onchange = e => { view.to = e.target.value; renderSummary(); };
+$('#filterChips').onclick = e => { const b = e.target.closest('.chip'); if (!b) return; view.filter = b.dataset.f; renderSummary(); };
+const inRangeRows = () => { const [f, t] = getRange(); return rows.filter(r => r.date >= f && r.date <= t); };
+
+function renderSummary() {
+  if (!$('#page-sum').classList.contains('on')) return;
+  $$('#modeTabs button').forEach(b => b.classList.toggle('on', b.dataset.mode === view.mode));
+  $$('#filterChips .chip').forEach(b => b.classList.toggle('on', b.dataset.f === view.filter));
+  const custom = view.mode === 'custom';
+  $('#navRow').style.display = custom ? 'none' : 'flex';
+  $('#customRow').classList.toggle('on', custom);
+  if (custom) { $('#cFrom').value = view.from; $('#cTo').value = view.to; }
+  $('#rangeLbl').textContent = rangeLabel(getRange());
+
+  const inRange = inRangeRows();
+  let inc = 0, exp = 0, pend = 0, pendN = 0;
+  for (const r of inRange) {
+    if (r.type === 'รายรับ') inc += +r.amount;
+    else { exp += +r.amount; if (!r.reimbursed) { pend += +r.amount; pendN++; } }
+  }
+  const net = inc - exp;
+  $('#tInc').textContent = money(inc) + ' ฿';
+  $('#tExp').textContent = money(exp) + ' ฿';
+  $('#tNet').textContent = (net > 0 ? '+' : '') + money(net) + ' ฿';
+  $('#tNet').style.color = net > 0 ? 'var(--inc)' : net < 0 ? 'var(--exp)' : 'var(--ink)';
+  $('#tCount').textContent = inRange.length + ' รายการ';
+  const pe = $('#tPend');
+  pe.style.display = pendN ? 'block' : 'none';
+  pe.textContent = `รายจ่ายที่ยังไม่เบิก ${pendN} รายการ · ${money(pend)} ฿`;
+
+  let list = inRange;
+  if (view.filter === 'รายรับ' || view.filter === 'รายจ่าย') list = list.filter(r => r.type === view.filter);
+  else if (view.filter === 'unpaid') list = list.filter(r => r.type === 'รายจ่าย' && !r.reimbursed);
+  else if (view.filter.startsWith('cat:')) list = list.filter(r => r.type === 'รายจ่าย' && r.category === view.filter.slice(4));
+  list.sort((a, b) => a.date === b.date ? String(b.createdAt).localeCompare(String(a.createdAt)) : b.date.localeCompare(a.date));
+
+  if (!list.length) { $('#list').innerHTML = '<div class="empty">ยังไม่มีรายการในช่วงนี้</div>'; return; }
+  const pendingIds = new Set(queue.map(o => o.op === 'upsert' ? o.row.id : o.id));
+  let html = '', curDay = '', dayInc = 0, dayExp = 0, dayHtml = '';
+  const closeDay = () => {
+    if (!curDay) return;
+    const dn = dayInc - dayExp;
+    html += `<div class="day"><span>${esc(thD(curDay, { weekday: 'short', day: 'numeric', month: 'short' }))}</span><span>${dn >= 0 ? '+' : ''}${money(dn)}</span></div>` + dayHtml;
+  };
+  for (const r of list) {
+    if (r.date !== curDay) { closeDay(); curDay = r.date; dayInc = 0; dayExp = 0; dayHtml = ''; }
+    const isInc = r.type === 'รายรับ';
+    if (isInc) dayInc += +r.amount; else dayExp += +r.amount;
+    const rb = isInc ? '' : `<br><button class="rb ${r.reimbursed ? 'yes' : 'no'}" data-rb="${esc(r.id)}">${r.reimbursed ? '✓ เบิกแล้ว' : 'ยังไม่เบิก'}</button>`;
+    dayHtml += `<div class="item" data-id="${esc(r.id)}">
+      <div class="dot" style="background:var(${isInc ? '--inc' : '--exp'})"></div>
+      <div class="mid"><div class="cat">${esc(r.category)}${pendingIds.has(r.id) ? ' <span style="color:var(--warn);font-size:11px">●</span>' : ''}</div>
+      <div class="note">${esc(r.note || '—')}</div></div>
+      <div class="amt" style="color:var(${isInc ? '--inc' : '--exp'})">${isInc ? '+' : '−'}${money(r.amount)}${rb}</div>
+      <button class="ed" aria-label="แก้ไข">✎</button></div>`;
+  }
+  closeDay();
+  // ถ้ากำลังกรองจากแผนภูมิ ให้มีปุ่มยกเลิกตัวกรอง
+  if (view.filter.startsWith('cat:')) html = `<div class="day"><span>หมวด: <b>${esc(view.filter.slice(4))}</b></span><button class="chip" id="clearCat">ดูทั้งหมด</button></div>` + html;
+  $('#list').innerHTML = html;
+}
+$('#list').onclick = e => {
+  if (e.target.id === 'clearCat') { view.filter = 'all'; renderSummary(); return; }
+  const rb = e.target.closest('[data-rb]');
+  if (rb) {
+    const r = rows.find(x => x.id === rb.dataset.rb); if (!r) return;
+    enqueue({ op: 'upsert', row: { id: r.id, reimbursed: !r.reimbursed } });
+    toast(!r.reimbursed ? 'ทำเครื่องหมายว่าเบิกแล้ว' : 'เปลี่ยนเป็นยังไม่เบิก');
+    return;
+  }
+  const it = e.target.closest('.item');
+  if (it) { const r = rows.find(x => x.id === it.dataset.id); if (r) openEdit(r); }
+};
+
+/* ---------- pie chart ---------- */
+let pieSel = null;
+function renderPie() {
+  $('#pieRange').textContent = rangeLabel(getRange());
+  const sums = {};
+  let total = 0;
+  for (const r of inRangeRows()) if (r.type === 'รายจ่าย') { sums[r.category] = (sums[r.category] || 0) + +r.amount; total += +r.amount; }
+  let items = Object.entries(sums).sort((a, b) => b[1] - a[1]);
+  if (!items.length) { $('#pieBody').innerHTML = '<div class="empty">ไม่มีรายจ่ายในช่วงนี้</div>'; return; }
+  if (items.length > 10) {   // หมวดเล็กๆ รวมเป็นก้อนเดียว ให้อ่านง่าย
+    const rest = items.slice(9).reduce((s, x) => s + x[1], 0);
+    items = items.slice(0, 9).concat([['หมวดอื่นๆ รวม', rest]]);
+  }
+  const R = 70, C = 2 * Math.PI * R;
+  let off = 0, arcs = '';
+  items.forEach(([name, v], i) => {
+    const len = (v / total) * C;
+    const sel = pieSel === name;
+    arcs += `<circle class="sl" data-n="${esc(name)}" cx="100" cy="100" r="${R}" fill="none" stroke="${PIE_COLORS[i % PIE_COLORS.length]}"
+      stroke-width="${sel ? 44 : 36}" stroke-dasharray="${Math.max(len - (items.length > 1 ? 1.5 : 0), 0.5)} ${C}" stroke-dashoffset="${-off}"
+      opacity="${pieSel && !sel ? .35 : 1}"/>`;
+    off += len;
+  });
+  const selItem = items.find(x => x[0] === pieSel);
+  const mid = selItem
+    ? `<div class="k">${esc(selItem[0])}</div><div class="v">${money(selItem[1])} ฿</div><div class="k">${(selItem[1] / total * 100).toFixed(1)}%</div>`
+    : `<div class="k">รายจ่ายรวม</div><div class="v">${money(total)} ฿</div><div class="k">${items.length} หมวด</div>`;
+  $('#pieBody').innerHTML = `
+    <div class="pie-wrap"><svg viewBox="0 0 200 200">${arcs}</svg><div class="pie-mid">${mid}</div></div>
+    <div class="legend">${items.map(([name, v], i) => `
+      <div class="lg${pieSel === name ? ' on' : ''}" data-n="${esc(name)}">
+        <span class="sw" style="background:${PIE_COLORS[i % PIE_COLORS.length]}"></span>
+        <span class="nm">${esc(name)}</span><span class="pc">${(v / total * 100).toFixed(1)}%</span>
+        <span class="am">${money(v)}</span></div>`).join('')}
+    </div>
+    ${pieSel && pieSel !== 'หมวดอื่นๆ รวม' ? `<button class="btn ghost" id="pieShowList">ดูรายการในหมวด "${esc(pieSel)}"</button>` : ''}
+    <div class="hint" style="text-align:center">แตะชิ้นหรือชื่อหมวดเพื่อดูรายละเอียด</div>`;
+}
+$('#pieBtn').onclick = () => { pieSel = null; renderPie(); $('#pieDlg').showModal(); };
+$('#pieBody').onclick = e => {
+  if (e.target.id === 'pieShowList') { view.filter = 'cat:' + pieSel; $('#pieDlg').close(); renderSummary(); return; }
+  const t = e.target.closest('[data-n]'); if (!t) return;
+  pieSel = pieSel === t.dataset.n ? null : t.dataset.n;
+  renderPie();
+};
+
+/* ---------- category manager ---------- */
+function renderCatMgr() {
+  let html = '';
+  for (const t of ['รายจ่าย', 'รายรับ']) {
+    const cnt = {};
+    for (const r of rows) if (r.type === t) cnt[r.category] = (cnt[r.category] || 0) + 1;
+    const names = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]);
+    html += `<div class="cm-h">${t}</div>`;
+    html += names.length ? names.map(n => `<div class="cm"><span class="nm">${esc(n)}</span><span class="n">${cnt[n]} รายการ</span>
+      <button class="chip" data-t="${t}" data-c="${esc(n)}">เปลี่ยนชื่อ</button></div>`).join('') : '<div class="hint">ยังไม่มี</div>';
+  }
+  $('#catBody').innerHTML = html;
+}
+$('#catBody').onclick = e => {
+  const b = e.target.closest('[data-c]'); if (!b) return;
+  const oldName = b.dataset.c, t = b.dataset.t;
+  const nn = (prompt(`เปลี่ยนชื่อหมวด "${oldName}" เป็น`, oldName) || '').trim();
+  if (!nn || nn === oldName) return;
+  const ops = rows.filter(r => r.type === t && r.category === oldName).map(r => ({ op: 'upsert', row: { id: r.id, category: nn } }));
+  enqueue(...ops);
+  toast(`เปลี่ยน ${ops.length} รายการเป็น "${nn}" แล้ว`);
+};
+
+/* ---------- settings ---------- */
+function openSettings() {
+  $('#sUrl').value = cfg.url; $('#sKey').value = cfg.key;
+  $('#sInfo').textContent = `ข้อมูลในเครื่อง ${serverRows.length} รายการ · รอส่ง ${queue.length}`;
+  if (!$('#settings').open) $('#settings').showModal();
+}
+$('#openSettings').onclick = openSettings;
+$('#sSave').onclick = () => {
+  cfg = { url: $('#sUrl').value.trim(), key: $('#sKey').value.trim() };
+  store(K.cfg, cfg); authErr = false; failCount = 0;
+  $('#settings').close(); refresh(true);
+};
+$('#sCats').onclick = () => { $('#settings').close(); renderCatMgr(); $('#catDlg').showModal(); };
+$('#sReload').onclick = () => { $('#settings').close(); refresh(true); };
+$('#sync').onclick = () => { authErr = false; refresh(true); };
+
+window.addEventListener('online', flush);
+window.addEventListener('offline', updateSync);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+
+/* ---------- start: แสดงจากแคชทันที แล้วค่อยดึงของจริงตามหลัง ---------- */
+resetForm();
+showPage(ui.page);
+recompute();
+if (!cfg.url) openSettings(); else refresh();
+</script>
+</body>
+</html>
