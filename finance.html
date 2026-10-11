@@ -174,8 +174,8 @@ dialog h3{margin:0 0 4px}
     <div class="tot">
       <div class="card inc"><div class="k">รายรับเงินสด</div><div class="v" id="tInc">0</div><div class="sub" id="tCount"></div></div>
       <div class="card exp"><div class="k">รายจ่าย</div><div class="v" id="tExp">0</div><div class="sub" id="tExpSub"></div></div>
-      <div class="card net"><div><div class="k">ผลต่าง (รายรับเงินสด − รายจ่ายที่เบิกแล้ว)</div></div><div class="v" id="tNet">0</div></div>
-      <div class="card real"><div><div class="k">ยอดเงินคงเหลือจริง</div><div class="sub" id="tRealSub">หลังหักยอดที่ยังไม่ได้เบิก</div></div><div class="v" id="tReal">0</div></div>
+      <div class="card net"><div><div class="k">ยอดเงินเหลือในกระเป๋า</div></div><div class="v" id="tNet">0</div></div>
+      <div class="card real"><div><div class="k">ยอดเงินที่จะเหลือหลังหักค้างเบิก</div><div class="sub" id="tRealSub">หลังหักยอดที่ยังไม่ได้เบิก</div></div><div class="v" id="tReal">0</div></div>
     </div>
     <button class="pie-btn" id="pieBtn">◔ ดูสัดส่วนรายจ่ายตามหมวดหมู่</button>
     <div class="filters" id="filterChips">
@@ -558,7 +558,8 @@ function renderSummary() {
   $('#tExp').textContent = money(exp) + ' ฿';
   $('#tExpSub').textContent = `เบิกแล้ว ${money(paid)} · ยังไม่เบิก ${money(pend)}`;
   sgn($('#tNet'), net);
-  sgn($('#tReal'), real);
+  $('#tReal').textContent = (real > 0 ? '+' : '') + money(real) + ' ฿';
+  $('#tReal').style.color = 'var(--exp)';
   $('#tRealSub').textContent = pendN ? `หักยอดที่ยังไม่เบิก ${pendN} รายการ · ${money(pend)} ฿` : 'ไม่มียอดค้างเบิก';
   $('#tCount').textContent = inRange.length + ' รายการ';
 
