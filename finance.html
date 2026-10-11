@@ -62,7 +62,21 @@ input.in:focus,textarea.in:focus{border-color:var(--brand)}
 .tot .inc .v{color:var(--inc)}.tot .exp .v{color:var(--exp)}
 .tot .net{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center}
 .tot .net .v{font-size:24px}
-.pend{font-size:13px;color:var(--warn);background:var(--warn-bg);border-radius:10px;padding:8px 12px;margin-top:10px;display:none}
+.tot .sub{font-size:12px;color:var(--mute);margin-top:4px}
+.tot .real{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;border-width:2px}
+.tot .real .v{font-size:24px}
+.notice{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 60px);transform:translate(-50%,-16px);width:min(calc(100% - 32px),608px);
+  display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;font-size:14px;font-weight:600;
+  box-shadow:0 6px 20px rgba(0,0,0,.18);opacity:0;pointer-events:none;transition:.25s;z-index:30}
+.notice.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.notice .ic{font-size:18px;flex:none}
+.notice .tx{flex:1;min-width:0}
+.notice .tx small{display:block;font-weight:400;font-size:12px;opacity:.85}
+.notice button{border:0;border-radius:99px;padding:6px 12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,.25);color:inherit;flex:none}
+.notice.pending{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)}
+.notice.ok{background:var(--inc);color:#fff}
+.notice.err{background:var(--exp);color:#fff}
+.btn.done{background:var(--inc);color:#fff}
 .pie-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:10px;padding:11px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-weight:600;cursor:pointer}
 .filters{display:flex;gap:6px;margin:14px 0 6px;overflow-x:auto}
 .day{display:flex;justify-content:space-between;font-size:13px;color:var(--mute);margin:16px 4px 6px}
@@ -80,6 +94,7 @@ input.in:focus,textarea.in:focus{border-color:var(--brand)}
 .bottom button{border:0;background:none;padding:12px 0 10px;font-size:13px;color:var(--mute);cursor:pointer}
 .bottom button b{display:block;font-size:20px}
 .bottom button.on{color:var(--brand);font-weight:600}
+.ver{position:absolute;right:10px;bottom:calc(env(safe-area-inset-bottom) + 4px);font-size:10px;color:var(--mute);opacity:.7;pointer-events:none}
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:20}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 dialog{border:0;border-radius:var(--r);background:var(--card);color:var(--ink);width:min(94vw,460px);max-height:88vh;overflow-y:auto;padding:18px}
@@ -157,11 +172,11 @@ dialog h3{margin:0 0 4px}
       <div><label class="f" style="margin-top:0">ถึง</label><input class="in" type="date" id="cTo"></div>
     </div>
     <div class="tot">
-      <div class="card inc"><div class="k">รายรับ</div><div class="v" id="tInc">0</div></div>
-      <div class="card exp"><div class="k">รายจ่าย</div><div class="v" id="tExp">0</div></div>
-      <div class="card net"><div><div class="k">ผลต่าง (รายรับ − รายจ่าย)</div><div class="k" id="tCount"></div></div><div class="v" id="tNet">0</div></div>
+      <div class="card inc"><div class="k">รายรับเงินสด</div><div class="v" id="tInc">0</div><div class="sub" id="tCount"></div></div>
+      <div class="card exp"><div class="k">รายจ่าย</div><div class="v" id="tExp">0</div><div class="sub" id="tExpSub"></div></div>
+      <div class="card net"><div><div class="k">ผลต่าง (รายรับเงินสด − รายจ่ายที่เบิกแล้ว)</div></div><div class="v" id="tNet">0</div></div>
+      <div class="card real"><div><div class="k">ยอดเงินคงเหลือจริง</div><div class="sub" id="tRealSub">หลังหักยอดที่ยังไม่ได้เบิก</div></div><div class="v" id="tReal">0</div></div>
     </div>
-    <div class="pend" id="tPend"></div>
     <button class="pie-btn" id="pieBtn">◔ ดูสัดส่วนรายจ่ายตามหมวดหมู่</button>
     <div class="filters" id="filterChips">
       <button class="chip on" data-f="all">ทั้งหมด</button>
@@ -176,6 +191,7 @@ dialog h3{margin:0 0 4px}
 <nav class="bottom">
   <button data-page="add"><b>＋</b>บันทึก</button>
   <button data-page="sum"><b>☰</b>สรุป</button>
+  <span class="ver">v1.0</span>
 </nav>
 
 <!-- ===== แก้ไขรายการ ===== -->
@@ -230,6 +246,7 @@ dialog h3{margin:0 0 4px}
 </dialog>
 
 <div class="toast" id="toast"></div>
+<div class="notice" id="notice" role="status" aria-live="polite"><span class="ic"></span><span class="tx"></span><button id="noticeBtn" style="display:none"></button></div>
 
 <script>
 /* ---------- utils ---------- */
@@ -250,6 +267,30 @@ const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } ca
 const parseAmt = v => parseFloat(String(v).replace(/,/g, ''));
 let toastT;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1800); }
+/* แจ้งสถานะการบันทึกด้านบนจอ: กำลังบันทึก → บันทึกลง Sheet แล้ว / ส่งไม่สำเร็จ */
+let noticeT, noticeState = '', noticeLabel = '';
+function notice(state, title, sub, btn) {
+  const n = $('#notice');
+  noticeState = state;
+  n.className = 'notice on ' + state;
+  n.querySelector('.ic').textContent = state === 'ok' ? '✓' : state === 'err' ? '!' : '⏳';
+  n.querySelector('.tx').innerHTML = esc(title) + (sub ? `<small>${esc(sub)}</small>` : '');
+  const b = $('#noticeBtn');
+  b.style.display = btn ? 'block' : 'none';
+  if (btn) { b.textContent = btn.text; b.onclick = btn.fn; }
+  clearTimeout(noticeT);
+  if (state === 'ok') noticeT = setTimeout(hideNotice, 2500);
+}
+function hideNotice() { $('#notice').classList.remove('on'); noticeState = ''; }
+$('#notice').addEventListener('click', e => { if (e.target.id !== 'noticeBtn' && noticeState !== 'pending') hideNotice(); });
+function noticeAfterSave(label) {
+  noticeLabel = label;
+  if (!cfg.key) { notice('err', label + ' — เก็บไว้ในเครื่อง', 'ยังไม่ได้ใส่ API Key จึงยังไม่ส่งเข้า Sheet', { text: 'ใส่ Key', fn: openSettings }); return; }
+  if (authErr) { notice('err', label + ' — เก็บไว้ในเครื่อง', 'API Key ไม่ถูกต้อง ยังส่งเข้า Sheet ไม่ได้', { text: 'แก้ Key', fn: openSettings }); return; }
+  notice('pending', label, navigator.onLine ? 'กำลังส่งเข้า Google Sheet…' : 'ออฟไลน์อยู่ — เก็บไว้ในเครื่อง จะส่งให้อัตโนมัติเมื่อมีเน็ต');
+}
+function retryNow() { failCount = 0; notice('pending', noticeLabel || 'กำลังส่งใหม่', 'กำลังส่งเข้า Google Sheet…'); flush(); }
+
 $$('[data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
 $$('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));   // แตะพื้นหลังเพื่อปิด
 
@@ -264,7 +305,9 @@ const PIE_COLORS = ['#c0392b', '#e67e22', '#d4a017', '#27ae60', '#16a085', '#298
    queue      = รายการที่บันทึกแล้วแต่ยังไม่ถึง Sheet (เก็บในเครื่อง ไม่หายแม้ปิดแอป)
    rows       = serverRows + queue → ใช้แสดงผล เลยเห็นผลทันทีไม่ต้องรอเน็ต */
 const K = { cfg: 'ie_cfg', rows: 'ie_rows', queue: 'ie_queue', ui: 'ie_ui' };
+const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbwuAcmXYq1coh7WU6jgXxOHCQ1Hd8wgCNxfrV9pihcQ1428OjrtUnm9GDgm0OhvkB5Q/exec';
 let cfg = load(K.cfg, { url: '', key: '' });
+if (!cfg.url) cfg.url = DEFAULT_URL;
 let serverRows = load(K.rows, []);
 let queue = load(K.queue, []);
 let rows = [];
@@ -300,7 +343,7 @@ function enqueue(...ops) { queue.push(...ops); store(K.queue, queue); recompute(
 
 async function flush() {
   if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
-  if (flushing || !queue.length || !cfg.url || authErr) { updateSync(); return; }
+  if (flushing || !queue.length || !cfg.url || !cfg.key || authErr) { updateSync(); return; }
   flushing = true; updateSync();
   const batch = queue.slice(0, 50);
   let ok = false;
@@ -311,10 +354,17 @@ async function flush() {
     serverRows = applyOps(serverRows, batch); store(K.rows, serverRows);
     queue = queue.slice(batch.length); store(K.queue, queue);
     failCount = 0; ok = true;
+    if (!queue.length && noticeState) notice('ok', (noticeLabel || 'บันทึกแล้ว'), 'บันทึกลง Google Sheet เรียบร้อย');
   } catch (e) {
     failCount++;
-    if (e.message === 'unauthorized') { authErr = true; toast('API Key ไม่ถูกต้อง'); openSettings(); }
-    else retryTimer = setTimeout(flush, Math.min(30000, 2000 * failCount));
+    if (e.message === 'unauthorized') {
+      authErr = true;
+      notice('err', 'ส่งไม่สำเร็จ: API Key ไม่ถูกต้อง', 'รายการยังเก็บอยู่ในเครื่อง ไม่หาย', { text: 'แก้ Key', fn: openSettings });
+    } else {
+      retryTimer = setTimeout(flush, Math.min(30000, 2000 * failCount));
+      if (noticeState) notice('err', 'ยังส่งเข้า Sheet ไม่สำเร็จ',
+        (navigator.onLine ? 'เชื่อมต่อไม่ได้' : 'ไม่มีอินเทอร์เน็ต') + ' — เก็บไว้ในเครื่องแล้ว จะลองส่งใหม่อัตโนมัติ', { text: 'ลองอีกครั้ง', fn: retryNow });
+    }
   }
   flushing = false;
   recompute();
@@ -322,7 +372,7 @@ async function flush() {
 }
 
 async function refresh(manual) {
-  if (!cfg.url || loading) return;
+  if (!cfg.url || !cfg.key || loading) return;
   loading = true; updateSync();
   try {
     const res = await fetch(cfg.url + '?key=' + encodeURIComponent(cfg.key) + '&t=' + Date.now());
@@ -342,7 +392,7 @@ async function refresh(manual) {
 
 function updateSync() {
   const el = $('#sync');
-  if (!cfg.url) { el.textContent = 'ยังไม่ได้ตั้งค่า'; el.className = 'sync err'; return; }
+  if (!cfg.url || !cfg.key) { el.textContent = 'ยังไม่ได้ใส่ Key'; el.className = 'sync err'; return; }
   if (authErr) { el.textContent = 'Key ไม่ถูกต้อง'; el.className = 'sync err'; return; }
   if (queue.length) {
     const pre = flushing ? 'กำลังส่ง ' : (navigator.onLine ? 'รอส่ง ' : 'ออฟไลน์ · รอส่ง ');
@@ -403,10 +453,14 @@ $('#saveBtn').onclick = () => {
     reimbursed: formType === 'รายจ่าย' ? $('#fReimb').checked : false,
     createdAt: nowStr()
   };
+  const label = `บันทึก${row.type} ${money(row.amount)} ฿ · ${row.category}`;
   enqueue({ op: 'upsert', row });
-  toast(`บันทึก${row.type} ${money(row.amount)} ฿ แล้ว`);
+  noticeAfterSave(label);
+  const sb = $('#saveBtn'); sb.textContent = '✓ บันทึกแล้ว'; sb.classList.add('done');
+  setTimeout(() => { sb.textContent = 'บันทึก'; sb.classList.remove('done'); }, 1500);
+  if (navigator.vibrate) navigator.vibrate(30);
   $('#fAmount').value = ''; $('#fNote').value = ''; $('#fCat').value = ''; $('#fReimb').checked = false;
-  renderChips(); $('#fAmount').focus();
+  renderChips(); $('#fAmount').blur();
 };
 
 /* ---------- edit dialog ---------- */
@@ -441,12 +495,12 @@ $('#eSave').onclick = () => {
     note: $('#eNote').value.trim(),
     reimbursed: eType === 'รายจ่าย' ? $('#eReimb').checked : false
   } });
-  editing = null; $('#editDlg').close(); toast('แก้ไขแล้ว');
+  editing = null; $('#editDlg').close(); noticeAfterSave('แก้ไขรายการแล้ว');
 };
 $('#eDel').onclick = () => {
   if (!editing || !confirm('ลบรายการนี้?')) return;
   enqueue({ op: 'delete', id: editing.id });
-  editing = null; $('#editDlg').close(); toast('ลบแล้ว');
+  editing = null; $('#editDlg').close(); noticeAfterSave('ลบรายการแล้ว');
 };
 
 /* ---------- summary ---------- */
@@ -491,20 +545,22 @@ function renderSummary() {
   $('#rangeLbl').textContent = rangeLabel(getRange());
 
   const inRange = inRangeRows();
-  let inc = 0, exp = 0, pend = 0, pendN = 0;
+  // ผลต่าง = เงินสดที่ควรมีอยู่จริงตอนนี้: หักเฉพาะรายจ่ายที่ "เบิกแล้ว"
+  // ยอดเงินคงเหลือจริง = ผลต่าง − รายจ่ายที่ยังไม่เบิก (เงินที่ยังต้องจ่ายออกไป)
+  let inc = 0, exp = 0, paid = 0, pend = 0, pendN = 0;
   for (const r of inRange) {
     if (r.type === 'รายรับ') inc += +r.amount;
-    else { exp += +r.amount; if (!r.reimbursed) { pend += +r.amount; pendN++; } }
+    else { exp += +r.amount; if (r.reimbursed) paid += +r.amount; else { pend += +r.amount; pendN++; } }
   }
-  const net = inc - exp;
+  const net = inc - paid, real = net - pend;
+  const sgn = (el, v) => { el.textContent = (v > 0 ? '+' : '') + money(v) + ' ฿'; el.style.color = v > 0 ? 'var(--inc)' : v < 0 ? 'var(--exp)' : 'var(--ink)'; };
   $('#tInc').textContent = money(inc) + ' ฿';
   $('#tExp').textContent = money(exp) + ' ฿';
-  $('#tNet').textContent = (net > 0 ? '+' : '') + money(net) + ' ฿';
-  $('#tNet').style.color = net > 0 ? 'var(--inc)' : net < 0 ? 'var(--exp)' : 'var(--ink)';
+  $('#tExpSub').textContent = `เบิกแล้ว ${money(paid)} · ยังไม่เบิก ${money(pend)}`;
+  sgn($('#tNet'), net);
+  sgn($('#tReal'), real);
+  $('#tRealSub').textContent = pendN ? `หักยอดที่ยังไม่เบิก ${pendN} รายการ · ${money(pend)} ฿` : 'ไม่มียอดค้างเบิก';
   $('#tCount').textContent = inRange.length + ' รายการ';
-  const pe = $('#tPend');
-  pe.style.display = pendN ? 'block' : 'none';
-  pe.textContent = `รายจ่ายที่ยังไม่เบิก ${pendN} รายการ · ${money(pend)} ฿`;
 
   let list = inRange;
   if (view.filter === 'รายรับ' || view.filter === 'รายจ่าย') list = list.filter(r => r.type === view.filter);
@@ -523,7 +579,7 @@ function renderSummary() {
   for (const r of list) {
     if (r.date !== curDay) { closeDay(); curDay = r.date; dayInc = 0; dayExp = 0; dayHtml = ''; }
     const isInc = r.type === 'รายรับ';
-    if (isInc) dayInc += +r.amount; else dayExp += +r.amount;
+    if (isInc) dayInc += +r.amount; else if (r.reimbursed) dayExp += +r.amount;
     const rb = isInc ? '' : `<br><button class="rb ${r.reimbursed ? 'yes' : 'no'}" data-rb="${esc(r.id)}">${r.reimbursed ? '✓ เบิกแล้ว' : 'ยังไม่เบิก'}</button>`;
     dayHtml += `<div class="item" data-id="${esc(r.id)}">
       <div class="dot" style="background:var(${isInc ? '--inc' : '--exp'})"></div>
@@ -543,7 +599,7 @@ $('#list').onclick = e => {
   if (rb) {
     const r = rows.find(x => x.id === rb.dataset.rb); if (!r) return;
     enqueue({ op: 'upsert', row: { id: r.id, reimbursed: !r.reimbursed } });
-    toast(!r.reimbursed ? 'ทำเครื่องหมายว่าเบิกแล้ว' : 'เปลี่ยนเป็นยังไม่เบิก');
+    noticeAfterSave(!r.reimbursed ? `เบิกแล้ว ${money(r.amount)} ฿ · ${r.category}` : `เปลี่ยนเป็นยังไม่เบิก · ${r.category}`);
     return;
   }
   const it = e.target.closest('.item');
@@ -616,7 +672,7 @@ $('#catBody').onclick = e => {
   if (!nn || nn === oldName) return;
   const ops = rows.filter(r => r.type === t && r.category === oldName).map(r => ({ op: 'upsert', row: { id: r.id, category: nn } }));
   enqueue(...ops);
-  toast(`เปลี่ยน ${ops.length} รายการเป็น "${nn}" แล้ว`);
+  noticeAfterSave(`เปลี่ยน ${ops.length} รายการเป็น "${nn}" แล้ว`);
 };
 
 /* ---------- settings ---------- */
@@ -627,7 +683,7 @@ function openSettings() {
 }
 $('#openSettings').onclick = openSettings;
 $('#sSave').onclick = () => {
-  cfg = { url: $('#sUrl').value.trim(), key: $('#sKey').value.trim() };
+  cfg = { url: $('#sUrl').value.trim() || DEFAULT_URL, key: $('#sKey').value.trim() };
   store(K.cfg, cfg); authErr = false; failCount = 0;
   $('#settings').close(); refresh(true);
 };
@@ -643,7 +699,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) refr
 resetForm();
 showPage(ui.page);
 recompute();
-if (!cfg.url) openSettings(); else refresh();
+if (!cfg.key) openSettings(); else refresh();
 </script>
 </body>
 </html>
